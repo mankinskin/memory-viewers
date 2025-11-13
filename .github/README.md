@@ -5,7 +5,7 @@ This directory contains GitHub Copilot custom instructions for the context-engin
 ## Active Files
 
 ### Primary Agent Instructions
-**`copilot-instructions.md`** - Repository-wide custom instructions (copy of `../AGENTS.md`)
+**`instructions.md`** - Repository-wide custom instructions (copy of `../AGENTS.md`)
 
 This file provides:
 - Documentation maintenance checklist
@@ -24,7 +24,7 @@ This file provides:
 
 GitHub Copilot supports multiple instruction file types (in priority order):
 
-1. **Repository-wide**: `.github/copilot-instructions.md` ✅ **We use this**
+1. **Repository-wide**: `.github/instructions.md` ✅ **We use this**
    - Applied to all requests in the repository
    - Best for project-wide conventions and architecture
 
@@ -64,7 +64,7 @@ To verify Copilot is using these instructions:
 **In VS Code:**
 - Use Copilot Chat
 - Check "References" in response
-- Look for `.github/copilot-instructions.md`
+- Look for `.github/instructions.md`
 
 **On GitHub.com:**
 - Use Copilot Chat or Agents
@@ -79,16 +79,16 @@ To verify Copilot is using these instructions:
 
 When updating `AGENTS.md`, remember to sync changes:
 ```bash
-cp AGENTS.md .github/copilot-instructions.md
-git add .github/copilot-instructions.md
+cp AGENTS.md .github/instructions.md
+git add .github/instructions.md
 git commit -m "docs: update Copilot instructions"
 ```
 
-Or consider making `.github/copilot-instructions.md` a symlink:
+Or consider making `.github/instructions.md` a symlink:
 ```bash
 # Not done yet, but possible future approach:
 cd .github
-ln -s ../AGENTS.md copilot-instructions.md
+ln -s ../AGENTS.md instructions.md
 ```
 
 ## References

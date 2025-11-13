@@ -1,23 +1,23 @@
-# Agent Development Guide
+# Agent Rules & Code Requirements
 
-> **⚠️ READ THIS FILE FIRST** before responding to any request in this workspace.
+> **⚠️ MANDATORY: READ THIS FILE FIRST** before any code changes in this workspace.
 
-Workspace-specific reference for the context-engine project.
+Code requirements and development rules for the context-engine project.
 
-> **Keep this file concise and scannable.** Remove outdated info. Focus on what's actionable.
+> **AGENT RESPONSIBILITY:** Keep this file current. Update immediately when requirements change.
 >
-> **Update this file** when project structure, test locations, or common issues change.
+> **Update triggers:** Project structure changes, new test patterns, modified debugging workflows, requirement changes.
 
 ## 📚 Documentation Maintenance
 
 **⚠️ CRITICAL: Always review and update guidance files when making changes!**
 
-### Before Starting Work:
+### Before Starting Work (REQUIRED):
 1. ✅ Read `CHEAT_SHEET.md` for current API patterns
 2. ✅ Check relevant `<crate>/HIGH_LEVEL_GUIDE.md` for concepts
 3. ✅ Review `QUESTIONS_FOR_AUTHOR.md` for known issues related to your task
 
-### After Making Changes:
+### After Making Changes (MANDATORY):
 1. ✅ **Update `CHEAT_SHEET.md`** if you:
    - Changed public API or types
    - Fixed a common gotcha
@@ -35,7 +35,7 @@ Workspace-specific reference for the context-engine project.
    - Found answer to existing question (move to proper docs, remove question)
    - Identified new documentation gaps
 
-4. ✅ **Update this AGENT.md** if you:
+4. ✅ **Update this AGENTS.md** if you:
    - Changed test structure or locations
    - Modified debugging workflows
    - Changed build/test commands
@@ -133,11 +133,25 @@ Multi-crate workspace for context analysis and graph traversal:
 ### Test Commands
 ```bash
 cargo test -p context-search -- --nocapture              # Run crate tests with output
-RUST_LOG=trace cargo test -p context-search -- --nocapture  # With detailed logging
+LOG_STDOUT=1 LOG_FILTER=trace cargo test -p context-search -- --nocapture  # With detailed logging
 cargo test --package context-search find_ancestor2 -- --nocapture  # Specific test
 ```
 
-### Workspace-Specific Test Setup
+**Important:** To see debug/tracing output in tests, you MUST set `LOG_STDOUT=1`:
+```bash
+# Enable tracing output to terminal
+LOG_STDOUT=1 cargo test -p context-search test_name -- --nocapture
+
+# With specific log level
+LOG_STDOUT=1 LOG_FILTER=debug cargo test -p context-search -- --nocapture
+
+# Module-specific logging
+LOG_STDOUT=1 LOG_FILTER=context_search::match=debug cargo test -- --nocapture
+```
+
+Without `LOG_STDOUT=1`, tracing output only goes to `target/test-logs/<test_name>.log` files.
+
+### Workspace-Specific Test Setup (REQUIRED)
 Add to beginning of test functions:
 ```rust
 let _tracing = init_test_tracing!();  // Enables tracing for this test
@@ -148,15 +162,25 @@ let _tracing = init_test_tracing!();  // Enables tracing for this test
 - `context-search/src/tests/search/mod.rs` - General search tests
 - Other crates: `<crate>/src/tests/`
 
-### Debugging
-- **Failed test logs**: `target/test-logs/<test_name>.log` (preserved on failure)
-- **Log levels**: `RUST_LOG=error|warn|info|debug|trace`
-- **Module-specific**: `RUST_LOG=context_search::search=trace`
+### Debugging Requirements
 
-**Debug workflow:**
-1. Track: data flow origin, control flow, component ownership, dependencies
-2. Before fix: state understanding, identify gaps, explain why fix should work
-3. After failure: re-examine output, check for different underlying issue, consider different layer
+**When tests fail, ALWAYS check test log files:**
+- **Location**: `target/test-logs/<test_name>.log`
+- **Preserved**: Automatically saved on test failure
+- **Contains**: Full tracing output including debug, info, warn, error messages
+- **Usage**: Essential for debugging - often contains details not visible in terminal output
+
+**Log level configuration:**
+- **Environment variable**: `LOG_FILTER=error|warn|info|debug|trace`
+- **Module-specific**: `LOG_FILTER=context_search::search=trace`
+- **Multiple modules**: `LOG_FILTER=context_search::search=trace,context_trace=debug`
+
+**Required debug workflow:**
+1. Run failing test with `LOG_STDOUT=1 LOG_FILTER=trace`
+2. **Check log file**: `target/test-logs/<test_name>.log` for complete details
+3. Track: data flow origin, control flow, component ownership, dependencies
+4. Before fix: state understanding, identify gaps, explain why fix should work
+5. After failure: re-examine log output, check for different underlying issue, consider different layer
 
 ## Bug Reports
 

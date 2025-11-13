@@ -5,7 +5,7 @@ This repository uses GitHub Copilot's custom instructions feature to provide con
 ## Available Instruction Files
 
 ### 1. Repository-Wide Instructions
-**File:** `.github/copilot-instructions.md`
+**File:** `.github/instructions.md`
 **Scope:** All requests in this repository
 **Usage:** Primary onboarding document for Copilot agents
 **Status:** ✅ Active (copy of `AGENTS.md`)
@@ -40,7 +40,7 @@ Example structure:
 ## Current Setup
 
 We use a **unified repository-wide approach**:
-- Primary file: `.github/copilot-instructions.md` (copy of `AGENTS.md`)
+- Primary file: `.github/instructions.md` (copy of `AGENTS.md`)
 - Layered documentation: CHEAT_SHEET.md → HIGH_LEVEL_GUIDE.md → detailed docs
 - Questions tracked in: `QUESTIONS_FOR_AUTHOR.md`
 
@@ -62,7 +62,7 @@ Consider adding path-specific instructions if:
 To verify Copilot is using your instructions:
 1. Use Copilot Chat in VS Code or GitHub.com
 2. Check the "References" section in responses
-3. Look for `.github/copilot-instructions.md` in the reference list
+3. Look for `.github/instructions.md` in the reference list
 4. Click to view the active instructions
 
 ## Enable/Disable
