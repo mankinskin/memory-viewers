@@ -116,6 +116,39 @@ Multi-crate workspace for context analysis and graph traversal:
 
 ## Testing & Debugging
 
+### Debug Logging Requirements
+
+**Always use the `tracing` crate for debug output:**
+- ✅ Use `tracing::debug!()`, `tracing::info!()`, `tracing::warn!()`, `tracing::error!()`
+- ❌ Never use `println!()`, `eprintln!()`, or `dbg!()` for debug output
+- Use `context_trace::logging` infrastructure for test setup
+- Import: `use tracing::{debug, info, warn, error};`
+
+**Example:**
+```rust
+use tracing::debug;
+
+debug!("Processing item: {}", item);
+debug!("cursor.atom_position: {:?}", cursor.atom_position);
+```
+
+### Terminal Commands
+
+**Avoid redundant directory changes:**
+- Commands already execute in the workspace root directory
+- ❌ Don't prefix with `cd <workspace>` when already in workspace
+- ✅ Use absolute paths or relative paths from workspace root
+- Only use `cd` when genuinely changing to a different directory
+
+**Example:**
+```bash
+# ❌ Redundant
+cd c:/Users/linus_behrbohm/git/private/context-engine && cargo test
+
+# ✅ Direct (already in workspace)
+cargo test -p context-search
+```
+
 ### Recent API Changes (Important!)
 
 **Response API Unification (context-search):**
