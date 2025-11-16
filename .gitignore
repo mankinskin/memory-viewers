@@ -2,7 +2,12 @@ target/
 .vscode/
 agent-tmp/
 
-# Local cargo configuration (personal overrides)
+# Direnv configuration for personal environment overrides
+.envrc
+
+# Local cargo configuration
+# Note: Cargo doesn't support config.local.toml - use .envrc or ~/.cargo/config.toml instead
+# Keeping this in gitignore in case someone creates it by mistake
 .cargo/config.local.toml
 
 # Local tracing configuration (use config/tracing.toml.example as template)

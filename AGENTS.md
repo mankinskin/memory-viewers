@@ -139,16 +139,21 @@ cargo test --package context-search find_ancestor2 -- --nocapture  # Specific te
 
 **IMPORTANT: Return Focus to Chat After Commands**
 
-After running terminal commands, **always** append `&& focus_chat` to return focus to the chat window:
+After running terminal commands, **always** append `; focus_chat` to return focus to the chat window:
 
 ```bash
-# Examples:
-cargo test -p context-search -- --nocapture && focus_chat
-LOG_STDOUT=1 cargo test -p context-search -- --nocapture && focus_chat
+# Examples (use semicolon to run focus_chat regardless of success/failure):
+cargo test -p context-search -- --nocapture ; focus_chat
+LOG_STDOUT=1 cargo test -p context-search -- --nocapture ; focus_chat
+cargo build ; focus_chat
+
+# Alternative: use && only if you want focus_chat to run only on success
 cargo build && focus_chat
 ```
 
 The `focus_chat` command is a bash alias that triggers the custom VS Code extension to focus the Copilot Chat window. This provides a better workflow by automatically returning to the chat after command completion.
+
+**Use semicolon (`;`) instead of `&&`** when you want focus to return even if the command fails (e.g., for failing tests). Use `&&` only when you want focus to return only on successful command execution.
 
 **Exception:** Do NOT use `focus_chat` for:
 - Background processes (`isBackground: true`)
