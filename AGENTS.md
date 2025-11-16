@@ -137,6 +137,24 @@ LOG_STDOUT=1 LOG_FILTER=trace cargo test -p context-search -- --nocapture  # Wit
 cargo test --package context-search find_ancestor2 -- --nocapture  # Specific test
 ```
 
+**IMPORTANT: Return Focus to Chat After Commands**
+
+After running terminal commands, **always** append `&& focus_chat` to return focus to the chat window:
+
+```bash
+# Examples:
+cargo test -p context-search -- --nocapture && focus_chat
+LOG_STDOUT=1 cargo test -p context-search -- --nocapture && focus_chat
+cargo build && focus_chat
+```
+
+The `focus_chat` command is a bash alias that triggers the custom VS Code extension to focus the Copilot Chat window. This provides a better workflow by automatically returning to the chat after command completion.
+
+**Exception:** Do NOT use `focus_chat` for:
+- Background processes (`isBackground: true`)
+- Commands that are expected to keep terminal focus
+- Interactive commands (grep, less, etc.)
+
 **Important:** To see debug/tracing output in tests, you MUST set `LOG_STDOUT=1`:
 ```bash
 # Enable tracing output to terminal
