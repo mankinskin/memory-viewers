@@ -1,9 +1,10 @@
 target/
 .vscode/
 agents/tmp/
-
 # Direnv configuration for personal environment overrides
 .envrc
+
+.serena/
 
 # Local cargo configuration
 # Note: Cargo doesn't support config.local.toml - use .envrc or ~/.cargo/config.toml instead
