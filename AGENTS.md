@@ -8,6 +8,8 @@ Code requirements and development rules for the context-engine project.
 >
 > **Update triggers:** Project structure changes, new test patterns, modified debugging workflows, requirement changes.
 
+> **🔍 CONFUSED? CHECK `agents/guides/INDEX.md` FIRST** - Search by tags before asking questions or researching.
+
 ## 📚 Documentation Maintenance
 
 **⚠️ CRITICAL: Update docs when changing code!**
@@ -44,7 +46,7 @@ Code requirements and development rules for the context-engine project.
    - Verify each step before proceeding
    - Update plan if deviations needed
    - Mark completed items
-   - Move to `agents/implemented/` when done
+   - When done: Create summary in `agents/implemented/`, update INDEX.md, keep or archive plan
 
 **Benefits:**
 - Fresh context = more tokens for code
@@ -59,7 +61,7 @@ Code requirements and development rules for the context-engine project.
 
 ### When Confused: Research → Document (or Ask)
 
-1. **Don't guess!** Check `agents/guides/GUIDES_INDEX.md` by tags first
+1. **Don't guess!** Check `agents/guides/INDEX.md` by tags first
 2. **Quick research:** Read source, check docs, scan tests (10-15 min max)
 3. **Still unclear? → Ask user** rather than deep rabbit holes
 4. **After user clarifies:** Document in `agents/guides/<TOPIC>_GUIDE.md`:
@@ -67,7 +69,7 @@ Code requirements and development rules for the context-engine project.
    - Correct/incorrect examples
    - Common mistakes + fixes
    - Related files + migration checklist
-5. **Update index:** Add to `agents/guides/GUIDES_INDEX.md` (or note "TODO" if urgent)
+5. **Update index:** Add to `agents/guides/INDEX.md` (or note "TODO" if urgent)
 
 **When to defer to user:**
 - Research taking >15 minutes without clarity
@@ -94,11 +96,11 @@ Code requirements and development rules for the context-engine project.
 
 ## Project Structure
 
-Multi-crate workspace for context analysis and graph traversal:
-- `context-trace` - Foundation: graph structures, paths, bidirectional tracing (see HIGH_LEVEL_GUIDE.md)
-- `context-search` - Pattern matching and search with unified Response API (see HIGH_LEVEL_GUIDE.md)
-- `context-insert` - Insertion via split-join architecture (see HIGH_LEVEL_GUIDE.md)
-- `context-read` - Context reading and expansion
+Multi-crate workspace for context analysis and graph traversal (all crates in `crates/` directory):
+- `crates/context-trace/` - Foundation: graph structures, paths, bidirectional tracing (see HIGH_LEVEL_GUIDE.md)
+- `crates/context-search/` - Pattern matching and search with unified Response API (see HIGH_LEVEL_GUIDE.md)
+- `crates/context-insert/` - Insertion via split-join architecture (see HIGH_LEVEL_GUIDE.md)
+- `crates/context-read/` - Context reading and expansion
 
 **Architecture:** trace → search → insert → read (each layer builds on previous)
 
@@ -108,11 +110,11 @@ Multi-crate workspace for context analysis and graph traversal:
 
 **Priority order:**
 1. **`CHEAT_SHEET.md`** - Types, patterns, gotchas (START HERE)
-2. **`agents/guides/GUIDES_INDEX.md`** - How-to guides by topic
-3. `<crate>/HIGH_LEVEL_GUIDE.md` - Concepts, design
-4. `<crate>/README.md` - Purpose, API overview
-5. `<crate>/src/tests/` - Usage examples
-6. `agents/bug-reports/` - Known issues
+2. **`agents/guides/INDEX.md`** - How-to guides by topic
+3. `crates/<crate>/HIGH_LEVEL_GUIDE.md` - Concepts, design
+4. `crates/<crate>/README.md` - Purpose, API overview
+5. `crates/<crate>/src/tests/` - Usage examples
+6. `agents/bug-reports/INDEX.md` - Known issues
 7. `QUESTIONS_FOR_AUTHOR.md` - Unclear topics
 8. `cargo doc --package <crate>` - Generated docs
 
@@ -145,26 +147,38 @@ let _tracing = init_test_tracing!(&graph);  // Pass graph for readable tokens!
 
 ## Bug Reports
 
-Check `agents/bug-reports/` before investigating.
+Check `agents/bug-reports/INDEX.md` before investigating.
 
 **Format:** `agents/bug-reports/BUG_<component>_<desc>.md` with: Summary, Root Cause, Evidence, Fix Options, Related Files
 
-**After fixing:** Update guides in `agents/guides/`, remove/update bug report, document pattern
+**After creating:** Add entry to `agents/bug-reports/INDEX.md` with tags and summary
+
+**After fixing:** Update guides in `agents/guides/`, archive/update bug report in INDEX.md, document pattern
 
 ## Agentic Workflow Organization
 
-**Use `agents/` directory to keep repository organized:**
-- `agents/guides/` - Persistent guidance documents (commit these)
+**Use `agents/` directory to keep repository organized. See `agents/README.md` for complete guide.**
+
+**Directory structure:**
+- `agents/guides/` - How-to guides and troubleshooting (commit these)
 - `agents/plans/` - Task plans before execution (commit active plans)
-- `agents/implemented/` - Completed plans (archive when done)
-- `agents/bug-reports/` - Known issues and fixes (commit these)
-- `agents/tmp/` - Temporary analysis files (never commit)
+- `agents/implemented/` - Completed feature documentation (commit these)
+- `agents/bug-reports/` - Known issues and analyses (commit these)
+- `agents/tmp/` - Temporary scratch files (never commit)
+
+**Quick decision tree:**
+- Confused? → Check `agents/guides/INDEX.md` → Research 10-15min → Still unclear? Ask user → Document in `agents/guides/` + **update INDEX.md**
+- Large task (>5 files)? → Create plan in `agents/plans/` → Execute later → Summary in `agents/implemented/` + **update INDEX.md**
+- Found bug? → Document in `agents/bug-reports/` + **update INDEX.md** → After fix, update `agents/guides/`
+- Feature done? → Write summary in `agents/implemented/` + **update INDEX.md**
 
 **Move findings from tmp/ to:** CHEAT_SHEET.md (patterns) | HIGH_LEVEL_GUIDE.md (concepts) | `agents/guides/` (how-tos) | QUESTIONS_FOR_AUTHOR.md (questions)
 
+**Full documentation:** `agents/README.md` - Master index with when-to-use guide for each directory
+
 ## Key Docs by Crate
 
-- **context-trace:** HIGH_LEVEL_GUIDE.md (graph, paths, tracing, cache)
-- **context-search:** HIGH_LEVEL_GUIDE.md (search, Response API, patterns)
-- **context-insert:** HIGH_LEVEL_GUIDE.md (split-join, InitInterval, insertion)
-- **Root:** README.md, CHEAT_SHEET.md, QUESTIONS_FOR_AUTHOR.md
+- **crates/context-trace/:** HIGH_LEVEL_GUIDE.md (graph, paths, tracing, cache)
+- **crates/context-search/:** HIGH_LEVEL_GUIDE.md (search, Response API, patterns)
+- **crates/context-insert/:** HIGH_LEVEL_GUIDE.md (split-join, InitInterval, insertion)
+- **Root:** README.md, CHEAT_SHEET.md, QUESTIONS_FOR_AUTHOR.md, `agents/README.md`

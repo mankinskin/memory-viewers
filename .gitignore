@@ -1,6 +1,6 @@
 target/
 .vscode/
-agent-tmp/
+agents/tmp/
 
 # Direnv configuration for personal environment overrides
 .envrc
