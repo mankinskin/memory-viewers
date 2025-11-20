@@ -32,23 +32,19 @@ Code requirements and development rules for the context-engine project.
 **For multi-file refactors, large features, or architectural changes:**
 
 1. **Planning session (research-focused):**
-   - Create `agent-tmp/PLAN_<task_name>.md` with:
-     - **Objective:** Clear goal statement
-     - **Context:** All relevant files, dependencies, constraints
-     - **Analysis:** What needs to change and why
-     - **Execution steps:** Numbered, atomic, testable actions
-     - **Risks:** Known issues, breaking changes, edge cases
-     - **Validation:** How to verify success
+   - Create `agents/plans/PLAN_<task_name>.md` (use template in `agents/plans/`)
+   - Include: Objective, Context, Analysis, Execution steps, Risks, Validation
    - Gather ALL context before planning
    - Ask user to clarify unknowns
    - Don't implement yet - just plan
 
 2. **Execution session (fresh context):**
-   - Load plan file
+   - Load plan from `agents/plans/`
    - Execute steps sequentially
    - Verify each step before proceeding
    - Update plan if deviations needed
    - Mark completed items
+   - Move to `agents/implemented/` when done
 
 **Benefits:**
 - Fresh context = more tokens for code
@@ -63,15 +59,15 @@ Code requirements and development rules for the context-engine project.
 
 ### When Confused: Research → Document (or Ask)
 
-1. **Don't guess!** Check `guides/GUIDES_INDEX.md` by tags first
+1. **Don't guess!** Check `agents/guides/GUIDES_INDEX.md` by tags first
 2. **Quick research:** Read source, check docs, scan tests (10-15 min max)
 3. **Still unclear? → Ask user** rather than deep rabbit holes
-4. **After user clarifies:** Document in `guides/<TOPIC>_GUIDE.md`:
+4. **After user clarifies:** Document in `agents/guides/<TOPIC>_GUIDE.md`:
    - Problem description + root cause
    - Correct/incorrect examples
    - Common mistakes + fixes
    - Related files + migration checklist
-5. **Update index:** Add to `guides/GUIDES_INDEX.md` (or note "TODO" if urgent)
+5. **Update index:** Add to `agents/guides/GUIDES_INDEX.md` (or note "TODO" if urgent)
 
 **When to defer to user:**
 - Research taking >15 minutes without clarity
@@ -112,12 +108,13 @@ Multi-crate workspace for context analysis and graph traversal:
 
 **Priority order:**
 1. **`CHEAT_SHEET.md`** - Types, patterns, gotchas (START HERE)
-2. `<crate>/HIGH_LEVEL_GUIDE.md` - Concepts, design
-3. `<crate>/README.md` - Purpose, API overview
-4. `<crate>/src/tests/` - Usage examples
-5. `bug-reports/` - Known issues
-6. `QUESTIONS_FOR_AUTHOR.md` - Unclear topics
-7. `cargo doc --package <crate>` - Generated docs
+2. **`agents/guides/GUIDES_INDEX.md`** - How-to guides by topic
+3. `<crate>/HIGH_LEVEL_GUIDE.md` - Concepts, design
+4. `<crate>/README.md` - Purpose, API overview
+5. `<crate>/src/tests/` - Usage examples
+6. `agents/bug-reports/` - Known issues
+7. `QUESTIONS_FOR_AUTHOR.md` - Unclear topics
+8. `cargo doc --package <crate>` - Generated docs
 
 ## Testing & Debugging
 
@@ -148,17 +145,22 @@ let _tracing = init_test_tracing!(&graph);  // Pass graph for readable tokens!
 
 ## Bug Reports
 
-Check `bug-reports/` before investigating.
+Check `agents/bug-reports/` before investigating.
 
-**Format:** `BUG_<component>_<desc>.md` with: Summary, Root Cause, Evidence, Fix Options, Related Files
+**Format:** `agents/bug-reports/BUG_<component>_<desc>.md` with: Summary, Root Cause, Evidence, Fix Options, Related Files
 
-**After fixing:** Update guides, remove/update bug report, document pattern
+**After fixing:** Update guides in `agents/guides/`, remove/update bug report, document pattern
 
-## Temporary Files
+## Agentic Workflow Organization
 
-Use `agent-tmp/` for work files (never commit).
+**Use `agents/` directory to keep repository organized:**
+- `agents/guides/` - Persistent guidance documents (commit these)
+- `agents/plans/` - Task plans before execution (commit active plans)
+- `agents/implemented/` - Completed plans (archive when done)
+- `agents/bug-reports/` - Known issues and fixes (commit these)
+- `agents/tmp/` - Temporary analysis files (never commit)
 
-**Move findings to:** CHEAT_SHEET.md (patterns) | HIGH_LEVEL_GUIDE.md (concepts) | QUESTIONS_FOR_AUTHOR.md (questions)
+**Move findings from tmp/ to:** CHEAT_SHEET.md (patterns) | HIGH_LEVEL_GUIDE.md (concepts) | `agents/guides/` (how-tos) | QUESTIONS_FOR_AUTHOR.md (questions)
 
 ## Key Docs by Crate
 
