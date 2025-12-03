@@ -149,7 +149,7 @@ let _tracing = init_test_tracing!(&graph);  // Pass graph for readable tokens!
 
 Check `agents/bug-reports/INDEX.md` before investigating.
 
-**Format:** `agents/bug-reports/BUG_<component>_<desc>.md` with: Summary, Root Cause, Evidence, Fix Options, Related Files
+**Format:** `agents/bug-reports/YYYYMMDD_BUG_<component>_<desc>.md` with: Summary, Root Cause, Evidence, Fix Options, Related Files
 
 **After creating:** Add entry to `agents/bug-reports/INDEX.md` with tags and summary
 
@@ -164,7 +164,15 @@ Check `agents/bug-reports/INDEX.md` before investigating.
 - `agents/plans/` - Task plans before execution (commit active plans)
 - `agents/implemented/` - Completed feature documentation (commit these)
 - `agents/bug-reports/` - Known issues and analyses (commit these)
+- `agents/analysis/` - Algorithm analysis and comparisons (commit these)
 - `agents/tmp/` - Temporary scratch files (never commit)
+
+**File naming convention (CRITICAL):**
+All agent-generated files MUST include a timestamp prefix for chronological ordering:
+- Format: `YYYYMMDD_<FILENAME>.md` (e.g., `20251203_FEATURE_NAME.md`)
+- Lists newest files first when sorted alphabetically
+- Makes file age immediately visible
+- Enables easy tracking of document history
 
 **Quick decision tree:**
 - Confused? → Check `agents/guides/INDEX.md` → Research 10-15min → Still unclear? Ask user → Document in `agents/guides/` + **update INDEX.md**
