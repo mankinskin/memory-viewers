@@ -5,10 +5,11 @@
 Code requirements and development rules for the context-engine project.
 
 > **AGENT RESPONSIBILITY:** Keep this file current. Update immediately when requirements change.
->
-> **Update triggers:** Project structure changes, new test patterns, modified debugging workflows, requirement changes.
 
-> **🔍 CONFUSED? CHECK `agents/guides/INDEX.md` FIRST** - Search by tags before asking questions or researching.
+## Environment Guidelines
+
+- **Prefer bash commands** over PowerShell or cmd when running terminal commands
+- **Always use Unix-style paths** (forward slashes `/`) in commands, documentation, and code comments
 
 ## 📚 Documentation Maintenance
 
