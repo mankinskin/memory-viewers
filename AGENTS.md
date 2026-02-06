@@ -120,24 +120,14 @@ Multi-crate workspace for context analysis and graph traversal (all crates in `c
 
 ## Testing & Debugging
 
-### API Changes (Important!)
-- ❌ `CompleteState`/`IncompleteState` → ✅ `Response` (unified)
-- `search()` returns `Result<Response, ErrorState>`
-- Check `response.is_complete()` before unwrap
-- `Searchable` trait in `context_search::`
-- Use `init_test_tracing!()` not `init_tracing()`
-
+### Tracing Setup (IMPORTANT) Enable test log files in target/test-logs/:
+```rust
+let _tracing = init_test_tracing!(&graph);  // Pass graph for readable tokens in output!
+```
 ### Test Commands
 ```bash
 cargo test -p <crate> [test_name] -- --nocapture
 LOG_STDOUT=1 LOG_FILTER=trace cargo test -p <crate> -- --nocapture
-```
-
-**Always append `; focus_chat`** to return focus (except background/interactive commands)
-
-### Tracing Setup (REQUIRED)
-```rust
-let _tracing = init_test_tracing!(&graph);  // Pass graph for readable tokens!
 ```
 
 ### Debug Workflow
