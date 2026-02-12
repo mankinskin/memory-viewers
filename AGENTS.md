@@ -10,6 +10,7 @@ Code requirements and development rules for the context-engine project.
 
 - **Prefer bash commands** over PowerShell or cmd when running terminal commands
 - **Always use Unix-style paths** (forward slashes `/`) in commands, documentation, and code comments
+- **Read test logs instead of test command output for debugging** Test logs are located in `target/test-logs/` and contain the full trace output, while test command output may be truncated.
 
 ## 📚 Documentation Maintenance
 
