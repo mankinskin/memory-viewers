@@ -5,12 +5,10 @@
 Code requirements and development rules for the context-engine project.
 
 > **AGENT RESPONSIBILITY:** Keep this file current. Update immediately when requirements change.
+>
+> **Update triggers:** Project structure changes, new test patterns, modified debugging workflows, requirement changes.
 
-## Environment Guidelines
-
-- **Prefer bash commands** over PowerShell or cmd when running terminal commands
-- **Always use Unix-style paths** (forward slashes `/`) in commands, documentation, and code comments
-- **Read test logs instead of test command output for debugging** Test logs are located in `target/test-logs/` and contain the full trace output, while test command output may be truncated.
+> **🔍 CONFUSED? CHECK `agents/guides/INDEX.md` FIRST** - Search by tags before asking questions or researching.
 
 ## 📚 Documentation Maintenance
 
@@ -125,14 +123,24 @@ Multi-crate workspace for context analysis and graph traversal (all crates in `c
 
 ## Testing & Debugging
 
-### Tracing Setup (IMPORTANT) Enable test log files in target/test-logs/:
-```rust
-let _tracing = init_test_tracing!(&graph);  // Pass graph for readable tokens in output!
-```
+### API Changes (Important!)
+- ❌ `CompleteState`/`IncompleteState` → ✅ `Response` (unified)
+- `search()` returns `Result<Response, ErrorState>`
+- Check `response.is_complete()` before unwrap
+- `Searchable` trait in `context_search::`
+- Use `init_test_tracing!()` not `init_tracing()`
+
 ### Test Commands
 ```bash
 cargo test -p <crate> [test_name] -- --nocapture
 LOG_STDOUT=1 LOG_FILTER=trace cargo test -p <crate> -- --nocapture
+```
+
+**Always append `; focus_chat`** to return focus (except background/interactive commands)
+
+### Tracing Setup (REQUIRED)
+```rust
+let _tracing = init_test_tracing!(&graph);  // Pass graph for readable tokens!
 ```
 
 ### Debug Workflow
