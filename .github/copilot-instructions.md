@@ -18,12 +18,3 @@ copilot --additional-mcp-config @.github/copilot-mcp-config.json
 When using `copilot` CLI from this directory, hooks in `.github/hooks/` provide:
 - **PostToolUse:** Reminds you to validate docs after editing MCP server source files
 - **Stop:** Warns about uncommitted MCP server changes before session ends
-
-### API Migration Notes
-
-If you encounter old API patterns in tests or documentation:
-- ❌ `CompleteState`/`IncompleteState` → ✅ `Response` (unified)
-- `search()` returns `Result<Response, ErrorState>`
-- Check `response.is_complete()` before unwrap
-- `Searchable` trait is in `context_search::`
-- Use `init_test_tracing!()` not `init_tracing()`
