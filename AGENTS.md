@@ -31,6 +31,12 @@ Code requirements and development rules for the context-engine project.
 | Unclear behavior/gaps | `QUESTIONS_FOR_AUTHOR.md` |
 | Test structure/workflows/commands | `AGENTS.md` (this file) |
 
+### Documentation Validation (MCP Server)
+
+**After code changes**, run validation:
+- `mcp_docs-server_validate_docs` - Check agent docs
+- `mcp_docs-server_check_stale_docs` - Detect stale crate docs
+
 ## Problem-Solving Approach
 
 ### Complex Tasks: Plan First, Execute Later
@@ -100,11 +106,16 @@ Code requirements and development rules for the context-engine project.
 
 ## Project Structure
 
-Multi-crate workspace for context analysis and graph traversal (all crates in `crates/` directory):
+Multi-crate workspace for context analysis and graph traversal:
+
+**Core crates** (in `crates/` directory):
 - `crates/context-trace/` - Foundation: graph structures, paths, bidirectional tracing (see HIGH_LEVEL_GUIDE.md)
 - `crates/context-search/` - Pattern matching and search with unified Response API (see HIGH_LEVEL_GUIDE.md)
 - `crates/context-insert/` - Insertion via split-join architecture (see HIGH_LEVEL_GUIDE.md)
 - `crates/context-read/` - Context reading and expansion
+
+**Tools** (in `tools/` directory):
+- `tools/mcp-docs-server/` - MCP server for documentation management (has its own `agents/docs/`)
 
 **Architecture:** trace → search → insert → read (each layer builds on previous)
 
@@ -164,7 +175,7 @@ Check `agents/bug-reports/INDEX.md` before investigating.
 
 **File naming convention (CRITICAL):**
 All agent-generated files MUST include a timestamp prefix for chronological ordering:
-- Format: `YYYYMMDD_<FILENAME>.md` (e.g., `20251203_FEATURE_NAME.md`)
+- Format: `YYYYMMDD_<FILENAME>.md` (e.g., `20260216_FEATURE_NAME.md`)
 - Lists newest files first when sorted alphabetically
 - Makes file age immediately visible
 - Enables easy tracking of document history
