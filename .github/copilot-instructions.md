@@ -29,6 +29,19 @@ Code requirements and development rules for the context-engine project.
 | Unclear behavior/gaps | `QUESTIONS_FOR_AUTHOR.md` |
 | Test structure/workflows/commands | `AGENTS.md` (this file) |
 
+### Documentation Validation (MCP Server + CLI Hooks)
+
+**After code changes to `tools/mcp-docs-server/`**, run validation:
+- `mcp_docs-server_validate_docs` - Check agent docs
+- `mcp_docs-server_check_stale_docs` - Detect stale crate docs
+
+**Automated via Copilot CLI hooks:** When using `copilot` CLI from this directory, the `postToolUse` hook in `.github/hooks/` will remind you to validate docs after editing MCP server source files.
+
+**To use the MCP docs server with CLI:**
+```bash
+copilot --additional-mcp-config @.github/copilot-mcp-config.json
+```
+
 ## Problem-Solving Approach
 
 ### Complex Tasks: Plan First, Execute Later
