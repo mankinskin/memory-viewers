@@ -1,0 +1,21 @@
+# Dependencies
+node_modules/
+
+# Build output (built to ../static/)
+dist/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Editor
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
