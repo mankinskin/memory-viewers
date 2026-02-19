@@ -11,6 +11,9 @@ static/index.html
 # Logs
 *.log
 
+# Config (keep .example tracked)
+log-viewer.toml
+
 # Editor
 .vscode/
 *.swp
