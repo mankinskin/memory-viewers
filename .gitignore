@@ -2,6 +2,10 @@ target/
 agents/tmp/
 node_modules/
 
+# Built frontend assets
+tools/doc-viewer/static/
+tools/log-viewer/static/
+
 # Direnv configuration for personal environment overrides
 .envrc
 
