@@ -13,12 +13,23 @@
 copilot --additional-mcp-config @.github/copilot-mcp-config.json
 ```
 
+**Consolidated CRUD-based API (6 tools):**
+
+| Tool | Purpose | Targets |
+|------|---------|---------|
+| `list` | List/browse/read | agent_docs, crate_docs, crates |
+| `search` | Search content | agent_docs, crate_docs, all |
+| `validate` | Maintenance ops | agent_docs, crate_docs, all |
+| `create` | Create docs | agent_doc, crate_module |
+| `update` | Update docs | agent_doc, crate_doc, crate_index |
+| `delete` | Delete docs | agent_doc, crate_module |
+
 **Research documentation before implementation:**
-- Use `mcp_docs-server_list_docs` to discover available documentation
-- Use `mcp_docs-server_search_docs` or `mcp_docs-server_search_content` to find relevant guides
-- Use `mcp_docs-server_read_doc` to read specific documentation files
-- Use `mcp_docs-server_list_crates` and `mcp_docs-server_browse_crate` for crate API docs
-- Always check documentation for algorithms, patterns, and expected behaviors before implementing or fixing tests
+- Use `mcp_doc-viewer-mcp_list` with `target: crates` to see available crates
+- Use `mcp_doc-viewer-mcp_list` with `target: agent_docs` to browse guides/plans
+- Use `mcp_doc-viewer-mcp_search` with `target: all` to find relevant documentation
+- Use `mcp_doc-viewer-mcp_validate` to check documentation health
+- Always check documentation for algorithms, patterns, and expected behaviors
 
 ### Automated Hooks
 
