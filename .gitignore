@@ -1,5 +1,7 @@
 target/
 agents/tmp/
+node_modules/
+
 # Direnv configuration for personal environment overrides
 .envrc
 

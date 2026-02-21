@@ -115,7 +115,9 @@ Multi-crate workspace for context analysis and graph traversal:
 - `crates/context-read/` - Context reading and expansion
 
 **Tools** (in `tools/` directory):
-- `tools/mcp-docs-server/` - MCP server for documentation management (has its own `agents/docs/`)
+- `tools/doc-viewer/` - Documentation viewer with HTTP API and MCP support (has its own `agents/docs/`)
+- `tools/log-viewer/` - Log viewer for tracing logs with JQ query support
+- `tools/viewer-api/` - Shared server infrastructure for viewer tools
 
 **Architecture:** trace → search → insert → read (each layer builds on previous)
 
