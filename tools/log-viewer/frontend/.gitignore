@@ -4,6 +4,9 @@ node_modules/
 # Build output (built to ../static/)
 dist/
 
+# Generated demo data (created by scripts/generate-demo-data.mjs)
+public/data/
+
 # Logs
 *.log
 npm-debug.log*
