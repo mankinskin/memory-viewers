@@ -15,11 +15,3 @@ tools/log-viewer/static/
 # Note: Cargo doesn't support config.local.toml - use .envrc or ~/.cargo/config.toml instead
 # Keeping this in gitignore in case someone creates it by mistake
 .cargo/config.local.toml
-
-# Local tracing configuration (use config/tracing.toml.example as template)
-config/tracing.toml
-config/tracing.*.toml
-config/test-config.toml
-# Legacy locations (still supported)
-.tracing.toml
-tracing.toml
