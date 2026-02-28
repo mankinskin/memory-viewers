@@ -1,10 +1,6 @@
 # Agent Rules & Code Requirements
 
-> **⚠️ MANDATORY: READ THIS FILE FIRST** before any code changes in this workspace.
-
 Code requirements and development rules for the context-engine project.
-
-> **AGENT RESPONSIBILITY:** Keep this file current. Update immediately when requirements change.
 
 ## Environment Guidelines
 
@@ -12,27 +8,8 @@ Code requirements and development rules for the context-engine project.
 - **Always use Unix-style paths** (forward slashes `/`) in commands, documentation, and code comments
 - **Read test logs instead of test command output for debugging** Test logs are located in `target/test-logs/` and contain the full trace output, while test command output may be truncated.
 
-## 📚 Documentation Maintenance
-
-**⚠️ CRITICAL: Update docs when changing code!**
-
-### Before Work:
-1. `CHEAT_SHEET.md` - API patterns
-2. `<crate>/HIGH_LEVEL_GUIDE.md` - concepts
-3. `QUESTIONS_FOR_AUTHOR.md` - known issues
-
-### After Changes:
-| Change Type | Update File |
-|------------|-------------|
-| API/types/patterns/macros | `CHEAT_SHEET.md` |
-| Concepts/architecture/modules | `<crate>/HIGH_LEVEL_GUIDE.md` |
-| New crate module | `<crate>/agents/docs/<module>/index.yaml` |
-| New types/traits | `<crate>/agents/docs/index.yaml` exported_items |
-| Unclear behavior/gaps | `QUESTIONS_FOR_AUTHOR.md` |
-| Test structure/workflows/commands | `AGENTS.md` (this file) |
-
 ### Documentation Validation (MCP Server)
-
+**Search Docs:** `mcp_docs-server_search_docs <query>`- Search agent docs by keyword or tag
 **After code changes**, run validation:
 - `mcp_docs-server_validate_docs` - Check agent docs
 - `mcp_docs-server_check_stale_docs` - Detect stale crate docs
