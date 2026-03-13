@@ -19,3 +19,6 @@ tools/log-viewer/demo-logs/
 # Keeping this in gitignore in case someone creates it by mistake
 .cargo/config.local.toml
 .playwright-mcp/
+
+# Local workspace data created by the CLI/REPL
+.context-engine/
