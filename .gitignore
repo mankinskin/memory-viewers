@@ -6,6 +6,9 @@ node_modules/
 tools/doc-viewer/static/
 tools/log-viewer/static/
 
+# Generated Playwright report output
+tools/ticket-viewer/frontend/playwright-report/
+
 # Generated demo logs (produced by tools/log-viewer/scripts/generate-demo-logs.sh)
 tools/log-viewer/demo-logs/
 
