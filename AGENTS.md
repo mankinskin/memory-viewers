@@ -34,7 +34,7 @@ See `.github/prompts/ticket-system.prompt.md` for the full CLI reference.
    - Claim it: `ticket claim --id <uuid> --worker-id <agent>`
    - Transition: `ticket update --id <uuid> --to-state in-progress`
    - Execute steps sequentially, verify each before proceeding
-   - When done: `ticket update --id <uuid> --to-state done`; write summary in `agents/implemented/`
+   - When done: `ticket update --id <uuid> --to-state done`; record completion notes in the ticket body
 
 **Benefits:**
 - Fresh context = more tokens for code
@@ -50,22 +50,13 @@ See `.github/prompts/ticket-system.prompt.md` for the full CLI reference.
 
 ### When Confused: Research → Document (or Ask)
 
-1. **Don't guess!** Check `agents/guides/INDEX.md` by tags first
+1. **Don't guess!** Search the ticket database first: `ticket search "<keyword>"`
 2. **Quick research:** Read source, check docs, scan tests (10-15 min max)
 3. **Still unclear? → Ask user** rather than deep rabbit holes
-4. **After user clarifies:** Document in `agents/guides/<TOPIC>_GUIDE.md`:
-   - Problem description + root cause
-   - Correct/incorrect examples
-   - Common mistakes + fixes
-   - Related files + migration checklist
-5. **Update index:** Add to `agents/guides/INDEX.md` (or note "TODO" if urgent)
-
-**When to defer to user:**
-- Research taking >15 minutes without clarity
-- Multiple plausible interpretations
-- Contradictory expectations or evidence
-- Domain-specific knowledge needed
-- Architecture decisions required
+4. **After user clarifies:** Create a ticket capturing the finding:
+   - `ticket create --title "Guide: <topic>" --state done --field component=<crate> --field workflow_stage=design --body-file <temp-doc.md>`
+   - This makes it searchable by future agents
+5. Key patterns and gotchas also belong in `CHEAT_SHEET.md`
 
 ### Context-First Strategy
 
@@ -81,7 +72,12 @@ See `.github/prompts/ticket-system.prompt.md` for the full CLI reference.
 
 **Context sources:** `ls`/`find` → docs → tests → `target/test-logs/` → `git log -p` → ask user
 
-**Red flags:** Repeated failures, unclear values, uncertain ownership, many unknown refs
+**When to defer to user:**
+- Research taking >15 minutes without clarity
+- Multiple plausible interpretations
+- Contradictory expectations or evidence
+- Domain-specific knowledge needed
+- Architecture decisions required
 
 ## Project Structure
 
@@ -94,7 +90,7 @@ Multi-crate workspace for context analysis and graph traversal:
 - `crates/context-read/` - Context reading and expansion
 
 **Tools** (in `tools/` directory):
-- `tools/doc-viewer/` - Documentation viewer with HTTP API and MCP support (has its own `agents/docs/`)
+- `tools/doc-viewer/` - Documentation viewer with HTTP API and MCP support
 - `tools/log-viewer/` - Log viewer for tracing logs with JQ query support
 - `tools/viewer-api/` - Shared server infrastructure for viewer tools
 
@@ -106,14 +102,13 @@ Multi-crate workspace for context analysis and graph traversal:
 
 **Priority order:**
 1. **`CHEAT_SHEET.md`** - Types, patterns, gotchas (START HERE)
-2. **`agents/guides/INDEX.md`** - How-to guides by topic
-3. **`crates/<crate>/agents/docs/`** - API documentation (via MCP tools)
-4. `crates/<crate>/HIGH_LEVEL_GUIDE.md` - Concepts, design
-5. `crates/<crate>/README.md` - Purpose, API overview
-6. `crates/<crate>/src/tests/` - Usage examples
-7. `agents/bug-reports/INDEX.md` - Known issues
-8. `QUESTIONS_FOR_AUTHOR.md` - Unclear topics
-9. `cargo doc --package <crate>` - Generated docs
+2. **`crates/<crate>/agents/docs/`** - API documentation (via MCP tools)
+3. `crates/<crate>/HIGH_LEVEL_GUIDE.md` - Concepts, design
+4. `crates/<crate>/README.md` - Purpose, API overview
+5. `crates/<crate>/src/tests/` - Usage examples
+6. `QUESTIONS_FOR_AUTHOR.md` - Unclear topics
+7. `cargo doc --package <crate>` - Generated docs
+8. `ticket search "<keywords>"` - Search all tracked issues, plans, and bugs
 
 ## Testing & Debugging
 
@@ -134,46 +129,35 @@ LOG_STDOUT=1 LOG_FILTER=trace cargo test -p <crate> -- --nocapture
 
 ## Bug Reports
 
-Check `agents/bug-reports/INDEX.md` before investigating.
+File bugs as tickets:
+```bash
+ticket create --title "Bug: <component> — <symptom>" --state open \
+  --field component=<crate> --field risk_level=<high|medium|low> \
+  --field "acceptance_criteria=Root cause identified; fix verified; regression test added" \
+  [--body-file <analysis.md>]
+```
 
-**Format:** `agents/bug-reports/YYYYMMDD_BUG_<component>_<desc>.md` with: Summary, Root Cause, Evidence, Fix Options, Related Files
+Search known issues: `ticket search "<symptom>"` or `ticket list --state open`
 
-**After creating:** Add entry to `agents/bug-reports/INDEX.md` with tags and summary
+See `.github/prompts/ticket-system.prompt.md` for the full bug workflow.
 
-**After fixing:** Update guides in `agents/guides/`, archive/update bug report in INDEX.md, document pattern
+## Agentic Workflow
 
-## Agentic Workflow Organization
-
-**Use `agents/` directory to keep repository organized. See `agents/README.md` for complete guide.**
-
-**Directory structure:**
-- `agents/guides/` - How-to guides and troubleshooting (commit these)
-- `agents/implemented/` - Completed feature documentation (commit these)
-- `agents/bug-reports/` - Known issues and analyses (commit these)
-- `agents/analysis/` - Algorithm analysis and comparisons (commit these)
-- `agents/tmp/` - Temporary scratch files (never commit)
-- ~~`agents/plans/`~~ — **Replaced by the ticket database** (`.ticket/`). Use `ticket create --body-file` to embed plan docs.
-
-**File naming convention (CRITICAL):**
-All agent-generated files MUST include a timestamp prefix for chronological ordering:
-- Format: `YYYYMMDD_<FILENAME>.md` (e.g., `20260216_FEATURE_NAME.md`)
-- Lists newest files first when sorted alphabetically
-- Makes file age immediately visible
-- Enables easy tracking of document history
+All task tracking, planning, bug reports, and design decisions live in the ticket database.
+See `.github/prompts/ticket-system.prompt.md` for the complete workflow.
 
 **Quick decision tree:**
-- Confused? → Check `agents/guides/INDEX.md` → Research 10-15min → Still unclear? Ask user → Document in `agents/guides/` + **update INDEX.md**
-- Large task (>5 files)? → `ticket create --title "..." --body-file <plan.md>` → Execute later → Summary in `agents/implemented/` + **update INDEX.md**
-- Found bug? → `ticket create` + document in `agents/bug-reports/` + **update INDEX.md** → After fix, update `agents/guides/`
-- Feature done? → `ticket update --to-state done` + write summary in `agents/implemented/` + **update INDEX.md**
+- Confused? → `ticket search "<keyword>"` → Read source/tests 10-15 min → Still unclear? Ask user → capture finding as a `done` ticket with body
+- Large task (>5 files)? → `ticket create --title "Plan: ..."` with body doc → wire deps → execute → `ticket update --to-state done`
+- Found bug? → `ticket create --title "Bug: ..."` → fix → validate → `done`
+- Feature done? → `ticket update --id <uuid> --to-state done`
 
-**Move findings from tmp/ to:** CHEAT_SHEET.md (patterns) | HIGH_LEVEL_GUIDE.md (concepts) | `agents/guides/` (how-tos) | QUESTIONS_FOR_AUTHOR.md (questions)
-
-**Full documentation:** `agents/README.md` - Master index with when-to-use guide for each directory
+**Scratch work** goes in a local temp file; never commit ephemeral notes.
+**Key patterns/gotchas** go in `CHEAT_SHEET.md`.
 
 ## Key Docs by Crate
 
 - **crates/context-trace/:** HIGH_LEVEL_GUIDE.md (graph, paths, tracing, cache)
 - **crates/context-search/:** HIGH_LEVEL_GUIDE.md (search, Response API, patterns)
 - **crates/context-insert/:** HIGH_LEVEL_GUIDE.md (split-join, InitInterval, insertion)
-- **Root:** README.md, CHEAT_SHEET.md, QUESTIONS_FOR_AUTHOR.md, `agents/README.md`
+- **Root:** README.md, CHEAT_SHEET.md, QUESTIONS_FOR_AUTHOR.md
