@@ -18,29 +18,31 @@ Code requirements and development rules for the context-engine project.
 
 ### Complex Tasks: Plan First, Execute Later
 
-**For multi-file refactors, large features, or architectural changes:**
+**For multi-file refactors, large features, or architectural changes, use the ticket system.**
+See `.github/prompts/ticket-system.prompt.md` for the full CLI reference.
 
 1. **Planning session (research-focused):**
-   - Create `agents/plans/PLAN_<task_name>.md` (use template in `agents/plans/`)
-   - Include: Objective, Context, Analysis, Execution steps, Risks, Validation
+   - Create a ticket: `ticket create --title "<task>" --state open --field component=<crate> --field risk_level=<level> --field "acceptance_criteria=<done condition>" [--body-file <plan.md>]`
+   - Include objective, context, analysis, execution steps, risks, and validation in the body
    - Gather ALL context before planning
    - Ask user to clarify unknowns
-   - Don't implement yet - just plan
+   - Don't implement yet — just plan
+   - Wire dependencies: `ticket link --from <this> --to <blocker> --kind depends_on`
 
 2. **Execution session (fresh context):**
-   - Load plan from `agents/plans/`
-   - Execute steps sequentially
-   - Verify each step before proceeding
-   - Update plan if deviations needed
-   - Mark completed items
-   - When done: Create summary in `agents/implemented/`, update INDEX.md, keep or archive plan
+   - Load plan: `ticket get --id <uuid>` (body contains full plan doc)
+   - Claim it: `ticket claim --id <uuid> --worker-id <agent>`
+   - Transition: `ticket update --id <uuid> --to-state in-progress`
+   - Execute steps sequentially, verify each before proceeding
+   - When done: `ticket update --id <uuid> --to-state done`; write summary in `agents/implemented/`
 
 **Benefits:**
 - Fresh context = more tokens for code
 - Complete picture before starting
-- Parallel execution possible (multiple agents)
+- Parallel execution possible (multiple agents with leases)
+- Dependency graph enforced (acyclic, queryable)
 - Recoverable from failures
-- User can review plan before execution
+- User can review plan: `ticket list --state open`
 
 **When to use:** >5 files affected, >100 lines changed, or unclear scope
 
@@ -146,11 +148,11 @@ Check `agents/bug-reports/INDEX.md` before investigating.
 
 **Directory structure:**
 - `agents/guides/` - How-to guides and troubleshooting (commit these)
-- `agents/plans/` - Task plans before execution (commit active plans)
 - `agents/implemented/` - Completed feature documentation (commit these)
 - `agents/bug-reports/` - Known issues and analyses (commit these)
 - `agents/analysis/` - Algorithm analysis and comparisons (commit these)
 - `agents/tmp/` - Temporary scratch files (never commit)
+- ~~`agents/plans/`~~ — **Replaced by the ticket database** (`.ticket/`). Use `ticket create --body-file` to embed plan docs.
 
 **File naming convention (CRITICAL):**
 All agent-generated files MUST include a timestamp prefix for chronological ordering:
@@ -161,9 +163,9 @@ All agent-generated files MUST include a timestamp prefix for chronological orde
 
 **Quick decision tree:**
 - Confused? → Check `agents/guides/INDEX.md` → Research 10-15min → Still unclear? Ask user → Document in `agents/guides/` + **update INDEX.md**
-- Large task (>5 files)? → Create plan in `agents/plans/` → Execute later → Summary in `agents/implemented/` + **update INDEX.md**
-- Found bug? → Document in `agents/bug-reports/` + **update INDEX.md** → After fix, update `agents/guides/`
-- Feature done? → Write summary in `agents/implemented/` + **update INDEX.md**
+- Large task (>5 files)? → `ticket create --title "..." --body-file <plan.md>` → Execute later → Summary in `agents/implemented/` + **update INDEX.md**
+- Found bug? → `ticket create` + document in `agents/bug-reports/` + **update INDEX.md** → After fix, update `agents/guides/`
+- Feature done? → `ticket update --to-state done` + write summary in `agents/implemented/` + **update INDEX.md**
 
 **Move findings from tmp/ to:** CHEAT_SHEET.md (patterns) | HIGH_LEVEL_GUIDE.md (concepts) | `agents/guides/` (how-tos) | QUESTIONS_FOR_AUTHOR.md (questions)
 
