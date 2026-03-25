@@ -3,16 +3,21 @@
 /* Ticket Viewer — base styles */
 
 :root {
+  /* Fallbacks — overridden at runtime by createThemeStore CSS injection */
   --bg-primary: #1a1b26;
   --bg-secondary: #1e2030;
-  --bg-panel: #222436;
+  --bg-tertiary: #222436;
   --border-color: #2f3354;
   --text-primary: #c0caf5;
   --text-secondary: #787c99;
-  --accent: #7aa2f7;
-  --accent-hover: #89b4fa;
-  --tab-active-bg: #2a2e47;
-  --tab-hover-bg: #252840;
+  --accent-blue: #7aa2f7;
+
+  /* Local aliases bridging viewer-api variable names */
+  --bg-panel: var(--bg-tertiary);
+  --accent: var(--accent-blue);
+  --accent-hover: color-mix(in srgb, var(--accent-blue) 85%, white);
+  --tab-active-bg: var(--bg-hover, #2a2e47);
+  --tab-hover-bg: var(--bg-active, #252840);
   --error-bg: #3d1a1a;
   --error-text: #fc8181;
   --sidebar-width: 280px;
@@ -37,7 +42,49 @@ html, body, #app { font-family: system-ui, sans-serif; }
   border-bottom: 1px solid var(--border-color);
 }
 .app-header__title { font-weight: 700; font-size: 15px; color: var(--accent); }
-.app-header__workspace { font-size: 12px; color: var(--text-secondary); }
+.app-header__workspace { font-size: 12px; color: var(--text-secondary); flex: 1; }
+
+.header-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.header-icon-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover, rgba(255,255,255,0.06));
+  border-color: var(--border-color);
+}
+.header-icon-btn svg { width: 16px; height: 16px; }
+
+/* ── Theme overlay ────────────────────────────────────────────────────────── */
+
+.theme-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.theme-overlay__panel {
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  max-width: 90vw;
+  max-height: 85vh;
+  overflow: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
 
 /* ── Global error banner ──────────────────────────────────────────────────── */
 
