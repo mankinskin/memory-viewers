@@ -26,8 +26,8 @@ const MOCK_TICKETS = {
     {
       id: TICKET_ID,
       type: 'tracker-improvement',
-      title: 'First open ticket',
-      state: 'open',
+      title: 'First new ticket',
+      state: 'new',
       updated_at: '2026-01-01T00:00:00Z',
       fields: { component: 'ui' },
     },
@@ -50,8 +50,8 @@ const MOCK_TICKET_DETAIL = {
     id: TICKET_ID,
     created_at: '2026-01-01T00:00:00Z',
     fields: {
-      title: 'First open ticket',
-      state: 'open',
+      title: 'First new ticket',
+      state: 'new',
       component: 'ui',
       acceptance_criteria: 'It works',
     },
@@ -62,7 +62,7 @@ const MOCK_DESCRIPTION = {
   request_id: 'r4',
   workspace: WORKSPACE,
   id: TICKET_ID,
-  description: '# First open ticket\n\nThis ticket does something **useful**.',
+  description: '# First new ticket\n\nThis ticket does something **useful**.',
 };
 
 const MOCK_EDGES = {
@@ -77,8 +77,8 @@ const MOCK_SUBGRAPH = {
     nodes: [
         {
             id: TICKET_ID,
-            title: 'First open ticket',
-            state: 'open',
+        title: 'First new ticket',
+        state: 'new',
             depth: 0,
         },
         {
@@ -176,7 +176,7 @@ test.describe('ticket-viewer app', () => {
 
     // State group labels — exact text match via regex.
     await expect(
-      page.locator('.tree-label').filter({ hasText: /^open$/ }).first(),
+      page.locator('.tree-label').filter({ hasText: /^new$/ }).first(),
     ).toBeVisible();
     await expect(
       page.locator('.tree-label').filter({ hasText: /^done$/ }).first(),
@@ -184,7 +184,7 @@ test.describe('ticket-viewer app', () => {
 
     // Individual ticket nodes.
     await expect(
-      page.locator('.tree-label', { hasText: 'First open ticket' }),
+      page.locator('.tree-label', { hasText: 'First new ticket' }),
     ).toBeVisible();
     await expect(
       page.locator('.tree-label', { hasText: 'A done ticket' }),
@@ -254,12 +254,12 @@ test.describe('ticket-viewer app', () => {
       page.locator('.tree-label', { hasText: 'A done ticket' }),
     ).toBeVisible();
 
-    // The open group and its ticket are removed from the tree.
+    // The new group and its ticket are removed from the tree.
     await expect(
-      page.locator('.tree-label').filter({ hasText: /^open$/ }),
+      page.locator('.tree-label').filter({ hasText: /^new$/ }),
     ).not.toBeVisible();
     await expect(
-      page.locator('.tree-label', { hasText: 'First open ticket' }),
+      page.locator('.tree-label', { hasText: 'First new ticket' }),
     ).not.toBeVisible();
   });
 
@@ -267,7 +267,7 @@ test.describe('ticket-viewer app', () => {
     page,
   }) => {
     const ticketNode = page.locator('.tree-item-row').filter({
-      has: page.locator('.tree-label', { hasText: 'First open ticket' }),
+      has: page.locator('.tree-label', { hasText: 'First new ticket' }),
     });
     await expect(ticketNode).toBeVisible();
     await ticketNode.click();
@@ -284,7 +284,7 @@ test.describe('ticket-viewer app', () => {
     // Rendered markdown is present.
     const markdown = page.locator('.ticket-content__markdown');
     await expect(markdown).toBeVisible();
-    await expect(markdown.locator('h1')).toHaveText('First open ticket');
+    await expect(markdown.locator('h1')).toHaveText('First new ticket');
     await expect(markdown.locator('strong')).toHaveText('useful');
   });
 
@@ -292,7 +292,7 @@ test.describe('ticket-viewer app', () => {
     // Open a ticket first.
     await page
       .locator('.tree-item-row')
-      .filter({ has: page.locator('.tree-label', { hasText: 'First open ticket' }) })
+      .filter({ has: page.locator('.tree-label', { hasText: 'First new ticket' }) })
       .click();
     await expect(page.locator('.ticket-content')).toBeVisible();
 
@@ -330,12 +330,12 @@ test.describe('ticket-viewer app', () => {
     }) => {
         await page
             .locator('.tree-item-row')
-            .filter({ has: page.locator('.tree-label', { hasText: 'First open ticket' }) })
+          .filter({ has: page.locator('.tree-label', { hasText: 'First new ticket' }) })
             .click();
 
         await expect(page.locator('.graph-view__svg')).toBeVisible();
         await expect(page.locator('.graph-view__node-label')).toContainText([
-            'First open ticket',
+          'First new ticket',
             'A done ticket',
         ]);
     });
@@ -354,7 +354,7 @@ test.describe('ticket-viewer app', () => {
 
         await page
             .locator('.tree-item-row')
-            .filter({ has: page.locator('.tree-label', { hasText: 'First open ticket' }) })
+          .filter({ has: page.locator('.tree-label', { hasText: 'First new ticket' }) })
             .click();
 
         const error = page.locator('.graph-view__error');

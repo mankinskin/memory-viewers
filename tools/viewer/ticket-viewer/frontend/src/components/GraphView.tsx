@@ -5,13 +5,13 @@ import { authToken, openTicketId, selectedWorkspace } from '../store';
 import type { SubgraphNode, SubgraphResponse } from '../types';
 
 const STATE_COLORS: Record<string, string> = {
-  open: '#4a9eff',
-  'in-progress': '#f0a500',
-  review: '#9b7fe8',
-  validating: '#63b3ed',
-  validated: '#48bb78',
+  new: '#4a9eff',
+  'in-refinement': '#63b3ed',
+  ready: '#48bb78',
+  'in-implementation': '#f0a500',
+  'in-review': '#9b7fe8',
+  'in-validation': '#e5a84b',
   done: '#68d391',
-  blocked: '#fc8181',
   cancelled: '#a0aec0',
 };
 

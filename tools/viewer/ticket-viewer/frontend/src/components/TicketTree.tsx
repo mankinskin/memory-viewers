@@ -28,13 +28,13 @@ import { getTicket, getTicketDescription } from '../api';
 import type { TicketSummary } from '../types';
 
 const STATE_BADGE_COLORS: Record<string, string> = {
-  open: '#4a9eff',
-  'in-progress': '#f0a500',
-  review: '#9b7fe8',
-  validating: '#63b3ed',
-  validated: '#48bb78',
+  new: '#4a9eff',
+  'in-refinement': '#63b3ed',
+  ready: '#48bb78',
+  'in-implementation': '#f0a500',
+  'in-review': '#9b7fe8',
+  'in-validation': '#e5a84b',
   done: '#68d391',
-  blocked: '#fc8181',
   cancelled: '#a0aec0',
 };
 
@@ -45,8 +45,8 @@ const TICKET_SORT_OPTIONS: SortOption[] = [
 ];
 
 const stateOrder = [
-  'open', 'in-progress', 'review', 'validating', 'validated',
-  'done', 'blocked', 'cancelled', 'unknown',
+  'new', 'in-refinement', 'ready', 'in-implementation', 'in-review',
+  'in-validation', 'done', 'cancelled', 'unknown',
 ];
 
 function stateBadge(state: string | null): string | undefined {

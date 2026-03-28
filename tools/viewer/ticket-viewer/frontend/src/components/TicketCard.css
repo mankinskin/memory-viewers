@@ -34,15 +34,15 @@
 }
 
 /* State-specific colours */
-.ticket-state-badge--open        { background: rgba(80, 160, 255, 0.2); color: #60a8ff; }
-.ticket-state-badge--in-progress { background: rgba(255, 180, 60,  0.2); color: #ffb840; }
-.ticket-state-badge--done        { background: rgba(80, 200, 120,  0.2); color: #60c880; }
-.ticket-state-badge--blocked     { background: rgba(255, 80,  60,  0.2); color: #ff7060; }
-.ticket-state-badge--cancelled   { background: rgba(150, 150, 150, 0.2); color: #aaa; }
-.ticket-state-badge--review      { background: rgba(160, 80,  255, 0.2); color: #b060ff; }
-.ticket-state-badge--validating  { background: rgba(160, 80,  255, 0.2); color: #b060ff; }
-.ticket-state-badge--validated   { background: rgba(80,  200, 200, 0.2); color: #60c8c8; }
-.ticket-state-badge--unknown     { background: rgba(150, 150, 150, 0.1); color: #888; }
+.ticket-state-badge--new             { background: rgba(80, 160, 255, 0.2); color: #60a8ff; }
+.ticket-state-badge--in-refinement   { background: rgba(100, 180, 240, 0.2); color: #63b3ed; }
+.ticket-state-badge--ready           { background: rgba(80, 200, 120,  0.2); color: #60c880; }
+.ticket-state-badge--in-implementation { background: rgba(255, 180, 60,  0.2); color: #ffb840; }
+.ticket-state-badge--in-review       { background: rgba(160, 80,  255, 0.2); color: #b060ff; }
+.ticket-state-badge--in-validation   { background: rgba(230, 170, 75,  0.2); color: #e5a84b; }
+.ticket-state-badge--done            { background: rgba(80, 200, 120,  0.2); color: #60c880; }
+.ticket-state-badge--cancelled       { background: rgba(150, 150, 150, 0.2); color: #aaa; }
+.ticket-state-badge--unknown         { background: rgba(150, 150, 150, 0.1); color: #888; }
 
 /* ── Short ID ── */
 .ticket-short-id {
