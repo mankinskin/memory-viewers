@@ -6,15 +6,18 @@
  * not yet initialized.
  */
 import { JSX } from 'preact';
-import { useEffect, useState, useMemo } from 'preact/hooks';
+import { useEffect, useState, useMemo, useCallback } from 'preact/hooks';
+import type { ComponentChildren } from 'preact';
 import {
     HypergraphViewCore,
     overlayGpu,
+    type LayoutNode,
 } from '@context-engine/viewer-api-frontend';
 import { getSubgraph } from '../api';
 import { authToken, openTicketId, selectedWorkspace } from '../store';
 import type { SubgraphResponse } from '../types';
 import { GraphView } from './GraphView';
+import { TicketCard } from './TicketCard';
 
 // ── Color palettes ──
 
@@ -92,6 +95,13 @@ export function DependencyGraph(): JSX.Element {
         return { nodes, edges };
     }, [data]);
 
+    // Custom node renderer: ticket cards instead of default atom badges.
+    const renderNode = useCallback((node: LayoutNode): ComponentChildren => {
+        const ticket = data?.nodes[node.index];
+        if (!ticket) return <span class="ticket-card-fallback">{node.label}</span>;
+        return <TicketCard ticket={ticket} isRoot={ticket.id === rootId} />;
+    }, [data, rootId]);
+
     // ── Fallback: no WebGPU or overlay not yet ready ──
     if (!canUse3D) {
         return <GraphView />;
@@ -136,6 +146,7 @@ export function DependencyGraph(): JSX.Element {
                             autoLayout={false}
                             snapshotEdges={snapshot.edges}
                             stepKey=""
+                            renderNode={renderNode}
                         />
                     </div>
                 )}
