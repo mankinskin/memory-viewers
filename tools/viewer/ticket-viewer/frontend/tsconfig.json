@@ -18,7 +18,13 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@context-engine/types": [
+        "../../log-viewer/frontend/src/types/generated/index.ts"
+      ]
+    }
   },
   "include": ["src"]
 }

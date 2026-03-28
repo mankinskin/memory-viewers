@@ -1,17 +1,15 @@
 /**
  * DependencyGraph — GPU-accelerated 3D dependency graph for ticket-viewer.
  *
- * Uses Graph3DView from viewer-api when WebGPU is available; falls back to the
- * SVG-based GraphView when WebGPU is not supported or the overlay is not yet
- * initialized.
+ * Uses HypergraphViewCore from viewer-api when WebGPU is available; falls back
+ * to the SVG-based GraphView when WebGPU is not supported or the overlay is
+ * not yet initialized.
  */
 import { JSX } from 'preact';
-import { useEffect, useState, useCallback, useMemo } from 'preact/hooks';
+import { useEffect, useState, useMemo } from 'preact/hooks';
 import {
-    Graph3DView,
+    HypergraphViewCore,
     overlayGpu,
-    type Graph3DNode,
-    type Graph3DEdge,
 } from '@context-engine/viewer-api-frontend';
 import { getSubgraph } from '../api';
 import { authToken, openTicketId, selectedWorkspace } from '../store';
@@ -19,23 +17,6 @@ import type { SubgraphResponse } from '../types';
 import { GraphView } from './GraphView';
 
 // ── Color palettes ──
-
-const STATE_COLORS: Record<string, string> = {
-    open: '#4a9eff',
-    'in-progress': '#f0a500',
-    review: '#9b7fe8',
-    validating: '#63b3ed',
-    validated: '#48bb78',
-    done: '#68d391',
-    blocked: '#fc8181',
-    cancelled: '#a0aec0',
-};
-
-const EDGE_COLORS: Record<string, string> = {
-    depends_on: '#4a9eff',
-    blocks: '#fc8181',
-    linked: '#a0aec0',
-};
 
 // ── Helpers ──
 
@@ -91,29 +72,25 @@ export function DependencyGraph(): JSX.Element {
         };
     }, [canUse3D, workspace, rootId, token]);
 
-    const g3dNodes = useMemo<Graph3DNode[]>(() => {
-        if (!data) return [];
-        return data.nodes.map((n) => ({
-            id: n.id,
+    // Map SubgraphResponse to GraphSnapshot (index-based node/edge format).
+    const snapshot = useMemo(() => {
+        if (!data || data.nodes.length === 0) return null;
+        const idToIndex = new Map(data.nodes.map((n, i) => [n.id, i]));
+        const nodes = data.nodes.map((n, i) => ({
+            index: i,
             label: n.title?.trim() || n.id.slice(0, 8),
-            color: STATE_COLORS[n.state ?? ''] ?? '#6e7aa2',
-            // Root ticket is displayed larger (depth 0 = root)
-            size: n.depth === 0 ? 3 : 1,
+            width: 1,
         }));
+        const edges = data.edges
+            .filter((e) => idToIndex.has(e.from) && idToIndex.has(e.to))
+            .map((e, j) => ({
+                from: idToIndex.get(e.from)!,
+                to: idToIndex.get(e.to)!,
+                pattern_idx: 0,
+                sub_index: j,
+            }));
+        return { nodes, edges };
     }, [data]);
-
-    const g3dEdges = useMemo<Graph3DEdge[]>(() => {
-        if (!data) return [];
-        return data.edges.map((e) => ({
-            source: e.from,
-            target: e.to,
-            color: EDGE_COLORS[e.kind],
-        }));
-    }, [data]);
-
-    const handleNodeClick = useCallback((node: Graph3DNode) => {
-        openTicketId.value = node.id;
-    }, []);
 
     // ── Fallback: no WebGPU or overlay not yet ready ──
     if (!canUse3D) {
@@ -147,17 +124,18 @@ export function DependencyGraph(): JSX.Element {
                     </p>
                 )}
 
-                {rootId && !loading && !error && data && data.nodes.length > 0 && (
+                {rootId && !loading && !error && snapshot && (
                     <div
                         class="graph-view__canvas-wrap"
                         style={{ position: 'relative', width: '100%', height: '100%' }}
                     >
-                        <Graph3DView
-                            nodes={g3dNodes}
-                            edges={g3dEdges}
-                            onNodeClick={handleNodeClick}
-                            selectedNodeId={rootId}
-                            layoutMode="hierarchical"
+                        <HypergraphViewCore
+                            snapshot={snapshot}
+                            currentEvent={null}
+                            searchPath={null}
+                            autoLayout={false}
+                            snapshotEdges={snapshot.edges}
+                            stepKey=""
                         />
                     </div>
                 )}

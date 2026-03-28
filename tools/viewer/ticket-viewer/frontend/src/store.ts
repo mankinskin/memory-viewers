@@ -5,7 +5,8 @@
 //   2. Tree: ticket list for the current workspace, filter/search.
 //   3. Panel: the open ticket + active tab.
 
-import { signal, computed } from '@preact/signals';
+import { signal, computed, effect } from '@preact/signals';
+import { createUrlStateManager } from '@context-engine/viewer-api-frontend';
 import type { SortState } from '@context-engine/viewer-api-frontend';
 import type { TicketDetail, TicketSummary, TabId, WorkspaceInfo } from './types';
 
@@ -120,3 +121,78 @@ export function persistWorkspaceState(ws: string) {
     activeTab: activeTab.value,
   });
 }
+
+// ── URL Hash Routing ──────────────────────────────────────────────────────────
+
+interface TicketViewerUrlState {
+  workspace: string;
+  ticketId: string | null;
+}
+
+const urlStateManager = createUrlStateManager<TicketViewerUrlState>({
+  stateToHash(state) {
+    // /ws/<workspace> or /ws/<workspace>/ticket/<ticketId>
+    const base = '/ws/' + encodeURIComponent(state.workspace);
+    return state.ticketId
+      ? base + '/ticket/' + encodeURIComponent(state.ticketId)
+      : base;
+  },
+  hashToState(hash) {
+    const path = hash.startsWith('/') ? hash.slice(1) : hash;
+    if (!path.startsWith('ws/')) return null;
+    const rest = path.slice(3); // after "ws/"
+    if (!rest) return null;
+
+    const ticketIdx = rest.indexOf('/ticket/');
+    if (ticketIdx >= 0) {
+      const workspace = decodeURIComponent(rest.slice(0, ticketIdx));
+      const ticketId = decodeURIComponent(rest.slice(ticketIdx + 8));
+      return workspace && ticketId ? { workspace, ticketId } : null;
+    }
+    const workspace = decodeURIComponent(rest);
+    return workspace ? { workspace, ticketId: null } : null;
+  },
+  onNavigate(state) {
+    // Only navigate if workspace actually changed, to avoid
+    // redundant reloads when only ticketId changes.
+    if (selectedWorkspace.value !== state.workspace) {
+      selectedWorkspace.value = state.workspace;
+    }
+    openTicketId.value = state.ticketId;
+  },
+  getCurrentState() {
+    const ws = selectedWorkspace.value;
+    if (!ws) return null;
+    return { workspace: ws, ticketId: openTicketId.value };
+  },
+  statesEqual(a, b) {
+    return a.workspace === b.workspace && a.ticketId === b.ticketId;
+  },
+});
+
+/** Update the URL hash when workspace or open ticket changes. */
+export function updateUrlHash(): void {
+  const ws = selectedWorkspace.value;
+  if (!ws) return;
+  urlStateManager.updateHash({ workspace: ws, ticketId: openTicketId.value });
+}
+
+/** Read workspace + ticket state from the current URL hash. */
+export function getStateFromUrl(): TicketViewerUrlState | null {
+  return urlStateManager.getStateFromUrl();
+}
+
+/** Start listening for hashchange/popstate events. Call once on app init. */
+export function initUrlListener(): void {
+  urlStateManager.initListener();
+}
+
+// Auto-sync URL hash whenever workspace or ticket selection changes.
+// The urlStateManager guard prevents loops when navigating from URL.
+effect(() => {
+  const ws = selectedWorkspace.value;
+  // Track openTicketId so the effect re-runs when the ticket changes.
+  openTicketId.value;
+  if (!ws) return;
+  updateUrlHash();
+});

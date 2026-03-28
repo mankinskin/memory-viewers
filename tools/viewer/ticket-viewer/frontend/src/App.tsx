@@ -25,6 +25,10 @@ import {
   tickets,
   ticketsLoading,
   restoreWorkspaceState,
+  initUrlListener,
+  getStateFromUrl,
+  updateUrlHash,
+  openTicketId,
 } from './store';
 import { listWorkspaces, listTickets } from './api';
 
@@ -36,31 +40,43 @@ export function App(): JSX.Element {
   // Ensure theme store module is initialised on first render.
   void themeSettingsStore;
 
-  // Load workspace list on mount.
+  // Load workspace list on mount and restore URL or localStorage state.
   useEffect(() => {
+    initUrlListener();
+
     async function load() {
       workspacesLoading.value = true;
       try {
         const resp = await listWorkspaces(authToken.value || undefined);
         workspaces.value = resp.workspaces;
 
-        // Auto-select first workspace if none saved.
-        if (!selectedWorkspace.value && resp.workspaces.length > 0) {
-          const first = resp.workspaces[0].name;
-          selectedWorkspace.value = first;
-          restoreWorkspaceState(first);
+        // Prefer URL hash state; fall back to auto-selecting the first workspace.
+        const urlState = getStateFromUrl();
+        const targetWorkspace = urlState?.workspace ||
+          (resp.workspaces.length > 0 ? resp.workspaces[0].name : '');
+
+        if (targetWorkspace) {
+          selectedWorkspace.value = targetWorkspace;
+          restoreWorkspaceState(targetWorkspace);
 
           ticketsLoading.value = true;
           try {
             const ticketResp = await listTickets(
-              first,
+              targetWorkspace,
               {},
               authToken.value || undefined,
             );
             tickets.value = ticketResp.items;
+
+            // If URL specified a ticketId, open it after tickets load.
+            if (urlState?.ticketId) {
+              openTicketId.value = urlState.ticketId;
+            }
           } finally {
             ticketsLoading.value = false;
           }
+
+          updateUrlHash();
         }
       } catch (e) {
         globalError.value = String(e);

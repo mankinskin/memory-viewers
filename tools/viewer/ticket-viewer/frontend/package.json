@@ -11,6 +11,7 @@
     "test:e2e:ui": "playwright test --ui"
   },
   "dependencies": {
+    "@context-engine/types": "file:../../../packages/context-types",
     "@context-engine/viewer-api-frontend": "file:../../viewer-api/frontend",
     "@preact/signals": "^1.2.2",
     "marked": "^11.0.0",

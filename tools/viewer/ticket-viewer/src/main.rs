@@ -95,19 +95,25 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Ticket Viewer starting (single-process mode)"
     );
 
-    // Open the ticket store directly.
     let index_root = options.index_root.unwrap_or_else(|| {
         let (path, _source) = ticket_api::workspace::resolve_workspace();
         path
     });
-    let store = TicketStore::open(&index_root).expect("failed to open ticket store");
 
     // Build the workspace registry.
+    //
+    // Only open a TicketStore directly when we need a `single_opened` registry
+    // (explicit --workspace flag, or no workspaces configured at all). In the
+    // multi-workspace case, the registry opens each workspace lazily so we
+    // never strand an unused TicketStore that would hold a TantivySearchIndex
+    // and a RedbIndexStore alive for the server's entire lifetime.
     let registry = if options.workspace.is_some() {
+        let store = TicketStore::open(&index_root).expect("failed to open ticket store");
         WorkspaceRegistry::single_opened(Arc::new(store))
     } else {
         let config = WorkspaceConfig::load();
         if config.workspaces.is_empty() {
+            let store = TicketStore::open(&index_root).expect("failed to open ticket store");
             WorkspaceRegistry::single_opened(Arc::new(store))
         } else {
             WorkspaceRegistry::from_config(&config)
