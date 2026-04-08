@@ -1,0 +1,32 @@
+[package]
+name = "ticket-viewer-dioxus"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "ticket-viewer-dioxus"
+path = "src/main.rs"
+
+[dependencies]
+# Dioxus platform
+dioxus = { version = "0.7", features = ["web", "router"] }
+
+# Shared viewer-api platform shell (WebGPU canvas + overlay layout)
+viewer-api-dioxus = { path = "../../viewer-api-dioxus" }
+
+# HTTP client for the browser fetch API
+gloo-net = { version = "0.6", features = ["http"] }
+
+# Async support
+wasm-bindgen-futures = "0.4"
+
+# Serialization — matches the ticket-http REST responses
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# URL encoding for building query strings
+percent-encoding = "2"
+
+# Logging in WASM
+tracing = "0.1"
+tracing-wasm = "0.2"
