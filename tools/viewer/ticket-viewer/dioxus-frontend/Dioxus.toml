@@ -21,3 +21,6 @@ script = []
 [web.resource.dev]
 style = []
 script = []
+
+[[web.proxy]]
+backend = "http://localhost:3002/api/"
