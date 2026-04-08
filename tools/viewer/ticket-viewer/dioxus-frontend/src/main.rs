@@ -1,4 +1,6 @@
 mod backend;
+mod components;
+mod graph;
 mod routes;
 
 use dioxus::prelude::*;
