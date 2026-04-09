@@ -4,10 +4,12 @@
 //!
 //!   /                         → WorkspacePickerPage (list workspaces)
 //!   /workspace/:ws            → TicketListPage (tickets in workspace)
+//!   /workspace/:ws/new        → NewTicketPage (create ticket — modal overlay)
 //!   /workspace/:ws/ticket/:id → TicketDetailPage (single ticket + dep graph)
 
 use dioxus::prelude::*;
 
+use crate::components::create_ticket::CreateTicketModal;
 use crate::components::dep_graph::DepGraph;
 use crate::components::ticket_detail::TicketDetail;
 
@@ -20,6 +22,9 @@ pub enum Route {
 
     #[route("/workspace/:workspace")]
     TicketListPage { workspace: String },
+
+    #[route("/workspace/:workspace/new")]
+    NewTicketPage { workspace: String },
 
     #[route("/workspace/:workspace/ticket/:id")]
     TicketDetailPage { workspace: String, id: String },
@@ -40,12 +45,49 @@ pub fn WorkspacePickerPage() -> Element {
 
 #[component]
 pub fn TicketListPage(workspace: String) -> Element {
+    let nav = use_navigator();
+    let ws = workspace.clone();
+
     rsx! {
         div {
             style: "padding: 2rem; font-family: sans-serif; color: #e0e0e8;",
-            h2 { "Workspace: {workspace}" }
+            div {
+                style: "display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;",
+                h2 { style: "margin: 0;", "Workspace: {workspace}" }
+                button {
+                    style: "
+                        padding: 8px 18px; border-radius: 6px; border: none;
+                        background: #3b82f6; color: white;
+                        cursor: pointer; font-size: 14px; font-weight: 600;
+                    ",
+                    onclick: move |_| {
+                        nav.push(Route::NewTicketPage { workspace: ws.clone() });
+                    },
+                    "+ New Ticket"
+                }
+            }
             p { "Ticket list will be rendered here." }
             Link { to: Route::WorkspacePickerPage, "← Back" }
+        }
+    }
+}
+
+/// Standalone page that renders the CreateTicketModal as an overlay.
+///
+/// On cancel it navigates back to the ticket list.  On successful submit the
+/// modal itself navigates to the new ticket's detail page.
+#[component]
+pub fn NewTicketPage(workspace: String) -> Element {
+    let nav = use_navigator();
+    let ws_back = workspace.clone();
+
+    rsx! {
+        CreateTicketModal {
+            workspace: workspace.clone(),
+            prefill: None,
+            on_cancel: move |_| {
+                nav.push(Route::TicketListPage { workspace: ws_back.clone() });
+            },
         }
     }
 }

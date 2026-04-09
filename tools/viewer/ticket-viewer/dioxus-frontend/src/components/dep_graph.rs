@@ -15,9 +15,10 @@
 //!   (no `Closure::forget()` calls anywhere in this module).
 
 use dioxus::prelude::*;
+use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 
-use crate::backend::{HttpTicketBackend, TicketBackend};
+use crate::backend::{EdgeMutationBody, HttpTicketBackend, TicketBackend, TicketSummary};
 use crate::graph::{draw_edges, GraphLayout};
 use crate::routes::Route;
 
@@ -46,6 +47,19 @@ struct DragState {
     /// Node position at drag start (only relevant for DragKind::Node).
     start_node_x: f64,
     start_node_y: f64,
+}
+
+// ── Edge interaction state ─────────────────────────────────────────────────
+
+/// A pending edge deletion awaiting user confirmation.
+#[derive(Debug, Clone, PartialEq)]
+struct RemoveEdge {
+    from_id: String,
+    to_id: String,
+    kind: String,
+    /// Human-readable labels shown in the confirmation dialog.
+    from_title: String,
+    to_title: String,
 }
 
 // ── Canvas size helper ─────────────────────────────────────────────────────
@@ -122,6 +136,23 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
     let mut _sse_handle: Signal<Option<(web_sys::EventSource, [gloo_events::EventListener; 2])>> =
         use_signal(|| None);
 
+    // ── Add-dependency picker state ────────────────────────────────────────
+    let mut picker_open: Signal<bool> = use_signal(|| false);
+    let mut picker_query: Signal<String> = use_signal(String::new);
+    let mut picker_results: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
+    let mut picker_selected_id: Signal<Option<String>> = use_signal(|| None);
+    let mut picker_selected_title: Signal<Option<String>> = use_signal(|| None);
+    let mut picker_kind: Signal<String> = use_signal(|| "depends_on".to_string());
+    let mut picker_reason: Signal<String> = use_signal(String::new);
+    let mut picker_error: Signal<Option<String>> = use_signal(|| None);
+    let mut picker_searching: Signal<bool> = use_signal(|| false);
+    // JS `setTimeout` handle used to debounce the picker search input.
+    // Cleared and replaced on every keystroke; dropped to `None` when idle.
+    let mut debounce_id: Signal<Option<i32>> = use_signal(|| None);
+
+    // ── Remove-edge confirmation state ─────────────────────────────────────
+    let mut remove_confirm: Signal<Option<RemoveEdge>> = use_signal(|| None);
+
     // ── Async data fetch triggered by fetch_trigger ────────────────────
     {
         let workspace_fetch = workspace.clone();
@@ -171,6 +202,143 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
     });
 
     // ── Interaction handlers ──────────────────────────────────────────
+
+    // ── Add-dependency handlers ───────────────────────────────────────────
+
+    // Open the picker and reset all transient picker state.
+    let mut on_open_picker = move |_: Event<MouseData>| {
+        picker_query.set(String::new());
+        picker_results.set(Vec::new());
+        picker_selected_id.set(None);
+        picker_selected_title.set(None);
+        picker_kind.set("depends_on".to_string());
+        picker_reason.set(String::new());
+        picker_error.set(None);
+        picker_searching.set(false);
+        picker_open.set(true);
+    };
+
+    // Debounced input handler: cancels any pending JS timeout and schedules
+    // a new full-text search after 300 ms.  Ownership of the `Closure` is
+    // transferred to the JS GC via `into_js_value()` — no `forget()` calls.
+    let workspace_search = workspace.clone();
+    let mut on_picker_input = move |evt: Event<FormData>| {
+        let query = evt.value().clone();
+        picker_query.set(query.clone());
+        picker_selected_id.set(None);
+        picker_selected_title.set(None);
+        picker_error.set(None);
+
+        // Cancel any pending debounce timeout.  Copy the i32 out so the
+        // read() borrow is dropped before calling set() (borrow conflict fix).
+        let prev_id = *debounce_id.read();
+        if let Some(id) = prev_id {
+            if let Some(win) = web_sys::window() {
+                win.clear_timeout_with_handle(id);
+            }
+        }
+        debounce_id.set(None);
+
+        if query.trim().is_empty() {
+            picker_results.set(Vec::new());
+            picker_searching.set(false);
+            return;
+        }
+
+        // Schedule a search after 300 ms.
+        let ws = workspace_search.clone();
+        let mut results_w = picker_results;
+        let mut searching_w = picker_searching;
+        let cb = Closure::once(move || {
+            spawn(async move {
+                searching_w.set(true);
+                let backend = HttpTicketBackend::new(None);
+                if let Ok(resp) = backend
+                    .list_tickets(&ws, None, Some(&query), Some(20))
+                    .await
+                {
+                    results_w.set(resp.items);
+                }
+                searching_w.set(false);
+            });
+        });
+        if let Some(win) = web_sys::window() {
+            if let Ok(id) = win.set_timeout_with_callback_and_timeout_and_arguments_0(
+                cb.as_ref().unchecked_ref::<::js_sys::Function>(),
+                300,
+            ) {
+                debounce_id.set(Some(id));
+            }
+        }
+        let _ = cb.into_js_value(); // transfer ownership to JS GC
+    };
+
+    // Called when the user confirms adding an edge in the picker overlay.
+    let workspace_add = workspace.clone();
+    let root_add = root_id.clone();
+    let mut on_confirm_add = move |_: Event<MouseData>| {
+        let Some(to_id) = picker_selected_id.read().clone() else {
+            return;
+        };
+        let from_id = root_add.clone();
+        let kind = picker_kind.read().clone();
+        let reason_str = picker_reason.read().clone();
+        let reason = if reason_str.trim().is_empty() {
+            None
+        } else {
+            Some(reason_str)
+        };
+        let ws = workspace_add.clone();
+        let mut err_w = picker_error;
+        let mut open_w = picker_open;
+        let mut ft = fetch_trigger;
+        spawn(async move {
+            let backend = HttpTicketBackend::new(None);
+            let body = EdgeMutationBody { from_id, to_id, kind, reason };
+            match backend.create_edge(&ws, &body).await {
+                Ok(()) => {
+                    open_w.set(false);
+                    // The SSE stream will emit edge.upsert and trigger the
+                    // existing subscription, but we also bump fetch_trigger
+                    // for immediate refresh in case SSE has a small delay.
+                    ft.with_mut(|v| *v += 1);
+                }
+                Err(e) => {
+                    err_w.set(Some(if e.starts_with("cycle_detected:") {
+                        "Adding this edge would create a dependency cycle. \
+                         Choose a different target."
+                            .to_string()
+                    } else {
+                        e
+                    }));
+                }
+            }
+        });
+    };
+
+    // ── Remove-edge handlers ──────────────────────────────────────────────
+
+    let workspace_remove = workspace.clone();
+    let mut on_confirm_remove = move |_: Event<MouseData>| {
+        let Some(edge) = remove_confirm.read().clone() else {
+            return;
+        };
+        let ws = workspace_remove.clone();
+        let mut rc = remove_confirm;
+        let mut ft = fetch_trigger;
+        spawn(async move {
+            let backend = HttpTicketBackend::new(None);
+            let body = EdgeMutationBody {
+                from_id: edge.from_id,
+                to_id: edge.to_id,
+                kind: edge.kind,
+                reason: None,
+            };
+            let _ = backend.delete_edge(&ws, &body).await;
+            rc.set(None);
+            ft.with_mut(|v| *v += 1);
+        });
+    };
 
     let mut on_wheel = move |evt: Event<WheelData>| {
         evt.prevent_default();
@@ -374,6 +542,21 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                     },
                     "⌂"
                 }
+                button {
+                    style: "
+                        background: rgba(59,130,246,0.8);
+                        color: #fff;
+                        border: 1px solid rgba(147,197,253,0.4);
+                        border-radius: 4px;
+                        padding: 4px 10px;
+                        font-size: 13px;
+                        cursor: pointer;
+                        line-height: 1;
+                    ",
+                    title: "Add dependency",
+                    onclick: on_open_picker,
+                    "+ Add dependency"
+                }
             }
 
             // ── Node count badge ───────────────────────────────────────
@@ -386,6 +569,383 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                         pointer-events: none;
                     ",
                     "{l.nodes.len()} nodes · {l.edges.len()} edges"
+                }
+            }
+
+            // ── Adjacency list sidebar ─────────────────────────────────
+            // Shows all edges visible in the current subgraph with × buttons
+            // to remove them.  Positioned top-right above the zoom HUD.
+            {
+                layout.read().as_ref().and_then(|l| {
+                    if l.edges.is_empty() {
+                        return None;
+                    }
+                    Some(rsx! {
+                        div {
+                            style: "
+                                position: absolute; top: 12px; right: 12px;
+                                max-width: 280px; max-height: 220px;
+                                background: rgba(18,18,30,0.92);
+                                border: 1px solid rgba(200,200,220,0.18);
+                                border-radius: 6px;
+                                overflow-y: auto;
+                                pointer-events: auto;
+                                font-family: sans-serif;
+                            ",
+                            div {
+                                style: "
+                                    padding: 5px 8px;
+                                    font-size: 10px; font-weight: 700;
+                                    color: rgba(180,180,210,0.65);
+                                    text-transform: uppercase; letter-spacing: 0.6px;
+                                    border-bottom: 1px solid rgba(200,200,220,0.12);
+                                    background: rgba(28,28,46,0.6);
+                                ",
+                                "Dependencies"
+                            }
+                            for edge in l.edges.iter() {
+                                {
+                                    let from = edge.from.clone();
+                                    let to = edge.to.clone();
+                                    let kind = edge.kind.clone();
+                                    let from_title = l.nodes.iter()
+                                        .find(|n| n.id == from)
+                                        .and_then(|n| n.title.as_deref())
+                                        .unwrap_or(&from)
+                                        .to_string();
+                                    let to_title = l.nodes.iter()
+                                        .find(|n| n.id == to)
+                                        .and_then(|n| n.title.as_deref())
+                                        .unwrap_or(&to)
+                                        .to_string();
+                                    let re = RemoveEdge {
+                                        from_id: from.clone(),
+                                        to_id: to.clone(),
+                                        kind: kind.clone(),
+                                        from_title: from_title.clone(),
+                                        to_title: to_title.clone(),
+                                    };
+                                    let mut rc = remove_confirm;
+                                    rsx! {
+                                        div {
+                                            key: "{from}-{to}-{kind}",
+                                            style: "
+                                                display: flex; align-items: center; gap: 6px;
+                                                padding: 4px 8px;
+                                                border-bottom: 1px solid rgba(200,200,220,0.08);
+                                                font-size: 11px; color: #b0b0c8;
+                                            ",
+                                            span {
+                                                style: "
+                                                    flex: 1;
+                                                    overflow: hidden;
+                                                    text-overflow: ellipsis;
+                                                    white-space: nowrap;
+                                                ",
+                                                title: "{from_title} → {to_title}",
+                                                "{from_title} → {to_title}"
+                                            }
+                                            span {
+                                                style: "
+                                                    background: rgba(100,100,200,0.25);
+                                                    border-radius: 3px; padding: 1px 4px;
+                                                    font-size: 9px; color: #8080b8;
+                                                    flex-shrink: 0;
+                                                ",
+                                                "{kind}"
+                                            }
+                                            button {
+                                                style: "
+                                                    background: none; border: none;
+                                                    color: #ef4444; cursor: pointer;
+                                                    font-size: 14px; padding: 0 2px;
+                                                    line-height: 1; flex-shrink: 0;
+                                                ",
+                                                title: "Remove this edge",
+                                                onclick: move |_| rc.with_mut(|v| *v = Some(re.clone())),
+                                                "×"
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    })
+                })
+            }
+
+            // ── Add-dependency picker overlay ──────────────────────────
+            if *picker_open.read() {
+                div {
+                    // Backdrop — click to cancel.
+                    style: "
+                        position: absolute; inset: 0;
+                        background: rgba(0,0,0,0.65);
+                        display: flex; align-items: center; justify-content: center;
+                        pointer-events: auto;
+                        z-index: 50;
+                    ",
+                    onclick: move |_| picker_open.set(false),
+
+                    div {
+                        // Modal card — clicks don't bubble to backdrop.
+                        style: "
+                            background: #15152a;
+                            border: 1px solid rgba(200,200,220,0.25);
+                            border-radius: 10px;
+                            padding: 20px;
+                            width: 420px; max-width: 92%;
+                            display: flex; flex-direction: column;
+                            gap: 12px;
+                            font-family: sans-serif;
+                        ",
+                        onclick: move |evt| evt.stop_propagation(),
+
+                        h3 {
+                            style: "margin: 0; color: #e0e0f0; font-size: 15px;",
+                            "Add dependency"
+                        }
+
+                        // Search input
+                        input {
+                            r#type: "text",
+                            placeholder: "Search tickets…",
+                            value: "{picker_query}",
+                            oninput: on_picker_input,
+                            autofocus: true,
+                            style: "
+                                width: 100%; box-sizing: border-box;
+                                background: #0e0e1e;
+                                border: 1px solid rgba(200,200,220,0.25);
+                                border-radius: 5px;
+                                padding: 7px 10px;
+                                color: #e0e0f0; font-size: 13px;
+                                outline: none;
+                            ",
+                        }
+
+                        // Results list
+                        div {
+                            style: "
+                                max-height: 180px; overflow-y: auto;
+                                border: 1px solid rgba(200,200,220,0.12);
+                                border-radius: 5px;
+                                background: #0e0e1e;
+                            ",
+                            if *picker_searching.read() {
+                                div {
+                                    style: "padding: 10px; color: #9ca3af; font-size: 13px;",
+                                    "Searching…"
+                                }
+                            }
+                            if !*picker_searching.read() && picker_results.read().is_empty() && !picker_query.read().is_empty() {
+                                div {
+                                    style: "padding: 10px; color: #9ca3af; font-size: 13px;",
+                                    "No tickets found."
+                                }
+                            }
+                            for result in picker_results.read().clone().into_iter() {
+                                {
+                                    let id = result.id.clone();
+                                    let title = result.title.clone().unwrap_or_else(|| id.clone());
+                                    let state_label = result.state.clone().unwrap_or_default();
+                                    let is_selected = picker_selected_id.read().as_deref() == Some(id.as_str());
+                                    let id_cap = id.clone();
+                                    let title_cap = title.clone();
+                                    let title_disp = title.clone();
+                                    let state_disp = state_label.clone();
+                                    rsx! {
+                                        button {
+                                            key: "{id}",
+                                            style: if is_selected {
+                                                "
+                                                    display: flex; align-items: center; gap: 8px;
+                                                    width: 100%; text-align: left;
+                                                    padding: 7px 10px; border: none; cursor: pointer;
+                                                    background: rgba(59,130,246,0.25);
+                                                    color: #dde8ff; font-size: 12px;
+                                                "
+                                            } else {
+                                                "
+                                                    display: flex; align-items: center; gap: 8px;
+                                                    width: 100%; text-align: left;
+                                                    padding: 7px 10px; border: none; cursor: pointer;
+                                                    background: transparent;
+                                                    color: #c8c8e0; font-size: 12px;
+                                                "
+                                            },
+                                            onclick: move |_| {
+                                                picker_selected_id.set(Some(id_cap.clone()));
+                                                picker_selected_title.set(Some(title_cap.clone()));
+                                            },
+                                            span {
+                                                style: "flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                                                "{title_disp}"
+                                            }
+                                            if !state_disp.is_empty() {
+                                                span {
+                                                    style: "
+                                                        font-size: 10px; color: #7878a0;
+                                                        flex-shrink: 0;
+                                                    ",
+                                                    "{state_disp}"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // Edge kind selector
+                        div {
+                            style: "display: flex; flex-direction: column; gap: 4px;",
+                            label {
+                                style: "font-size: 11px; color: #9090b8; text-transform: uppercase; letter-spacing: 0.5px;",
+                                "Edge type"
+                            }
+                            select {
+                                style: "
+                                    background: #0e0e1e;
+                                    border: 1px solid rgba(200,200,220,0.25);
+                                    border-radius: 5px; padding: 6px 8px;
+                                    color: #e0e0f0; font-size: 13px;
+                                ",
+                                onchange: move |evt| picker_kind.set(evt.value()),
+                                option { value: "depends_on", "depends_on" }
+                                option { value: "linked", "linked" }
+                            }
+                        }
+
+                        // Reason input (optional)
+                        div {
+                            style: "display: flex; flex-direction: column; gap: 4px;",
+                            label {
+                                style: "font-size: 11px; color: #9090b8; text-transform: uppercase; letter-spacing: 0.5px;",
+                                "Reason (optional)"
+                            }
+                            textarea {
+                                rows: "2",
+                                placeholder: "Why does this dependency exist?",
+                                value: "{picker_reason}",
+                                oninput: move |evt| picker_reason.set(evt.value()),
+                                style: "
+                                    background: #0e0e1e;
+                                    border: 1px solid rgba(200,200,220,0.25);
+                                    border-radius: 5px; padding: 6px 8px;
+                                    color: #e0e0f0; font-size: 13px;
+                                    resize: vertical; min-height: 48px;
+                                    font-family: sans-serif;
+                                ",
+                            }
+                        }
+
+                        // Cycle detection error banner (non-dismissing per spec).
+                        if let Some(err) = picker_error.read().clone() {
+                            div {
+                                style: "
+                                    background: rgba(239,68,68,0.12);
+                                    border: 1px solid rgba(239,68,68,0.45);
+                                    border-radius: 5px; padding: 8px 12px;
+                                    color: #ef4444; font-size: 13px;
+                                ",
+                                "{err}"
+                            }
+                        }
+
+                        // Action buttons
+                        div {
+                            style: "display: flex; gap: 8px; justify-content: flex-end;",
+                            button {
+                                style: "
+                                    padding: 7px 16px; border-radius: 5px;
+                                    border: 1px solid rgba(200,200,220,0.2);
+                                    background: rgba(40,40,60,0.8);
+                                    color: #c0c0d8; font-size: 13px; cursor: pointer;
+                                ",
+                                onclick: move |_| picker_open.set(false),
+                                "Cancel"
+                            }
+                            button {
+                                style: if picker_selected_id.read().is_some() {
+                                    "
+                                        padding: 7px 16px; border-radius: 5px; border: none;
+                                        background: rgba(59,130,246,0.85);
+                                        color: #fff; font-size: 13px; cursor: pointer;
+                                    "
+                                } else {
+                                    "
+                                        padding: 7px 16px; border-radius: 5px; border: none;
+                                        background: rgba(59,130,246,0.3);
+                                        color: rgba(255,255,255,0.4); font-size: 13px;
+                                        cursor: not-allowed;
+                                    "
+                                },
+                                disabled: picker_selected_id.read().is_none(),
+                                onclick: on_confirm_add,
+                                "Add"
+                            }
+                        }
+                    }
+                }
+            }
+
+            // ── Remove-edge confirmation dialog ────────────────────────
+            if let Some(edge) = remove_confirm.read().clone() {
+                div {
+                    style: "
+                        position: absolute; inset: 0;
+                        background: rgba(0,0,0,0.70);
+                        display: flex; align-items: center; justify-content: center;
+                        pointer-events: auto;
+                        z-index: 60;
+                    ",
+                    div {
+                        style: "
+                            background: #15152a;
+                            border: 1px solid rgba(239,68,68,0.3);
+                            border-radius: 10px; padding: 20px;
+                            width: 360px; max-width: 92%;
+                            font-family: sans-serif;
+                            display: flex; flex-direction: column; gap: 12px;
+                        ",
+                        h3 {
+                            style: "margin: 0; color: #e0e0f0; font-size: 15px;",
+                            "Remove dependency?"
+                        }
+                        p {
+                            style: "margin: 0; color: #9ca3af; font-size: 13px; line-height: 1.5;",
+                            "Remove the \""
+                            span { style: "color: #c0c0e0; font-weight: 600;", "{edge.kind}" }
+                            "\" edge from \""
+                            span { style: "color: #c0c0e0;", "{edge.from_title}" }
+                            "\" to \""
+                            span { style: "color: #c0c0e0;", "{edge.to_title}" }
+                            "\"?"
+                        }
+                        div {
+                            style: "display: flex; gap: 8px; justify-content: flex-end;",
+                            button {
+                                style: "
+                                    padding: 7px 16px; border-radius: 5px;
+                                    border: 1px solid rgba(200,200,220,0.2);
+                                    background: rgba(40,40,60,0.8);
+                                    color: #c0c0d8; font-size: 13px; cursor: pointer;
+                                ",
+                                onclick: move |_| remove_confirm.set(None),
+                                "Cancel"
+                            }
+                            button {
+                                style: "
+                                    padding: 7px 16px; border-radius: 5px; border: none;
+                                    background: rgba(239,68,68,0.8);
+                                    color: #fff; font-size: 13px; cursor: pointer;
+                                ",
+                                onclick: on_confirm_remove,
+                                "Remove"
+                            }
+                        }
+                    }
                 }
             }
         }

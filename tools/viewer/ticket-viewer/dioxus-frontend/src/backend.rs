@@ -19,7 +19,7 @@ pub struct WorkspacesResponse {
     pub workspaces: Vec<WorkspaceInfo>,
 }
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct TicketSummary {
     pub id: String,
     pub title: Option<String>,
@@ -146,9 +146,71 @@ pub struct SchemaListResponse {
 pub struct TicketPatch {
     pub workspace: String,
     #[serde(skip_serializing_if = "Option::is_none")]
+    pub state: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub title: Option<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub fields: Option<serde_json::Value>,
+}
+
+// ── History response types ─────────────────────────────────────────────────
+
+/// A single history revision for a ticket.
+#[derive(Debug, Clone, Deserialize)]
+pub struct HistoryEntry {
+    pub rev: u64,
+    pub ts: String,
+    pub fields: serde_json::Value,
+}
+
+/// Response from `GET /api/tickets/{id}/history`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct TicketHistoryResponse {
+    pub id: String,
+    pub workspace: String,
+    pub count: u64,
+    pub entries: Vec<HistoryEntry>,
+}
+
+// ── Schema-by-type response ────────────────────────────────────────────────
+
+/// Response from `GET /api/schema/{type_id}`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct SchemaDetailResponse {
+    pub workspace: String,
+    pub schema: TypeSchema,
+}
+
+/// Request body sent to `POST /api/tickets`.
+#[derive(Debug, Clone, Serialize)]
+pub struct CreateTicketRequest {
+    #[serde(rename = "type")]
+    pub type_id: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub title: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub description: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub fields: Option<std::collections::BTreeMap<String, serde_json::Value>>,
+}
+
+/// Response from `POST /api/tickets`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct CreateTicketResponse {
+    pub workspace: String,
+    pub ticket: TicketDetail,
+}
+
+// ── Edge mutation request body ─────────────────────────────────────────────
+
+/// Request body for `POST /api/edges` and `DELETE /api/edges`.
+#[derive(Debug, Clone, Serialize)]
+pub struct EdgeMutationBody {
+    pub from_id: String,
+    pub to_id: String,
+    pub kind: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub reason: Option<String>,
 }
 
 // ── Trait ────────────────────────────────────────────────────────────────────
@@ -199,6 +261,49 @@ pub trait TicketBackend {
         &self,
         workspace: &str,
     ) -> impl std::future::Future<Output = Result<SchemaListResponse, String>>;
+
+    /// Create an edge between two tickets via `POST /api/edges`.
+    ///
+    /// Returns `Err("cycle_detected: ...")` when the server responds 422
+    /// (adding the edge would create a dependency cycle), allowing the UI to
+    /// surface a non-dismissing inline error banner.
+    fn create_edge(
+        &self,
+        workspace: &str,
+        body: &EdgeMutationBody,
+    ) -> impl std::future::Future<Output = Result<(), String>>;
+
+    /// Remove an edge between two tickets via `DELETE /api/edges`.
+    fn delete_edge(
+        &self,
+        workspace: &str,
+        body: &EdgeMutationBody,
+    ) -> impl std::future::Future<Output = Result<(), String>>;
+
+    /// Create a new ticket via `POST /api/tickets`.
+    fn create_ticket(
+        &self,
+        workspace: &str,
+        body: &CreateTicketRequest,
+    ) -> impl std::future::Future<Output = Result<CreateTicketResponse, String>>;
+
+    fn get_schema_by_type(
+        &self,
+        workspace: &str,
+        type_id: &str,
+    ) -> impl std::future::Future<Output = Result<SchemaDetailResponse, String>>;
+
+    fn get_ticket_history(
+        &self,
+        workspace: &str,
+        id: &str,
+    ) -> impl std::future::Future<Output = Result<TicketHistoryResponse, String>>;
+
+    fn undo_ticket(
+        &self,
+        workspace: &str,
+        id: &str,
+    ) -> impl std::future::Future<Output = Result<TicketDetailResponse, String>>;
 }
 
 // ── HTTP implementation ───────────────────────────────────────────────────────
@@ -324,5 +429,124 @@ impl TicketBackend for HttpTicketBackend {
     async fn list_schemas(&self, workspace: &str) -> Result<SchemaListResponse, String> {
         let enc = |s: &str| utf8_percent_encode(s, NON_ALPHANUMERIC).to_string();
         self.fetch(&format!("/api/schema?workspace={}", enc(workspace))).await
+    }
+
+    async fn create_edge(&self, workspace: &str, body: &EdgeMutationBody) -> Result<(), String> {
+        let enc = |s: &str| utf8_percent_encode(s, NON_ALPHANUMERIC).to_string();
+        let url = format!("/api/edges?workspace={}", enc(workspace));
+        let json_body = serde_json::to_string(body).map_err(|e| e.to_string())?;
+        let mut req = gloo_net::http::Request::post(&url)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json");
+        if let Some(ref t) = self.token {
+            req = req.header("Authorization", &format!("Bearer {t}"));
+        }
+        let resp = req
+            .body(json_body)
+            .map_err(|e| e.to_string())?
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+        if resp.status() == 422 {
+            return Err("cycle_detected: Adding this edge would create a dependency cycle".to_string());
+        }
+        if !resp.ok() {
+            let status = resp.status();
+            let body_text = resp.text().await.unwrap_or_default();
+            return Err(format!("{status} POST {url}: {body_text}"));
+        }
+        Ok(())
+    }
+
+    async fn delete_edge(&self, workspace: &str, body: &EdgeMutationBody) -> Result<(), String> {
+        let enc = |s: &str| utf8_percent_encode(s, NON_ALPHANUMERIC).to_string();
+        let url = format!("/api/edges?workspace={}", enc(workspace));
+        let json_body = serde_json::to_string(body).map_err(|e| e.to_string())?;
+        let mut req = gloo_net::http::Request::delete(&url)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json");
+        if let Some(ref t) = self.token {
+            req = req.header("Authorization", &format!("Bearer {t}"));
+        }
+        let resp = req
+            .body(json_body)
+            .map_err(|e| e.to_string())?
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+        if !resp.ok() {
+            let status = resp.status();
+            let body_text = resp.text().await.unwrap_or_default();
+            return Err(format!("{status} DELETE {url}: {body_text}"));
+        }
+        Ok(())
+    }
+
+    async fn create_ticket(
+        &self,
+        workspace: &str,
+        body: &CreateTicketRequest,
+    ) -> Result<CreateTicketResponse, String> {
+        let enc = |s: &str| utf8_percent_encode(s, NON_ALPHANUMERIC).to_string();
+        let url = format!("/api/tickets?workspace={}", enc(workspace));
+        let json_body = serde_json::to_string(body).map_err(|e| e.to_string())?;
+        let mut req = gloo_net::http::Request::post(&url)
+            .header("Accept", "application/json")
+            .header("Content-Type", "application/json");
+        if let Some(ref t) = self.token {
+            req = req.header("Authorization", &format!("Bearer {t}"));
+        }
+        let resp = req
+            .body(json_body)
+            .map_err(|e| e.to_string())?
+            .send()
+            .await
+            .map_err(|e| e.to_string())?;
+        if !resp.ok() {
+            let status = resp.status();
+            let body_text = resp.text().await.unwrap_or_default();
+            return Err(format!("{status} POST {url}: {body_text}"));
+        }
+        resp.json::<CreateTicketResponse>().await.map_err(|e| e.to_string())
+    }
+
+    async fn get_schema_by_type(
+        &self,
+        workspace: &str,
+        type_id: &str,
+    ) -> Result<SchemaDetailResponse, String> {
+        let enc = |s: &str| utf8_percent_encode(s, NON_ALPHANUMERIC).to_string();
+        self.fetch(&format!("/api/schema/{}?workspace={}", enc(type_id), enc(workspace))).await
+    }
+
+    async fn get_ticket_history(
+        &self,
+        workspace: &str,
+        id: &str,
+    ) -> Result<TicketHistoryResponse, String> {
+        let enc = |s: &str| utf8_percent_encode(s, NON_ALPHANUMERIC).to_string();
+        let url = format!("/api/tickets/{id}/history?workspace={}", enc(workspace));
+        self.fetch(&url).await
+    }
+
+    async fn undo_ticket(
+        &self,
+        workspace: &str,
+        id: &str,
+    ) -> Result<TicketDetailResponse, String> {
+        let enc = |s: &str| utf8_percent_encode(s, NON_ALPHANUMERIC).to_string();
+        let url = format!("/api/tickets/{id}/undo?workspace={}", enc(workspace));
+        let mut req = gloo_net::http::Request::post(&url)
+            .header("Accept", "application/json");
+        if let Some(ref t) = self.token {
+            req = req.header("Authorization", &format!("Bearer {t}"));
+        }
+        let resp = req.send().await.map_err(|e| e.to_string())?;
+        if !resp.ok() {
+            let status = resp.status();
+            let body = resp.text().await.unwrap_or_default();
+            return Err(format!("{status} POST {url}: {body}"));
+        }
+        resp.json::<TicketDetailResponse>().await.map_err(|e| e.to_string())
     }
 }
