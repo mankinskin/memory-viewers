@@ -15,7 +15,6 @@
 //!   (no `Closure::forget()` calls anywhere in this module).
 
 use dioxus::prelude::*;
-use wasm_bindgen::closure::Closure;
 use wasm_bindgen::JsCast;
 
 use crate::backend::{EdgeMutationBody, HttpTicketBackend, TicketBackend, TicketSummary};
@@ -146,9 +145,9 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
     let mut picker_reason: Signal<String> = use_signal(String::new);
     let mut picker_error: Signal<Option<String>> = use_signal(|| None);
     let mut picker_searching: Signal<bool> = use_signal(|| false);
-    // JS `setTimeout` handle used to debounce the picker search input.
-    // Cleared and replaced on every keystroke; dropped to `None` when idle.
-    let mut debounce_id: Signal<Option<i32>> = use_signal(|| None);
+    // Monotonic generation counter — incremented on every keystroke so that
+    // stale debounce tasks spawned by earlier keystrokes can self-cancel.
+    let mut debounce_gen: Signal<u32> = use_signal(|| 0u32);
 
     // ── Remove-edge confirmation state ─────────────────────────────────────
     let mut remove_confirm: Signal<Option<RemoveEdge>> = use_signal(|| None);
@@ -218,9 +217,11 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
         picker_open.set(true);
     };
 
-    // Debounced input handler: cancels any pending JS timeout and schedules
-    // a new full-text search after 300 ms.  Ownership of the `Closure` is
-    // transferred to the JS GC via `into_js_value()` — no `forget()` calls.
+    // Debounced input handler: increments the generation counter then spawns
+    // an async task (within the Dioxus runtime context) that waits 300 ms and
+    // self-cancels when a newer keystroke has already bumped the counter.
+    // Using `spawn` directly avoids raw JS `Closure` callbacks which run
+    // outside the Dioxus runtime and panic on signal mutation.
     let workspace_search = workspace.clone();
     let mut on_picker_input = move |evt: Event<FormData>| {
         let query = evt.value().clone();
@@ -229,15 +230,9 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
         picker_selected_title.set(None);
         picker_error.set(None);
 
-        // Cancel any pending debounce timeout.  Copy the i32 out so the
-        // read() borrow is dropped before calling set() (borrow conflict fix).
-        let prev_id = *debounce_id.read();
-        if let Some(id) = prev_id {
-            if let Some(win) = web_sys::window() {
-                win.clear_timeout_with_handle(id);
-            }
-        }
-        debounce_id.set(None);
+        // Bump the generation so any in-flight debounce task self-cancels.
+        let gen = *debounce_gen.read() + 1;
+        debounce_gen.set(gen);
 
         if query.trim().is_empty() {
             picker_results.set(Vec::new());
@@ -245,32 +240,38 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
             return;
         }
 
-        // Schedule a search after 300 ms.
+        // Spawn within the Dioxus runtime — safe to mutate signals here.
         let ws = workspace_search.clone();
         let mut results_w = picker_results;
         let mut searching_w = picker_searching;
-        let cb = Closure::once(move || {
-            spawn(async move {
-                searching_w.set(true);
-                let backend = HttpTicketBackend::new(None);
-                if let Ok(resp) = backend
-                    .list_tickets(&ws, None, Some(&query), Some(20))
-                    .await
-                {
-                    results_w.set(resp.items);
-                }
-                searching_w.set(false);
+        spawn(async move {
+            // 300 ms async sleep via js_sys::Promise (no extra crate needed).
+            let promise = js_sys::Promise::new(&mut |resolve, _| {
+                web_sys::window()
+                    .unwrap()
+                    .set_timeout_with_callback_and_timeout_and_arguments_0(
+                        &resolve,
+                        300,
+                    )
+                    .unwrap();
             });
-        });
-        if let Some(win) = web_sys::window() {
-            if let Ok(id) = win.set_timeout_with_callback_and_timeout_and_arguments_0(
-                cb.as_ref().unchecked_ref::<::js_sys::Function>(),
-                300,
-            ) {
-                debounce_id.set(Some(id));
+            let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
+
+            // If a newer keystroke came in while we were sleeping, abort.
+            if *debounce_gen.read() != gen {
+                return;
             }
-        }
-        let _ = cb.into_js_value(); // transfer ownership to JS GC
+
+            searching_w.set(true);
+            let backend = HttpTicketBackend::new(None);
+            if let Ok(resp) = backend
+                .list_tickets(&ws, None, Some(&query), Some(20))
+                .await
+            {
+                results_w.set(resp.items);
+            }
+            searching_w.set(false);
+        });
     };
 
     // Called when the user confirms adding an edge in the picker overlay.
