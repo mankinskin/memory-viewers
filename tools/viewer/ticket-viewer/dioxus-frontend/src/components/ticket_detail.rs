@@ -53,11 +53,9 @@ fn field_bool(fields: &serde_json::Value, key: &str) -> bool {
 fn state_colors(state: &str) -> (&'static str, &'static str) {
     match state {
         "new" => ("#2d2d4a", "#a0a0c8"),
-        "in-refinement" => ("#1a3558", "#7dd3fc"),
         "ready" => ("#1a3d28", "#86efac"),
         "in-implementation" => ("#3d2e1a", "#fbbf24"),
         "in-review" => ("#361a4a", "#c084fc"),
-        "in-validation" => ("#1a3545", "#67e8f9"),
         "done" => ("#1a3d28", "#4ade80"),
         "cancelled" => ("#3d1a1a", "#f87171"),
         _ => ("#2a2a3a", "#9ca3af"),

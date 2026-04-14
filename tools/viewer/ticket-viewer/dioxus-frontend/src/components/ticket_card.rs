@@ -10,11 +10,9 @@ use dioxus::prelude::*;
 pub fn state_color(state: Option<&str>) -> &'static str {
     match state {
         Some("new") => "#6b7280",
-        Some("in-refinement") => "#3b82f6",
         Some("ready") => "#8b5cf6",
         Some("in-implementation") => "#f59e0b",
         Some("in-review") => "#ec4899",
-        Some("in-validation") => "#06b6d4",
         Some("done") => "#10b981",
         Some("cancelled") => "#ef4444",
         _ => "#9ca3af",
