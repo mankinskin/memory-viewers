@@ -22,9 +22,60 @@ use std::{env, path::PathBuf, sync::Arc};
 use tracing::info;
 use viewer_api::{display_host, init_tracing, with_static_files};
 
-use ticket_api::workspace::WorkspaceConfig;
 use ticket_api::storage::store::TicketStore;
 use ticket_http::serve::{WorkspaceRegistry, StreamBroker, AppState};
+
+/// Resolve an index root purely from the current working directory.
+///
+/// The global `~/.ticket-workspaces.toml` is **not** consulted so the server
+/// always serves the workspace that is local to where it was launched, not
+/// whatever workspace a separate CLI session has set as active.
+///
+/// Resolution order:
+/// 1. `.ticket-workspace` file found walking up from cwd — same as the CLI
+///    (absolute path used directly; relative path resolved from the file's
+///    directory; workspace name is **not** looked up in the global registry).
+/// 2. `.ticket/` directory found walking up from cwd.
+/// 3. `<cwd>/.ticket` as the local default (created on first use by the store).
+fn resolve_index_root_from_cwd() -> PathBuf {
+    // Layer 1: project-local .ticket-workspace file (absolute path only —
+    // we do not look up names in the global registry to stay portable).
+    if let Some(local_file) = ticket_api::workspace::find_local_workspace_file() {
+        if let Ok(content) = std::fs::read_to_string(&local_file) {
+            let value = content.trim();
+            if !value.is_empty() {
+                let p = PathBuf::from(value);
+                if p.is_absolute() {
+                    return p;
+                }
+                // Relative path resolved from the file's own directory.
+                if let Some(parent) = local_file.parent() {
+                    return parent.join(&p);
+                }
+            }
+        }
+    }
+
+    // Layer 2: .ticket/ directory found walking up from cwd.
+    if let Ok(cwd) = std::env::current_dir() {
+        let mut dir: &std::path::Path = &cwd;
+        loop {
+            let candidate = dir.join(".ticket");
+            if candidate.is_dir() {
+                return candidate;
+            }
+            match dir.parent() {
+                Some(parent) => dir = parent,
+                None => break,
+            }
+        }
+    }
+
+    // Layer 3: local default — <cwd>/.ticket (no global config fallback).
+    std::env::current_dir()
+        .unwrap_or_else(|_| PathBuf::from("."))
+        .join(".ticket")
+}
 
 struct CliOptions {
     port: u16,
@@ -110,30 +161,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         "Ticket Viewer starting (single-process mode)"
     );
 
-    let index_root = options.index_root.unwrap_or_else(|| {
-        let (path, _source) = ticket_api::workspace::resolve_workspace();
-        path
-    });
+    let index_root = options.index_root.unwrap_or_else(resolve_index_root_from_cwd);
 
-    // Build the workspace registry.
-    //
-    // Only open a TicketStore directly when we need a `single_opened` registry
-    // (explicit --workspace flag, or no workspaces configured at all). In the
-    // multi-workspace case, the registry opens each workspace lazily so we
-    // never strand an unused TicketStore that would hold a TantivySearchIndex
-    // and a RedbIndexStore alive for the server's entire lifetime.
-    let registry = if options.workspace.is_some() {
-        let store = TicketStore::open(&index_root).expect("failed to open ticket store");
-        WorkspaceRegistry::single_opened(Arc::new(store))
-    } else {
-        let config = WorkspaceConfig::load();
-        if config.workspaces.is_empty() {
-            let store = TicketStore::open(&index_root).expect("failed to open ticket store");
-            WorkspaceRegistry::single_opened(Arc::new(store))
-        } else {
-            WorkspaceRegistry::from_config(&config)
-        }
-    };
+    info!(index_root = %index_root.display(), "Using ticket index root");
+
+    // Always open a single workspace from the resolved index root.
+    // We deliberately do NOT load WorkspaceRegistry::from_config() — the
+    // global ~/.ticket-workspaces.toml belongs to the CLI, not to this
+    // server, which must serve whatever workspace is local to its cwd.
+    let store = TicketStore::open(&index_root).expect("failed to open ticket store");
+    let registry = WorkspaceRegistry::single_opened(Arc::new(store));
 
     // Build the ticket-http AppState and wire up streaming.
     let state = AppState::new(
