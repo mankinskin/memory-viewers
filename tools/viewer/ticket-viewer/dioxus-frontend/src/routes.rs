@@ -9,10 +9,13 @@
 
 use dioxus::prelude::*;
 
-use crate::backend::{HttpTicketBackend, TicketBackend, WorkspaceInfo};
+use viewer_api_dioxus::{HamburgerIcon, Header, Layout, Sidebar};
+
+use crate::backend::{HttpTicketBackend, TicketBackend, TicketSummary, WorkspaceInfo};
 use crate::components::create_ticket::CreateTicketModal;
 use crate::components::dep_graph::DepGraph;
 use crate::components::ticket_detail::TicketDetail;
+use crate::sse::use_sse;
 
 // ── Route enum ────────────────────────────────────────────────────────────────
 
@@ -144,28 +147,238 @@ pub fn WorkspacePickerPage() -> Element {
 #[component]
 pub fn TicketListPage(workspace: String) -> Element {
     let nav = use_navigator();
-    let ws = workspace.clone();
+
+    // ── Per-workspace UI state (filter, sort, open ticket, active tab) ────
+    // Loads from localStorage (`ticket-viewer:{workspace}:ui`) + URL hash
+    // (`#id=…`) on first render; registers a `hashchange` listener so that
+    // browser back / forward navigation updates reactive state automatically.
+    let store = crate::store::TicketListStore::use_store(&workspace);
+
+    // Flush signals to localStorage and the URL hash on every state change.
+    // Dioxus tracks the signal reads inside `persist` and re-runs the effect
+    // automatically whenever filter, sort_key, open_ticket_id, or active_tab
+    // changes.
+    let ws_persist = workspace.clone();
+    use_effect(move || {
+        store.persist(&ws_persist);
+    });
+
+    // ── Layout state ──────────────────────────────────────────────────────
+    let mut sidebar_collapsed = use_signal(|| false);
+    let mut mobile_sidebar_open = use_signal(|| false);
+
+    // ── Ticket list state ─────────────────────────────────────────────────
+    let mut tickets: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
+    let mut loading: Signal<bool> = use_signal(|| true);
+    let mut list_error: Signal<Option<String>> = use_signal(|| None);
+    // Selected ticket ID — backed by the store for persistence and hash sync.
+    // Signal<T> is Copy so this is a zero-cost alias to the same backing cell.
+    let mut selected_id = store.open_ticket_id;
+
+    // ── SSE live-update hook ──────────────────────────────────────────────
+    // Must be called before any conditional logic (hook ordering rule).
+    // Mutates `tickets` in-place on `ticket.upsert` / `ticket.delete`;
+    // reconnects automatically with exponential backoff on error.
+    use_sse(workspace.clone(), tickets);
+
+    // ── Fetch ticket list on mount / workspace change ─────────────────────
+    {
+        let ws = workspace.clone();
+        use_effect(move || {
+            let ws = ws.clone();
+            loading.set(true);
+            list_error.set(None);
+            spawn(async move {
+                let backend = HttpTicketBackend::new(None);
+                match backend.list_tickets(&ws, None, None, None).await {
+                    Ok(resp) => {
+                        tickets.set(resp.items);
+                        loading.set(false);
+                    }
+                    Err(e) => {
+                        list_error.set(Some(e));
+                        loading.set(false);
+                    }
+                }
+            });
+        });
+    }
+
+    // ── Derived values ────────────────────────────────────────────────────
+    let ticket_count = tickets.read().len();
+    let ws_for_new = workspace.clone();
+    let ws_for_detail = workspace.clone();
 
     rsx! {
-        div {
-            style: "padding: 2rem; font-family: sans-serif; color: #e0e0e8;",
-            div {
-                style: "display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;",
-                h2 { style: "margin: 0;", "Workspace: {workspace}" }
-                button {
-                    style: "
-                        padding: 8px 18px; border-radius: 6px; border: none;
-                        background: #3b82f6; color: white;
-                        cursor: pointer; font-size: 14px; font-weight: 600;
-                    ",
-                    onclick: move |_| {
-                        nav.push(Route::NewTicketPage { workspace: ws.clone() });
+        Layout {
+            // ── Header ────────────────────────────────────────────────────
+            header: rsx! {
+                Header {
+                    left: rsx! {
+                        // Hamburger — visible on mobile only (CSS hides on desktop).
+                        // min 44×44px tap target per WCAG AAA.
+                        button {
+                            class: "sidebar-hamburger",
+                            style: "min-width: 44px; min-height: 44px;",
+                            aria_label: "Open sidebar",
+                            onclick: move |_| mobile_sidebar_open.set(true),
+                            HamburgerIcon {}
+                        }
+                        span { class: "header-icon", "🎫" }
+                        span { class: "header-title", "{workspace}" }
+                        Link {
+                            to: Route::WorkspacePickerPage,
+                            class: "header-subtitle",
+                            style: "margin-left: 8px; font-size: 12px; color: var(--text-muted); text-decoration: none;",
+                            "← workspaces"
+                        }
                     },
-                    "+ New Ticket"
+                    right: rsx! {
+                        button {
+                            style: "
+                                padding: 6px 14px; border-radius: 6px; border: none;
+                                background: var(--accent-blue); color: white;
+                                cursor: pointer; font-size: 13px; font-weight: 600;
+                                min-height: 32px;
+                            ",
+                            onclick: move |_| {
+                                nav.push(Route::NewTicketPage { workspace: ws_for_new.clone() });
+                            },
+                            "+ New Ticket"
+                        }
+                    },
+                }
+            },
+
+            // ── Sidebar — ticket tree slot ─────────────────────────────────
+            Sidebar {
+                title: "Tickets",
+                badge: if ticket_count > 0 { Some(ticket_count.to_string()) } else { None },
+                collapsed: *sidebar_collapsed.read(),
+                on_toggle: move |_| sidebar_collapsed.toggle(),
+                // Controlled mobile drawer — linked to the hamburger in the Header.
+                mobile_open: Some(*mobile_sidebar_open.read()),
+                on_mobile_open_change: move |open| mobile_sidebar_open.set(open),
+
+                // ── Loading state ──────────────────────────────────────────
+                if *loading.read() {
+                    div {
+                        class: "sidebar-loading",
+                        "Loading tickets…"
+                    }
+                }
+
+                // ── Error state ────────────────────────────────────────────
+                if let Some(err) = list_error.read().clone() {
+                    div {
+                        style: "padding: 12px; color: var(--error); font-size: 12px;",
+                        "Failed to load: {err}"
+                    }
+                }
+
+                // ── Ticket list ────────────────────────────────────────────
+                if !*loading.read() {
+                    if tickets.read().is_empty() {
+                        div {
+                            class: "sidebar-empty",
+                            "No tickets in this workspace."
+                        }
+                    }
+                    for ticket in tickets.read().clone() {
+                        {
+                            let tid = ticket.id.clone();
+                            let tid_click = tid.clone();
+                            let title = ticket.title.clone().unwrap_or_else(|| "Untitled".into());
+                            let state = ticket.state.clone().unwrap_or_else(|| "new".into());
+                            let is_selected = *selected_id.read() == Some(tid.clone());
+
+                            let (state_bg, state_fg) = match state.as_str() {
+                                "new" => ("rgba(100,100,160,0.15)", "#a0a0c8"),
+                                "ready" => ("rgba(61,160,96,0.15)", "#86efac"),
+                                "in-implementation" => ("rgba(249,115,22,0.15)", "#fbbf24"),
+                                "in-review" => ("rgba(192,90,210,0.15)", "#c084fc"),
+                                "done" => ("rgba(74,222,128,0.15)", "#4ade80"),
+                                "cancelled" => ("rgba(248,113,113,0.15)", "#f87171"),
+                                _ => ("rgba(80,80,100,0.15)", "#9ca3af"),
+                            };
+
+                            let row_bg = if is_selected {
+                                "var(--bg-active)"
+                            } else {
+                                "transparent"
+                            };
+
+                            rsx! {
+                                button {
+                                    key: "{tid}",
+                                    style: "
+                                        display: flex;
+                                        flex-direction: column;
+                                        gap: 4px;
+                                        width: 100%;
+                                        padding: 10px 14px;
+                                        border: none;
+                                        border-bottom: 1px solid var(--border-subtle);
+                                        background: {row_bg};
+                                        color: var(--text-primary);
+                                        cursor: pointer;
+                                        text-align: left;
+                                        min-height: 44px;
+                                    ",
+                                    onclick: move |_| {
+                                        selected_id.set(Some(tid_click.clone()));
+                                        // Close mobile drawer when a ticket is selected.
+                                        mobile_sidebar_open.set(false);
+                                    },
+                                    span {
+                                        style: "font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                                        "{title}"
+                                    }
+                                    span {
+                                        style: "
+                                            display: inline-block;
+                                            font-size: 10px;
+                                            font-weight: 600;
+                                            padding: 1px 7px;
+                                            border-radius: 10px;
+                                            background: {state_bg};
+                                            color: {state_fg};
+                                        ",
+                                        "{state}"
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-            p { "Ticket list will be rendered here." }
-            Link { to: Route::WorkspacePickerPage, "← Back" }
+
+            // ── Main panel — ticket detail slot ───────────────────────────
+            div {
+                class: "content",
+                if let Some(ref id) = *selected_id.read() {
+                    TicketDetail {
+                        workspace: ws_for_detail.clone(),
+                        id: id.clone(),
+                    }
+                } else {
+                    div {
+                        style: "
+                            display: flex;
+                            flex-direction: column;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100%;
+                            color: var(--text-muted);
+                            gap: 8px;
+                            padding: 2rem;
+                            text-align: center;
+                        ",
+                        span { style: "font-size: 2rem;", "🎫" }
+                        span { style: "font-size: 14px;", "Select a ticket from the sidebar to view details." }
+                    }
+                }
+            }
         }
     }
 }

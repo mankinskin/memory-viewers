@@ -2,6 +2,8 @@ mod backend;
 mod components;
 mod graph;
 mod routes;
+mod store;
+mod sse;
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::ViewerShell;
