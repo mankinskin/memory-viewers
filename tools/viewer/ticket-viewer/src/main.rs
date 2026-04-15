@@ -94,7 +94,23 @@ fn parse_cli_options() -> CliOptions {
 }
 
 async fn shutdown_signal() {
-    let _ = tokio::signal::ctrl_c().await;
+    let ctrl_c = tokio::signal::ctrl_c();
+
+    #[cfg(unix)]
+    {
+        let mut sigterm =
+            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+                .expect("failed to register SIGTERM handler");
+        tokio::select! {
+            _ = ctrl_c => {}
+            _ = sigterm.recv() => {}
+        }
+    }
+
+    #[cfg(not(unix))]
+    {
+        let _ = ctrl_c.await;
+    }
 }
 
 #[tokio::main]
@@ -141,8 +157,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = with_static_files(app, Some(options.static_dir).filter(|p| p.exists()));
 
     let addr = format!("0.0.0.0:{}", options.port);
-    info!("Listening on http://{}:{}", display_host("0.0.0.0"), options.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
+    let actual_port = listener.local_addr()?.port();
+    info!("Listening on http://{}:{}", display_host("0.0.0.0"), actual_port);
+    // Print the actual port on stdout so callers (e.g. the VS Code extension)
+    // can discover it when the server was started with --port 0.
+    println!("TICKET_VIEWER_PORT={actual_port}");
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
