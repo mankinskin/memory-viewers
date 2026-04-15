@@ -18,7 +18,7 @@
 //! - `PORT`       — HTTP listen port (default: 3002)
 /// - `STATIC_DIR` — Path to pre-built SPA static files (default: Dioxus build output, then <manifest>/static)
 
-use std::{env, path::PathBuf, sync::Arc};
+use std::{env, io::Write, path::PathBuf, sync::Arc};
 use tracing::info;
 use viewer_api::{display_host, init_tracing, with_static_files};
 
@@ -162,7 +162,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     info!("Listening on http://{}:{}", display_host("0.0.0.0"), actual_port);
     // Print the actual port on stdout so callers (e.g. the VS Code extension)
     // can discover it when the server was started with --port 0.
+    // Explicit flush is required because Rust uses full buffering (not line
+    // buffering) when stdout is a pipe, so without it the line sits in the
+    // buffer while the server loop runs and callers never see it.
     println!("TICKET_VIEWER_PORT={actual_port}");
+    std::io::stdout().flush().expect("failed to flush stdout");
     axum::serve(listener, app)
         .with_graceful_shutdown(shutdown_signal())
         .await?;
