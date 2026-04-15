@@ -382,3 +382,251 @@ test.describe('ticket-viewer app', () => {
     ).not.toBeVisible();
   });
 });
+
+// ── TicketContent detailed behavior ──────────────────────────────────────────
+//
+// These tests correspond directly to the Dioxus TicketContent component
+// implementation in dioxus-frontend/src/components/ticket_content.rs and
+// validate the behavioral specification that both the TS and Dioxus frontends
+// must satisfy.
+
+test.describe('TicketContent component', () => {
+  test.beforeEach(async ({ page }) => {
+    await mockApi(page);
+    await page.goto('/');
+  });
+
+  // ── Helper: open the first ticket ──────────────────────────────────
+
+  async function openFirstTicket(page: Page): Promise<void> {
+    const row = page.locator('.tree-item-row').filter({
+      has: page.locator('.tree-label', { hasText: 'First new ticket' }),
+    });
+    await expect(row).toBeVisible();
+    await row.click();
+    // Wait for content panel to leave empty state.
+    await expect(page.locator('.ticket-content')).toBeVisible();
+    await expect(page.locator('.ticket-content--empty')).not.toBeVisible();
+  }
+
+  // ── Description tab (default) ────────────────────────────────────────────
+
+  test('description tab is active by default', async ({ page }) => {
+    await openFirstTicket(page);
+
+    const descTab = page.locator('[role="tab"]').filter({ hasText: 'description.md' });
+    await expect(descTab).toHaveAttribute('aria-selected', 'true');
+
+    const tomlTab = page.locator('[role="tab"]').filter({ hasText: 'ticket.toml' });
+    await expect(tomlTab).toHaveAttribute('aria-selected', 'false');
+  });
+
+  test('description markdown includes heading and bold text from mock', async ({ page }) => {
+    await openFirstTicket(page);
+
+    const md = page.locator('.ticket-content__markdown');
+    await expect(md).toBeVisible();
+    await expect(md.locator('h1')).toHaveText('First new ticket');
+    await expect(md.locator('strong')).toHaveText('useful');
+  });
+
+  // ── Error state ──────────────────────────────────────────────────────────
+
+  test('shows inline error when description fetch fails', async ({ page }) => {
+    // Override description route to return a server error.
+    await page.unroute('**/api/tickets**');
+    await page.route('**/api/tickets**', (route: Route) => {
+      const { pathname } = new URL(route.request().url());
+      const afterTickets = pathname.split('/api/tickets')[1] ?? '';
+      if (afterTickets.includes('/description')) {
+        void route.fulfill({ status: 500, body: 'internal server error' });
+      } else if (afterTickets.startsWith('/') && afterTickets.length > 1) {
+        void route.fulfill({ json: MOCK_TICKET_DETAIL });
+      } else {
+        void route.fulfill({ json: MOCK_TICKETS });
+      }
+    });
+
+    await openFirstTicket(page);
+
+    // Error text must be visible in the description panel.
+    const content = page.locator('.ticket-content');
+    await expect(content).toBeVisible();
+    // The error should appear somewhere in the content area.
+    await expect(content.getByText(/error/i).first()).toBeVisible();
+  });
+
+  // ── Null description state ───────────────────────────────────────────────
+
+  test('shows no-description placeholder when description is null', async ({ page }) => {
+    // Override description route to return null description.
+    await page.unroute('**/api/tickets**');
+    await page.route('**/api/tickets**', (route: Route) => {
+      const { pathname } = new URL(route.request().url());
+      const afterTickets = pathname.split('/api/tickets')[1] ?? '';
+      if (afterTickets.includes('/description')) {
+        void route.fulfill({
+          json: {
+            request_id: 'r-null',
+            workspace: WORKSPACE,
+            id: TICKET_ID,
+            description: null,
+          },
+        });
+      } else if (afterTickets.startsWith('/') && afterTickets.length > 1) {
+        void route.fulfill({ json: MOCK_TICKET_DETAIL });
+      } else {
+        void route.fulfill({ json: MOCK_TICKETS });
+      }
+    });
+
+    await openFirstTicket(page);
+
+    // The placeholder message must appear instead of markdown.
+    const content = page.locator('.ticket-content');
+    await expect(content).toBeVisible();
+    await expect(content.getByText(/No description/i)).toBeVisible();
+    // No markdown body since there is no content.
+    await expect(content.locator('.ticket-content__markdown')).not.toBeVisible();
+  });
+
+  // ── TOML tab ─────────────────────────────────────────────────────────────
+
+  test('TOML tab is mutually exclusive with description tab', async ({ page }) => {
+    await openFirstTicket(page);
+
+    const tomlTab = page.locator('[role="tab"]').filter({ hasText: 'ticket.toml' });
+    await tomlTab.click();
+
+    await expect(tomlTab).toHaveAttribute('aria-selected', 'true');
+    const descTab = page.locator('[role="tab"]').filter({ hasText: 'description.md' });
+    await expect(descTab).toHaveAttribute('aria-selected', 'false');
+
+    // Markdown panel is hidden; TOML pre is shown.
+    await expect(page.locator('.ticket-content__markdown')).not.toBeVisible();
+    await expect(page.locator('.ticket-content__toml')).toBeVisible();
+  });
+
+  test('TOML content begins with ticket-ID comment line', async ({ page }) => {
+    await openFirstTicket(page);
+
+    const tomlTab = page.locator('[role="tab"]').filter({ hasText: 'ticket.toml' });
+    await tomlTab.click();
+
+    const toml = page.locator('.ticket-content__toml');
+    await expect(toml).toBeVisible();
+    // The TOML representation should start with a comment containing the ticket ID.
+    await expect(toml).toContainText(`# ${TICKET_ID}`);
+  });
+
+  test('TOML panel shows all field keys from ticket detail', async ({ page }) => {
+    await openFirstTicket(page);
+
+    const tomlTab = page.locator('[role="tab"]').filter({ hasText: 'ticket.toml' });
+    await tomlTab.click();
+
+    const toml = page.locator('.ticket-content__toml');
+    await expect(toml).toBeVisible();
+    // MOCK_TICKET_DETAIL.ticket.fields has: title, state, component, acceptance_criteria
+    await expect(toml).toContainText('title');
+    await expect(toml).toContainText('state');
+    await expect(toml).toContainText('component');
+    await expect(toml).toContainText('acceptance_criteria');
+  });
+
+  test('TOML field values are quoted strings', async ({ page }) => {
+    await openFirstTicket(page);
+
+    const tomlTab = page.locator('[role="tab"]').filter({ hasText: 'ticket.toml' });
+    await tomlTab.click();
+
+    const toml = page.locator('.ticket-content__toml');
+    // String values must be wrapped in double-quotes (TOML convention).
+    await expect(toml).toContainText('component = "ui"');
+    await expect(toml).toContainText('state = "new"');
+  });
+
+  // ── Tab round-trip ───────────────────────────────────────────────────────
+
+  test('switching from TOML back to description restores markdown', async ({ page }) => {
+    await openFirstTicket(page);
+
+    // Go to TOML.
+    const tomlTab = page.locator('[role="tab"]').filter({ hasText: 'ticket.toml' });
+    await tomlTab.click();
+    await expect(page.locator('.ticket-content__toml')).toBeVisible();
+    await expect(page.locator('.ticket-content__markdown')).not.toBeVisible();
+
+    // Switch back to description.
+    const descTab = page.locator('[role="tab"]').filter({ hasText: 'description.md' });
+    await descTab.click();
+    await expect(descTab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('.ticket-content__markdown')).toBeVisible();
+    await expect(page.locator('.ticket-content__toml')).not.toBeVisible();
+  });
+
+  // ── Multiple tickets ─────────────────────────────────────────────────────
+
+  test('selecting a different ticket fetches its description', async ({ page }) => {
+    // Wire up a second description response keyed to TICKET_ID_2.
+    await page.unroute('**/api/tickets**');
+    await page.route('**/api/tickets**', (route: Route) => {
+      const url = route.request().url();
+      const { pathname } = new URL(url);
+      const afterTickets = pathname.split('/api/tickets')[1] ?? '';
+      if (afterTickets.includes('/description')) {
+        // Return a different body for ticket 2.
+        if (url.includes(TICKET_ID_2)) {
+          void route.fulfill({
+            json: {
+              request_id: 'r-t2',
+              workspace: WORKSPACE,
+              id: TICKET_ID_2,
+              description: '# A done ticket\n\nCompleted work.',
+            },
+          });
+        } else {
+          void route.fulfill({ json: MOCK_DESCRIPTION });
+        }
+      } else if (afterTickets.startsWith('/') && afterTickets.length > 1) {
+        void route.fulfill({ json: MOCK_TICKET_DETAIL });
+      } else {
+        void route.fulfill({ json: MOCK_TICKETS });
+      }
+    });
+
+    // Open first ticket.
+    await openFirstTicket(page);
+    await expect(page.locator('.ticket-content__markdown h1')).toHaveText('First new ticket');
+
+    // Click the second ticket.
+    const secondRow = page.locator('.tree-item-row').filter({
+      has: page.locator('.tree-label', { hasText: 'A done ticket' }),
+    });
+    await secondRow.click();
+
+    // Description should now show the second ticket's heading.
+    await expect(page.locator('.ticket-content__markdown h1')).toHaveText('A done ticket');
+  });
+
+  // ── Accessibility ────────────────────────────────────────────────────────
+
+  test('tab buttons have correct role and aria-selected attributes', async ({ page }) => {
+    await openFirstTicket(page);
+
+    const tablist = page.locator('[role="tablist"]');
+    await expect(tablist).toBeVisible();
+
+    const tabs = tablist.locator('[role="tab"]');
+    await expect(tabs).toHaveCount(2);
+
+    // Description selected, TOML not.
+    await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'true');
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'false');
+
+    // Click TOML and verify swap.
+    await tabs.nth(1).click();
+    await expect(tabs.nth(0)).toHaveAttribute('aria-selected', 'false');
+    await expect(tabs.nth(1)).toHaveAttribute('aria-selected', 'true');
+  });
+});
