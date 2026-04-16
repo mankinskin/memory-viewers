@@ -155,7 +155,9 @@ pub fn use_sse(workspace: String, tickets: Signal<Vec<TicketSummary>>) {
                             id: p.ticket.id,
                             title: p.ticket.title,
                             state: p.ticket.state,
+                            ticket_type: None,
                             created_at: String::new(),
+                            updated_at: String::new(),
                             fields: serde_json::Value::Null,
                         });
                     }

@@ -24,7 +24,13 @@ pub struct TicketSummary {
     pub id: String,
     pub title: Option<String>,
     pub state: Option<String>,
+    /// Ticket type (e.g. `"tracker-improvement"`), serialised as top-level
+    /// `"type"` in the REST response.
+    #[serde(rename = "type", default)]
+    pub ticket_type: Option<String>,
     pub created_at: String,
+    #[serde(default)]
+    pub updated_at: String,
     #[serde(default)]
     pub fields: serde_json::Value,
 }

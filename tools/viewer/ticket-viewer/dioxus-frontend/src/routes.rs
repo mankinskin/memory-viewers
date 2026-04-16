@@ -14,6 +14,7 @@ use viewer_api_dioxus::{HamburgerIcon, Header, Layout, Sidebar};
 use crate::backend::{HttpTicketBackend, TicketBackend, TicketSummary, WorkspaceInfo};
 use crate::components::create_ticket::CreateTicketModal;
 use crate::components::dep_graph::DepGraph;
+use crate::components::search::SearchBar;
 use crate::components::ticket_detail::TicketDetail;
 use crate::sse::use_sse;
 
@@ -174,6 +175,10 @@ pub fn TicketListPage(workspace: String) -> Element {
     // Selected ticket ID — backed by the store for persistence and hash sync.
     // Signal<T> is Copy so this is a zero-cost alias to the same backing cell.
     let mut selected_id = store.open_ticket_id;
+    // Mutable aliases for filter/sort signals so closures can call `.set()`.
+    let mut filter = store.filter;
+    let mut state_filter = store.state_filter;
+    let sort_key = store.sort_key;
 
     // ── SSE live-update hook ──────────────────────────────────────────────
     // Must be called before any conditional logic (hook ordering rule).
@@ -181,16 +186,21 @@ pub fn TicketListPage(workspace: String) -> Element {
     // reconnects automatically with exponential backoff on error.
     use_sse(workspace.clone(), tickets);
 
-    // ── Fetch ticket list on mount / workspace change ─────────────────────
+    // ── Fetch ticket list on mount / workspace change / filter change ─────
     {
         let ws = workspace.clone();
         use_effect(move || {
             let ws = ws.clone();
+            // Read filter signals here so the effect re-runs when they change.
+            let query = filter.read().clone();
+            let state = state_filter.read().clone();
             loading.set(true);
             list_error.set(None);
             spawn(async move {
                 let backend = HttpTicketBackend::new(None);
-                match backend.list_tickets(&ws, None, None, None).await {
+                let q = if query.trim().is_empty() { None } else { Some(query.trim().to_string()) };
+                let s = if state.is_empty() { None } else { Some(state) };
+                match backend.list_tickets(&ws, s.as_deref(), q.as_deref(), Some(200)).await {
                     Ok(resp) => {
                         tickets.set(resp.items);
                         loading.set(false);
@@ -210,6 +220,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     let ws_for_detail = workspace.clone();
 
     rsx! {
+        SearchBar { workspace: workspace.clone() }
         Layout {
             // ── Header ────────────────────────────────────────────────────
             header: rsx! {
@@ -260,6 +271,61 @@ pub fn TicketListPage(workspace: String) -> Element {
                 mobile_open: Some(*mobile_sidebar_open.read()),
                 on_mobile_open_change: move |open| mobile_sidebar_open.set(open),
 
+                // ── Filter controls ────────────────────────────────────────
+                div {
+                    style: "
+                        padding: 8px 12px;
+                        border-bottom: 1px solid var(--border-subtle);
+                        display: flex;
+                        flex-direction: column;
+                        gap: 6px;
+                    ",
+                    input {
+                        r#type: "text",
+                        placeholder: "Filter tickets…",
+                        style: "
+                            width: 100%;
+                            padding: 6px 10px;
+                            border-radius: 6px;
+                            border: 1px solid var(--border-subtle);
+                            background: var(--bg-secondary);
+                            color: var(--text-primary);
+                            font-size: 12px;
+                            box-sizing: border-box;
+                            outline: none;
+                        ",
+                        value: "{filter.read()}",
+                        oninput: move |e| filter.set(e.value()),
+                    }
+                    div {
+                        style: "display: flex; flex-wrap: wrap; gap: 4px;",
+                        for (lab, val) in [("All", ""), ("new", "new"), ("ready", "ready"), ("impl", "in-implementation"), ("review", "in-review"), ("done", "done"), ("cancelled", "cancelled")].into_iter() {
+                            {
+                                let is_active = state_filter.read().as_str() == val;
+                                let chip_bg = if is_active { "var(--accent-blue)" } else { "var(--bg-secondary)" };
+                                let v = val.to_string();
+                                rsx! {
+                                    button {
+                                        key: "{val}",
+                                        style: "
+                                            padding: 2px 8px;
+                                            border-radius: 10px;
+                                            border: 1px solid var(--border-subtle);
+                                            background: {chip_bg};
+                                            color: var(--text-primary);
+                                            font-size: 10px;
+                                            cursor: pointer;
+                                            font-weight: 600;
+                                        ",
+                                        onclick: move |_| state_filter.set(v.clone()),
+                                        "{lab}"
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
                 // ── Loading state ──────────────────────────────────────────
                 if *loading.read() {
                     div {
@@ -284,67 +350,78 @@ pub fn TicketListPage(workspace: String) -> Element {
                             "No tickets in this workspace."
                         }
                     }
-                    for ticket in tickets.read().clone() {
-                        {
-                            let tid = ticket.id.clone();
-                            let tid_click = tid.clone();
-                            let title = ticket.title.clone().unwrap_or_else(|| "Untitled".into());
-                            let state = ticket.state.clone().unwrap_or_else(|| "new".into());
-                            let is_selected = *selected_id.read() == Some(tid.clone());
+                    {
+                        let mut sorted = tickets.read().clone();
+                        match sort_key.read().as_str() {
+                            "title" => sorted.sort_by(|a, b| a.title.cmp(&b.title)),
+                            "state" => sorted.sort_by(|a, b| a.state.cmp(&b.state)),
+                            "created_at" => sorted.sort_by(|a, b| b.created_at.cmp(&a.created_at)),
+                            _ => sorted.sort_by(|a, b| b.updated_at.cmp(&a.updated_at)),
+                        }
+                        rsx! {
+                            for ticket in sorted {
+                                {
+                                    let tid = ticket.id.clone();
+                                    let tid_click = tid.clone();
+                                    let title = ticket.title.clone().unwrap_or_else(|| "Untitled".into());
+                                    let state = ticket.state.clone().unwrap_or_else(|| "new".into());
+                                    let is_selected = *selected_id.read() == Some(tid.clone());
 
-                            let (state_bg, state_fg) = match state.as_str() {
-                                "new" => ("rgba(100,100,160,0.15)", "#a0a0c8"),
-                                "ready" => ("rgba(61,160,96,0.15)", "#86efac"),
-                                "in-implementation" => ("rgba(249,115,22,0.15)", "#fbbf24"),
-                                "in-review" => ("rgba(192,90,210,0.15)", "#c084fc"),
-                                "done" => ("rgba(74,222,128,0.15)", "#4ade80"),
-                                "cancelled" => ("rgba(248,113,113,0.15)", "#f87171"),
-                                _ => ("rgba(80,80,100,0.15)", "#9ca3af"),
-                            };
+                                    let (state_bg, state_fg) = match state.as_str() {
+                                        "new" => ("rgba(100,100,160,0.15)", "#a0a0c8"),
+                                        "ready" => ("rgba(61,160,96,0.15)", "#86efac"),
+                                        "in-implementation" => ("rgba(249,115,22,0.15)", "#fbbf24"),
+                                        "in-review" => ("rgba(192,90,210,0.15)", "#c084fc"),
+                                        "done" => ("rgba(74,222,128,0.15)", "#4ade80"),
+                                        "cancelled" => ("rgba(248,113,113,0.15)", "#f87171"),
+                                        _ => ("rgba(80,80,100,0.15)", "#9ca3af"),
+                                    };
 
-                            let row_bg = if is_selected {
-                                "var(--bg-active)"
-                            } else {
-                                "transparent"
-                            };
+                                    let row_bg = if is_selected {
+                                        "var(--bg-active)"
+                                    } else {
+                                        "transparent"
+                                    };
 
-                            rsx! {
-                                button {
-                                    key: "{tid}",
-                                    style: "
-                                        display: flex;
-                                        flex-direction: column;
-                                        gap: 4px;
-                                        width: 100%;
-                                        padding: 10px 14px;
-                                        border: none;
-                                        border-bottom: 1px solid var(--border-subtle);
-                                        background: {row_bg};
-                                        color: var(--text-primary);
-                                        cursor: pointer;
-                                        text-align: left;
-                                        min-height: 44px;
-                                    ",
-                                    onclick: move |_| {
-                                        selected_id.set(Some(tid_click.clone()));
-                                        // Close mobile drawer when a ticket is selected.
-                                        mobile_sidebar_open.set(false);
-                                    },
-                                    span {
-                                        style: "font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
-                                        "{title}"
-                                    }
-                                    span {
-                                        style: "
-                                            display: inline-block;
-                                            font-size: 10px;
-                                            font-weight: 600;
-                                            padding: 1px 7px;
-                                            border-radius: 10px;
-                                            background: {state_bg};
-                                            color: {state_fg};
-                                        ",
-                                        "{state}"
+                                    rsx! {
+                                        button {
+                                            key: "{tid}",
+                                            style: "
+                                                display: flex;
+                                                flex-direction: column;
+                                                gap: 4px;
+                                                width: 100%;
+                                                padding: 10px 14px;
+                                                border: none;
+                                                border-bottom: 1px solid var(--border-subtle);
+                                                background: {row_bg};
+                                                color: var(--text-primary);
+                                                cursor: pointer;
+                                                text-align: left;
+                                                min-height: 44px;
+                                            ",
+                                            onclick: move |_| {
+                                                selected_id.set(Some(tid_click.clone()));
+                                                // Close mobile drawer when a ticket is selected.
+                                                mobile_sidebar_open.set(false);
+                                            },
+                                            span {
+                                                style: "font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                                                "{title}"
+                                            }
+                                            span {
+                                                style: "
+                                                    display: inline-block;
+                                                    font-size: 10px;
+                                                    font-weight: 600;
+                                                    padding: 1px 7px;
+                                                    border-radius: 10px;
+                                                    background: {state_bg};
+                                                    color: {state_fg};
+                                                ",
+                                                "{state}"
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -353,10 +430,23 @@ pub fn TicketListPage(workspace: String) -> Element {
                 }
             }
 
-            // ── Main panel — ticket detail slot ───────────────────────────
+            // ── Main panel — dep graph + ticket detail ──────────────────
             div {
                 class: "content",
+                style: "display: flex; flex-direction: row; overflow: hidden;",
                 if let Some(ref id) = *selected_id.read() {
+                    // Center: dependency graph fills remaining space
+                    div {
+                        style: "flex: 1; position: relative; min-width: 0; overflow: hidden;",
+                        DepGraph {
+                            workspace: ws_for_detail.clone(),
+                            root_id: id.clone(),
+                            on_select: move |new_id: String| {
+                                selected_id.set(Some(new_id));
+                            },
+                        }
+                    }
+                    // Right sidebar: ticket detail editor
                     TicketDetail {
                         workspace: ws_for_detail.clone(),
                         id: id.clone(),
@@ -369,6 +459,7 @@ pub fn TicketListPage(workspace: String) -> Element {
                             align-items: center;
                             justify-content: center;
                             height: 100%;
+                            width: 100%;
                             color: var(--text-muted);
                             gap: 8px;
                             padding: 2rem;
@@ -403,47 +494,22 @@ pub fn NewTicketPage(workspace: String) -> Element {
     }
 }
 
-/// Ticket detail page — shows ticket metadata and the dependency graph.
+/// Ticket detail page — redirects to the list page with the ticket pre-selected.
 ///
-/// The `DepGraph` component occupies the full viewport (it renders inside the
-/// transparent `#ui-root` overlay sitting on top of `#webgpu-canvas`).
+/// The three-panel layout (list + graph + detail) is now rendered entirely by
+/// `TicketListPage`, so visiting this URL just sets the hash and redirects.
 #[component]
 pub fn TicketDetailPage(workspace: String, id: String) -> Element {
-    rsx! {
-        // Dep-graph fills the entire overlay area.
-        DepGraph {
-            workspace: workspace.clone(),
-            root_id: id.clone(),
+    let nav = use_navigator();
+    let ws = workspace.clone();
+    let tid = id.clone();
+    use_effect(move || {
+        // Set the URL hash so the store picks up the selected ticket.
+        if let Some(win) = web_sys::window() {
+            let _ = win.location().set_hash(&format!("id={tid}"));
         }
-
-        // Inline-editing sidebar — fixed left panel above the graph.
-        TicketDetail {
-            workspace: workspace.clone(),
-            id: id.clone(),
-        }
-
-        // Back-link HUD — pinned to top-left, above the graph.
-        div {
-            style: "
-                position: absolute;
-                top: 12px; left: 12px;
-                z-index: 100;
-                pointer-events: auto;
-            ",
-            Link {
-                to: Route::TicketListPage { workspace: workspace.clone() },
-                style: "
-                    color: rgba(200,200,220,0.85);
-                    font-family: sans-serif;
-                    font-size: 12px;
-                    text-decoration: none;
-                    background: rgba(30,30,45,0.7);
-                    padding: 4px 10px;
-                    border-radius: 4px;
-                ",
-                "← {id}"
-            }
-        }
-    }
+        nav.replace(Route::TicketListPage { workspace: ws.clone() });
+    });
+    rsx! {}
 }
 
