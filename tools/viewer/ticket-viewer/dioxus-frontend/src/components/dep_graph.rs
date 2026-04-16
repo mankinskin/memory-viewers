@@ -112,6 +112,11 @@ fn subscribe_sse(
 pub struct DepGraphProps {
     pub workspace: String,
     pub root_id: String,
+    /// Optional callback invoked when the user clicks a graph node.
+    /// When provided the component calls this instead of navigating to
+    /// `TicketDetailPage`.
+    #[props(optional)]
+    pub on_select: Option<EventHandler<String>>,
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -129,6 +134,7 @@ pub struct DepGraphProps {
 pub fn DepGraph(props: DepGraphProps) -> Element {
     let workspace = props.workspace.clone();
     let root_id = props.root_id.clone();
+    let on_select_prop = props.on_select.clone();
 
     // ── WebGPU 3-D path ────────────────────────────────────────────────
     #[cfg(target_arch = "wasm32")]
@@ -136,15 +142,20 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
         let ws_gpu = workspace.clone();
         let rid_gpu = root_id.clone();
         let nav = use_navigator();
+        let on_sel = on_select_prop.clone();
         return rsx! {
             crate::graph3d::Graph3D {
                 workspace: ws_gpu.clone(),
                 root_id: rid_gpu.clone(),
                 on_select: move |id: String| {
-                    nav.push(crate::routes::Route::TicketDetailPage {
-                        workspace: ws_gpu.clone(),
-                        id,
-                    });
+                    if let Some(ref cb) = on_sel {
+                        cb.call(id);
+                    } else {
+                        nav.push(crate::routes::Route::TicketDetailPage {
+                            workspace: ws_gpu.clone(),
+                            id,
+                        });
+                    }
                 }
             }
         };
@@ -505,6 +516,7 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                                 let node_id_drag = node.id.clone();
                                 let ws = workspace.clone();
                                 let nav = use_navigator();
+                                let on_sel = on_select_prop.clone();
                                 let nx = node.x;
                                 let ny = node.y;
                                 let node_title = node.title.clone();
@@ -525,10 +537,14 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                                         canvas_w: cw,
                                         canvas_h: ch,
                                         on_click: move |_| {
-                                            nav.push(Route::TicketDetailPage {
-                                                workspace: ws.clone(),
-                                                id: node_id.clone(),
-                                            });
+                                            if let Some(ref cb) = on_sel {
+                                                cb.call(node_id.clone());
+                                            } else {
+                                                nav.push(Route::TicketDetailPage {
+                                                    workspace: ws.clone(),
+                                                    id: node_id.clone(),
+                                                });
+                                            }
                                         },
                                         on_drag_start: move |(_, cx, cy): (String, f64, f64)| {
                                             drag.with_mut(|d| {

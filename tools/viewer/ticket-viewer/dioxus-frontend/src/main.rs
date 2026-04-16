@@ -8,7 +8,7 @@ mod store;
 mod sse;
 
 use dioxus::prelude::*;
-use viewer_api_dioxus::ViewerShell;
+use viewer_api_dioxus::{ViewerShell, WgpuOverlay};
 
 use routes::Route;
 
@@ -26,6 +26,7 @@ fn App() -> Element {
     rsx! {
         style { "html, body, #main {{ overflow: hidden; margin: 0; padding: 0; width: 100%; height: 100%; }}" }
         ViewerShell {
+            WgpuOverlay {}
             Router::<Route> {}
         }
     }

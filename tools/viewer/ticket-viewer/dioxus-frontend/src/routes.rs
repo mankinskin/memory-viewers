@@ -437,6 +437,7 @@ pub fn TicketListPage(workspace: String) -> Element {
                 if let Some(ref id) = *selected_id.read() {
                     // Center: dependency graph fills remaining space
                     div {
+                        key: "{id}",
                         style: "flex: 1; position: relative; min-width: 0; overflow: hidden;",
                         DepGraph {
                             workspace: ws_for_detail.clone(),
@@ -448,6 +449,7 @@ pub fn TicketListPage(workspace: String) -> Element {
                     }
                     // Right sidebar: ticket detail editor
                     TicketDetail {
+                        key: "{id}",
                         workspace: ws_for_detail.clone(),
                         id: id.clone(),
                     }

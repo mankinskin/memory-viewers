@@ -15,11 +15,11 @@ reload_html = true
 watch_path = ["src", "public"]
 
 [web.resource]
-style = []
+style = ["viewer-api.css"]
 script = []
 
 [web.resource.dev]
-style = []
+style = ["viewer-api.css"]
 script = []
 
 [[web.proxy]]

@@ -745,12 +745,14 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
         // ── Sidebar panel ────────────────────────────────────────────
         div {
             style: "
-                position: fixed; left: 0; top: 0; bottom: 0; width: 300px;
-                z-index: 200; overflow-y: auto; overflow-x: hidden;
+                width: 300px; min-width: 300px; height: 100%;
+                overflow-y: auto; overflow-x: hidden;
                 background: rgba(15, 15, 28, 0.93);
-                border-right: 1px solid #2a2a45;
+                border-left: 1px solid #2a2a45;
                 padding: 1rem;
                 font-family: sans-serif;
+                box-sizing: border-box;
+                flex-shrink: 0;
             ",
 
             if let Some(err) = load_error() {

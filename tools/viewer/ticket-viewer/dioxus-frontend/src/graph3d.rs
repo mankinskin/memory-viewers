@@ -616,6 +616,18 @@ fn position_dom_nodes(state: &RenderState, vw: f32, vh: f32) {
     let Some(doc) = web_sys::window().and_then(|w| w.document()) else {
         return;
     };
+
+    // Get container offset so DOM translates are relative to the container,
+    // not the full viewport (the GPU canvas covers the whole viewport but the
+    // DOM container lives inside the center panel).
+    let (container_left, container_top) = doc
+        .get_element_by_id("graph3d-container")
+        .map(|el| {
+            let rect = el.get_bounding_client_rect();
+            (rect.left() as f32, rect.top() as f32)
+        })
+        .unwrap_or((0.0, 0.0));
+
     let eye = state.camera.eye();
     let aspect = vw / vh.max(1.0);
     let proj = math3d::perspective(CAMERA_FOV, aspect, CAMERA_NEAR, CAMERA_FAR);
@@ -649,7 +661,7 @@ fn position_dom_nodes(state: &RenderState, vw: f32, vh: f32) {
         let dist = (dx * dx + dy * dy + dz * dz).sqrt().max(0.1);
         let pixel_scale = (15.0 / dist).clamp(0.15, 2.5);
 
-        // Culling
+        // Culling (still in viewport coords)
         let margin = 300.0;
         if !screen.visible
             || screen.x < -margin
@@ -662,6 +674,10 @@ fn position_dom_nodes(state: &RenderState, vw: f32, vh: f32) {
             continue;
         }
 
+        // Adjust screen coords to be relative to the container
+        let local_x = screen.x - container_left;
+        let local_y = screen.y - container_top;
+
         let _ = html_el.style().set_property("display", "");
         let z_idx = ((1.0 - screen.z) * 10000.0) as i32;
         let _ = html_el
@@ -670,7 +686,7 @@ fn position_dom_nodes(state: &RenderState, vw: f32, vh: f32) {
 
         let transform = format!(
             "translate(-50%, -50%) translate({:.1}px, {:.1}px) scale({:.3})",
-            screen.x, screen.y, pixel_scale,
+            local_x, local_y, pixel_scale,
         );
         let _ = html_el.style().set_property("transform", &transform);
     }
@@ -1146,9 +1162,11 @@ fn schedule_raf(state_rc: Rc<RefCell<RenderState>>, alive: Signal<Option<()>>) {
     let cb: Rc<RefCell<Option<Closure<dyn FnMut()>>>> = Rc::new(RefCell::new(None));
     let cb2 = cb.clone();
     let closure = Closure::wrap(Box::new(move || {
-        // Stop if the component was unmounted
-        if alive.read().is_none() {
-            return;
+        // Stop if the component was unmounted (signal scope may be dropped)
+        match alive.try_read() {
+            Ok(val) if val.is_none() => return,
+            Err(_) => return, // scope dropped
+            _ => {}
         }
         // Render
         if let Ok(mut st) = state_rc.try_borrow_mut() {
