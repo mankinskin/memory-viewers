@@ -8,7 +8,7 @@ mod store;
 mod sse;
 
 use dioxus::prelude::*;
-use viewer_api_dioxus::{ViewerShell, WgpuOverlay};
+use viewer_api_dioxus::ViewerShell;
 
 use routes::Route;
 
@@ -21,12 +21,15 @@ fn main() {
 /// Mounts the shared `ViewerShell` (WebGPU canvas + UI overlay) from
 /// `viewer-api-dioxus` and nests the ticket-viewer SPA router inside the
 /// overlay so all route components render on top of the GPU canvas layer.
+///
+/// `WgpuOverlay` is intentionally **not** mounted here — `Graph3D` manages
+/// its own GPU device, pipelines, and render loop directly on `#webgpu-canvas`.
+/// Mounting both would create two competing GPU contexts on the same canvas.
 #[component]
 fn App() -> Element {
     rsx! {
         style { "html, body, #main {{ overflow: hidden; margin: 0; padding: 0; width: 100%; height: 100%; }}" }
         ViewerShell {
-            WgpuOverlay {}
             Router::<Route> {}
         }
     }

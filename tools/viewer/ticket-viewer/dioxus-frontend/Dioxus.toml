@@ -15,12 +15,9 @@ reload_html = true
 watch_path = ["src", "public"]
 
 [web.resource]
-style = ["viewer-api.css"]
+style = ["/viewer-api.css"]
 script = []
 
 [web.resource.dev]
-style = ["viewer-api.css"]
+style = ["/viewer-api.css"]
 script = []
-
-[[web.proxy]]
-backend = "http://localhost:3002/api/"

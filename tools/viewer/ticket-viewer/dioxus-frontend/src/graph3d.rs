@@ -305,6 +305,28 @@ fn create_buf_init(device: &GpuDevice, data: &[f32], usage: u32) -> GpuBuffer {
     buf
 }
 
+/// Create a depth texture and return its default view.
+fn create_depth_view(device: &GpuDevice, w: u32, h: u32) -> JsValue {
+    let desc = obj();
+    let size = Array::new();
+    size.push(&js_f64(w as f64));
+    size.push(&js_f64(h as f64));
+    set(&desc, "size", &JsValue::from(size));
+    set(&desc, "format", &js_str("depth24plus"));
+    set(&desc, "usage", &js_f64(16.0)); // GPUTextureUsage.RENDER_ATTACHMENT
+    let device_js: JsValue = device.clone().into();
+    let tex = Reflect::get(&device_js, &js_str("createTexture"))
+        .and_then(|f| f.dyn_into::<Function>())
+        .expect("createTexture")
+        .call1(&device_js, &JsValue::from(desc))
+        .expect("createTexture call");
+    Reflect::get(&tex, &js_str("createView"))
+        .and_then(|f| f.dyn_into::<Function>())
+        .expect("createView")
+        .call0(&tex)
+        .expect("createView call")
+}
+
 fn make_shader(device: &GpuDevice, code: &str) -> web_sys::GpuShaderModule {
     let desc = web_sys::GpuShaderModuleDescriptor::new(code);
     device.create_shader_module(&desc)
@@ -334,10 +356,12 @@ struct GpuResources {
     ctx: GpuCanvasContext,
     format: String,
     edge_pipeline: GpuRenderPipeline,
+    node_quad_pipeline: GpuRenderPipeline,
     bind_group: JsValue,
     cam_buf: GpuBuffer,
     palette_buf: GpuBuffer,
     quad_buf: GpuBuffer,
+    depth_view: JsValue,
     canvas_w: u32,
     canvas_h: u32,
 }
@@ -348,6 +372,8 @@ struct RenderState {
     camera: Camera,
     edge_buf: GpuBuffer,
     edge_count: u32,
+    node_quad_buf: GpuBuffer,
+    node_count: u32,
 }
 
 // ── GPU initialisation ───────────────────────────────────────────────────────
@@ -512,6 +538,13 @@ async fn init_gpu(canvas: HtmlCanvasElement) -> Result<GpuResources, String> {
     set(&pipe_desc, "fragment", &JsValue::from(frag_state));
     set(&pipe_desc, "primitive", &JsValue::from(primitive));
 
+    // Depth stencil: test against node quads but don't write
+    let edge_ds = obj();
+    set(&edge_ds, "format", &js_str("depth24plus"));
+    set(&edge_ds, "depthWriteEnabled", &JsValue::FALSE);
+    set(&edge_ds, "depthCompare", &js_str("less-equal"));
+    set(&pipe_desc, "depthStencil", &JsValue::from(edge_ds));
+
     let pipe_js = Reflect::get(&device.clone().into(), &js_str("createRenderPipeline"))
         .and_then(|f| f.dyn_into::<Function>())
         .map_err(|_| "createRenderPipeline")?
@@ -519,6 +552,72 @@ async fn init_gpu(canvas: HtmlCanvasElement) -> Result<GpuResources, String> {
         .map_err(|_| "edge pipeline call")?;
     let edge_pipeline: GpuRenderPipeline =
         pipe_js.dyn_into().map_err(|_| "edge pipeline cast")?;
+
+    // ── Node occluder quad pipeline ──
+    let nq_shader = make_shader(&device, include_str!("graph3d_node_quad.wgsl"));
+
+    let nq_quad_attr = obj();
+    set(&nq_quad_attr, "format", &js_str("float32x2"));
+    set(&nq_quad_attr, "offset", &js_f64(0.0));
+    set(&nq_quad_attr, "shaderLocation", &js_f64(0.0));
+    let nq_quad_attrs = Array::new();
+    nq_quad_attrs.push(&JsValue::from(nq_quad_attr));
+    let nq_quad_layout = obj();
+    set(&nq_quad_layout, "arrayStride", &js_f64(8.0));
+    set(&nq_quad_layout, "stepMode", &js_str("vertex"));
+    set(&nq_quad_layout, "attributes", &JsValue::from(nq_quad_attrs));
+
+    let nq_inst_attr = obj();
+    set(&nq_inst_attr, "format", &js_str("float32x3"));
+    set(&nq_inst_attr, "offset", &js_f64(0.0));
+    set(&nq_inst_attr, "shaderLocation", &js_f64(1.0));
+    let nq_inst_attrs = Array::new();
+    nq_inst_attrs.push(&JsValue::from(nq_inst_attr));
+    let nq_inst_layout = obj();
+    set(&nq_inst_layout, "arrayStride", &js_f64(16.0));
+    set(&nq_inst_layout, "stepMode", &js_str("instance"));
+    set(&nq_inst_layout, "attributes", &JsValue::from(nq_inst_attrs));
+
+    let nq_vert_bufs = Array::new();
+    nq_vert_bufs.push(&JsValue::from(nq_quad_layout));
+    nq_vert_bufs.push(&JsValue::from(nq_inst_layout));
+
+    let nq_vertex_state = obj();
+    set(&nq_vertex_state, "module", &nq_shader.clone().into());
+    set(&nq_vertex_state, "entryPoint", &js_str("vs_node_quad"));
+    set(&nq_vertex_state, "buffers", &JsValue::from(nq_vert_bufs));
+
+    let nq_target = obj();
+    set(&nq_target, "format", &js_str(&format));
+    let nq_targets = Array::new();
+    nq_targets.push(&JsValue::from(nq_target));
+    let nq_frag_state = obj();
+    set(&nq_frag_state, "module", &nq_shader.into());
+    set(&nq_frag_state, "entryPoint", &js_str("fs_node_quad"));
+    set(&nq_frag_state, "targets", &JsValue::from(nq_targets));
+
+    let nq_primitive = obj();
+    set(&nq_primitive, "topology", &js_str("triangle-strip"));
+
+    let nq_ds = obj();
+    set(&nq_ds, "format", &js_str("depth24plus"));
+    set(&nq_ds, "depthWriteEnabled", &JsValue::TRUE);
+    set(&nq_ds, "depthCompare", &js_str("less-equal"));
+
+    let nq_pipe_desc = obj();
+    set(&nq_pipe_desc, "layout", &pipeline_layout);
+    set(&nq_pipe_desc, "vertex", &JsValue::from(nq_vertex_state));
+    set(&nq_pipe_desc, "fragment", &JsValue::from(nq_frag_state));
+    set(&nq_pipe_desc, "primitive", &JsValue::from(nq_primitive));
+    set(&nq_pipe_desc, "depthStencil", &JsValue::from(nq_ds));
+
+    let nq_pipe_js = Reflect::get(&device.clone().into(), &js_str("createRenderPipeline"))
+        .and_then(|f| f.dyn_into::<Function>())
+        .map_err(|_| "createRenderPipeline node")?
+        .call1(&device.clone().into(), &JsValue::from(nq_pipe_desc))
+        .map_err(|_| "node quad pipeline call")?;
+    let node_quad_pipeline: GpuRenderPipeline =
+        nq_pipe_js.dyn_into().map_err(|_| "node quad pipeline cast")?;
 
     // ── Uniform buffers ──
     let cam_buf = create_buf(
@@ -563,15 +662,20 @@ async fn init_gpu(canvas: HtmlCanvasElement) -> Result<GpuResources, String> {
     let quad_data: [f32; 8] = [-1.0, -1.0, 1.0, -1.0, -1.0, 1.0, 1.0, 1.0];
     let quad_buf = create_buf_init(&device, &quad_data, USAGE_VERTEX);
 
+    // ── Depth texture ──
+    let depth_view = create_depth_view(&device, canvas_w, canvas_h);
+
     Ok(GpuResources {
         device,
         ctx,
         format,
         edge_pipeline,
+        node_quad_pipeline,
         bind_group,
         cam_buf,
         palette_buf,
         quad_buf,
+        depth_view,
         canvas_w,
         canvas_h,
     })
@@ -695,18 +799,22 @@ fn position_dom_nodes(state: &RenderState, vw: f32, vh: f32) {
 // ── Render one frame ─────────────────────────────────────────────────────────
 
 fn render_frame(state: &mut RenderState) {
-    let gpu = &state.gpu;
-
-    // Resize canvas if needed
-    let canvas: HtmlCanvasElement = gpu.ctx.canvas()
-        .dyn_into()
-        .unwrap();
-    let w = canvas.client_width().max(1) as u32;
-    let h = canvas.client_height().max(1) as u32;
-    if w != gpu.canvas_w || h != gpu.canvas_h {
-        canvas.set_width(w);
-        canvas.set_height(h);
+    // Resize canvas + depth texture if needed (mutable access before borrowing gpu)
+    {
+        let canvas: HtmlCanvasElement = state.gpu.ctx.canvas().dyn_into().unwrap();
+        let w = canvas.client_width().max(1) as u32;
+        let h = canvas.client_height().max(1) as u32;
+        if w != state.gpu.canvas_w || h != state.gpu.canvas_h {
+            canvas.set_width(w);
+            canvas.set_height(h);
+            state.gpu.depth_view = create_depth_view(&state.gpu.device, w, h);
+            state.gpu.canvas_w = w;
+            state.gpu.canvas_h = h;
+        }
     }
+    let gpu = &state.gpu;
+    let w = gpu.canvas_w;
+    let h = gpu.canvas_h;
 
     // Build camera uniform
     let eye = state.camera.eye();
@@ -727,6 +835,8 @@ fn render_frame(state: &mut RenderState) {
     cam_data[18] = eye[2];
     cam_data[19] = 1.0;
     cam_data[20] = time;
+    cam_data[21] = w as f32;
+    cam_data[22] = h as f32;
     write_buffer(&gpu.device, &gpu.cam_buf, &cam_data);
 
     // Get current texture view
@@ -754,6 +864,14 @@ fn render_frame(state: &mut RenderState) {
     let rp_desc = obj();
     set(&rp_desc, "colorAttachments", &JsValue::from(color_atts));
 
+    // Depth stencil attachment for node/edge depth ordering
+    let ds_att = obj();
+    set(&ds_att, "view", &gpu.depth_view);
+    set(&ds_att, "depthClearValue", &js_f64(1.0));
+    set(&ds_att, "depthLoadOp", &js_str("clear"));
+    set(&ds_att, "depthStoreOp", &js_str("store"));
+    set(&rp_desc, "depthStencilAttachment", &JsValue::from(ds_att));
+
     // Create command encoder + begin pass
     let encoder = gpu.device.create_command_encoder();
     let encoder_js: JsValue = encoder.into();
@@ -763,7 +881,28 @@ fn render_frame(state: &mut RenderState) {
     let Ok(pass_enc) = enc_typed.begin_render_pass(&pass_desc) else { return };
     let pass: JsValue = JsValue::from(pass_enc);
 
-    // Draw edges
+    // Draw node occluder quads first (writes depth, occludes edges behind cards)
+    if state.node_count > 0 {
+        js_call(&pass, "setPipeline", &[&gpu.node_quad_pipeline.clone().into()]);
+        js_call(&pass, "setBindGroup", &[&js_f64(0.0), &gpu.bind_group]);
+        js_call(
+            &pass,
+            "setVertexBuffer",
+            &[&js_f64(0.0), &gpu.quad_buf.clone().into()],
+        );
+        js_call(
+            &pass,
+            "setVertexBuffer",
+            &[&js_f64(1.0), &state.node_quad_buf.clone().into()],
+        );
+        js_call(
+            &pass,
+            "draw",
+            &[&js_f64(4.0), &js_f64(state.node_count as f64)],
+        );
+    }
+
+    // Draw edges (tests depth but doesn't write — edges behind node quads are culled)
     if state.edge_count > 0 {
         js_call(&pass, "setPipeline", &[&gpu.edge_pipeline.clone().into()]);
         js_call(
@@ -925,8 +1064,36 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                 let cy: f32 = layout.nodes.iter().map(|n| n.y).sum::<f32>() / n;
                 let cz: f32 = layout.nodes.iter().map(|n| n.z).sum::<f32>() / n;
                 camera.target = [cx, cy, cz];
-                camera.distance = (layout.nodes.len() as f32 * 1.5).clamp(12.0, 60.0);
+
+                // Fit camera distance to bounding sphere of nodes
+                let radius = layout
+                    .nodes
+                    .iter()
+                    .map(|nd| {
+                        let dx = nd.x - cx;
+                        let dy = nd.y - cy;
+                        let dz = nd.z - cz;
+                        (dx * dx + dy * dy + dz * dz).sqrt()
+                    })
+                    .fold(0.0_f32, f32::max);
+                let half_fov_tan = (CAMERA_FOV * 0.5).tan(); // tan(22.5°) ≈ 0.414
+                camera.distance = ((radius / half_fov_tan) * 1.3).clamp(12.0, 120.0);
             }
+
+            // 6b. Node occluder quad instance buffer (position + padding)
+            let node_count = layout.nodes.len() as u32;
+            let mut node_data = Vec::with_capacity(layout.nodes.len() * 4);
+            for node in &layout.nodes {
+                node_data.push(node.x);
+                node_data.push(node.y);
+                node_data.push(node.z);
+                node_data.push(0.0);
+            }
+            let node_quad_buf = if node_data.is_empty() {
+                create_buf(&gpu.device, 16, USAGE_VERTEX | USAGE_COPY_DST)
+            } else {
+                create_buf_init(&gpu.device, &node_data, USAGE_VERTEX)
+            };
 
             let state_rc = Rc::new(RefCell::new(RenderState {
                 gpu,
@@ -934,6 +1101,8 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                 camera,
                 edge_buf,
                 edge_count,
+                node_quad_buf,
+                node_count,
             }));
             render_w.set(Some(state_rc.clone()));
             status_w.set(String::new());

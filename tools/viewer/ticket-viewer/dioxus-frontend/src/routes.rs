@@ -2,7 +2,7 @@
 //!
 //! Route hierarchy:
 //!
-//!   /                         → WorkspacePickerPage (list workspaces)
+//!   /                         → Redirect to /workspace/default
 //!   /workspace/:ws            → TicketListPage (tickets in workspace)
 //!   /workspace/:ws/new        → NewTicketPage (create ticket — modal overlay)
 //!   /workspace/:ws/ticket/:id → TicketDetailPage (single ticket + dep graph)
@@ -11,7 +11,7 @@ use dioxus::prelude::*;
 
 use viewer_api_dioxus::{HamburgerIcon, Header, Layout, Sidebar};
 
-use crate::backend::{HttpTicketBackend, TicketBackend, TicketSummary, WorkspaceInfo};
+use crate::backend::{HttpTicketBackend, TicketBackend, TicketSummary};
 use crate::components::create_ticket::CreateTicketModal;
 use crate::components::dep_graph::DepGraph;
 use crate::components::search::SearchBar;
@@ -22,8 +22,7 @@ use crate::sse::use_sse;
 
 #[derive(Clone, Routable, Debug, PartialEq)]
 pub enum Route {
-    #[route("/")]
-    WorkspacePickerPage,
+    #[redirect("/", || Route::TicketListPage { workspace: "default".into() })]
 
     #[route("/workspace/:workspace")]
     TicketListPage { workspace: String },
@@ -36,114 +35,6 @@ pub enum Route {
 }
 
 // ── Pages ─────────────────────────────────────────────────────────────────────
-
-#[component]
-pub fn WorkspacePickerPage() -> Element {
-    let mut workspaces: Signal<Option<Vec<WorkspaceInfo>>> = use_signal(|| None);
-    let mut error: Signal<Option<String>> = use_signal(|| None);
-    let mut hovered: Signal<Option<usize>> = use_signal(|| None);
-
-    use_effect(move || {
-        spawn(async move {
-            let backend = HttpTicketBackend::new(None);
-            match backend.list_workspaces().await {
-                Ok(resp) => workspaces.set(Some(resp.workspaces)),
-                Err(e) => error.set(Some(e)),
-            }
-        });
-    });
-
-    rsx! {
-        div {
-            style: "
-                min-height: 100vh;
-                background: #1a1a2e;
-                font-family: sans-serif;
-                color: #e0e0e8;
-                display: flex;
-                flex-direction: column;
-                align-items: center;
-                padding: 3rem 1.5rem;
-                box-sizing: border-box;
-            ",
-
-            h1 {
-                style: "margin: 0 0 0.5rem 0; font-size: 2rem; font-weight: 700;",
-                "Ticket Viewer"
-            }
-            p {
-                style: "margin: 0 0 2.5rem 0; color: #9999bb; font-size: 1rem;",
-                "Select a workspace to begin."
-            }
-
-            // ── Loading state ─────────────────────────────────────────────
-            if workspaces.read().is_none() && error.read().is_none() {
-                div {
-                    style: "color: #9999bb; font-size: 0.95rem;",
-                    "Loading workspaces…"
-                }
-            }
-
-            // ── Error state ───────────────────────────────────────────────
-            if let Some(err) = error.read().as_deref() {
-                div {
-                    style: "
-                        background: rgba(220,50,50,0.15);
-                        border: 1px solid rgba(220,50,50,0.4);
-                        border-radius: 8px;
-                        padding: 1rem 1.5rem;
-                        color: #ff8080;
-                        max-width: 480px;
-                        width: 100%;
-                    ",
-                    "Failed to load workspaces: {err}"
-                }
-            }
-
-            // ── Workspace cards ───────────────────────────────────────────
-            if let Some(ws_list) = workspaces.read().as_ref() {
-                div {
-                    style: "display: flex; flex-direction: column; gap: 0.75rem; width: 100%; max-width: 480px;",
-                    if ws_list.is_empty() {
-                        p {
-                            style: "color: #9999bb; text-align: center;",
-                            "No workspaces found."
-                        }
-                    }
-                    for (idx, ws) in ws_list.iter().enumerate() {
-                        {
-                            let is_hovered = *hovered.read() == Some(idx);
-                            let card_bg = if is_hovered { "#1e2a4a" } else { "#16213e" };
-                            let card_border = if is_hovered { "rgba(130,130,220,0.55)" } else { "rgba(100,100,180,0.25)" };
-                            let ws_name = ws.name.clone();
-                            rsx! {
-                                Link {
-                                    to: Route::TicketListPage { workspace: ws_name.clone() },
-                                    style: "text-decoration: none;",
-                                    div {
-                                        style: "
-                                            background: {card_bg};
-                                            border: 1px solid {card_border};
-                                            border-radius: 10px;
-                                            padding: 1.1rem 1.5rem;
-                                            cursor: pointer;
-                                            color: #e0e0e8;
-                                            font-size: 1rem;
-                                            font-weight: 600;
-                                        ",
-                                        onmouseenter: move |_| hovered.set(Some(idx)),
-                                        onmouseleave: move |_| hovered.set(None),
-                                        "{ws_name}"
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-}
 
 #[component]
 pub fn TicketListPage(workspace: String) -> Element {
@@ -237,11 +128,10 @@ pub fn TicketListPage(workspace: String) -> Element {
                         }
                         span { class: "header-icon", "🎫" }
                         span { class: "header-title", "{workspace}" }
-                        Link {
-                            to: Route::WorkspacePickerPage,
+                        span {
                             class: "header-subtitle",
-                            style: "margin-left: 8px; font-size: 12px; color: var(--text-muted); text-decoration: none;",
-                            "← workspaces"
+                            style: "margin-left: 8px; font-size: 12px; color: var(--text-muted);",
+                            "{workspace}"
                         }
                     },
                     right: rsx! {
