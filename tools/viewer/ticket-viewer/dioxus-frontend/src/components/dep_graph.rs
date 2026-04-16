@@ -24,8 +24,9 @@
 use dioxus::prelude::*;
 use wasm_bindgen::JsCast;
 
-use crate::backend::{EdgeMutationBody, HttpTicketBackend, TicketBackend, TicketSummary};
-use crate::graph::{draw_edges, GraphLayout};
+use crate::api::{HttpTicketBackend, TicketBackend};
+use crate::types::{EdgeMutationBody, TicketSummary};
+use crate::layout::GraphLayout;
 use crate::routes::Route;
 
 use super::ticket_card::TicketCard;
@@ -235,18 +236,6 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
             _sse_handle.with_mut(|h| *h = handle);
         });
     }
-
-    // ── Canvas edge redraw whenever layout / camera changes ────────────
-    use_effect(move || {
-        let pan = (*pan_x.read(), *pan_y.read());
-        let z = *zoom.read();
-        if let Some(l) = layout.read().as_ref() {
-            draw_edges(l, pan.0, pan.1, z);
-        } else {
-            // Clear the canvas when there is no layout.
-            crate::graph::draw_edges(&GraphLayout::default(), 0.0, 0.0, 1.0);
-        }
-    });
 
     // ── Interaction handlers ──────────────────────────────────────────
 

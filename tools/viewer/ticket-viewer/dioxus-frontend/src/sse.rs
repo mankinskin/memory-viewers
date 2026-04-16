@@ -24,7 +24,7 @@ use gloo_events::EventListener;
 use serde::Deserialize;
 use wasm_bindgen::JsCast;
 
-use crate::backend::TicketSummary;
+use crate::types::TicketSummary;
 
 // ── SSE payload types (frontend deserialisation) ───────────────────────────
 

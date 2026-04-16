@@ -8,15 +8,7 @@ use dioxus::prelude::*;
 
 /// Map a ticket state string to a CSS hex colour for the card's left border.
 pub fn state_color(state: Option<&str>) -> &'static str {
-    match state {
-        Some("new") => "#6b7280",
-        Some("ready") => "#8b5cf6",
-        Some("in-implementation") => "#f59e0b",
-        Some("in-review") => "#ec4899",
-        Some("done") => "#10b981",
-        Some("cancelled") => "#ef4444",
-        _ => "#9ca3af",
-    }
+    crate::types::state_accent(state)
 }
 
 // ── Props ──────────────────────────────────────────────────────────────────
@@ -54,7 +46,8 @@ pub fn TicketCard(props: TicketCardProps) -> Element {
     let screen_x = props.canvas_w / 2.0 + (props.layout_x + props.pan_x) * props.zoom;
     let screen_y = props.canvas_h / 2.0 + (props.layout_y + props.pan_y) * props.zoom;
 
-    use crate::graph::{CARD_H, CARD_W};
+    const CARD_W: f64 = 160.0;
+    const CARD_H: f64 = 72.0;
     let card_w_px = CARD_W * props.zoom.clamp(0.4, 2.5);
     let card_h_px = CARD_H * props.zoom.clamp(0.4, 2.5);
 

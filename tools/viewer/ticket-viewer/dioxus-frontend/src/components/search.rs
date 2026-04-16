@@ -35,7 +35,8 @@ use gloo_events::EventListener;
 use viewer_api_dioxus::set_hash_param;
 use wasm_bindgen::JsCast as _;
 
-use crate::backend::{HttpTicketBackend, TicketBackend, TicketSummary};
+use crate::api::{HttpTicketBackend, TicketBackend};
+use crate::types::TicketSummary;
 use crate::routes::Route;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -100,20 +101,6 @@ fn unique_values<F: Fn(&TicketSummary) -> &str>(items: &[TicketSummary], key_fn:
         .filter(|s| seen.insert(s.to_string()))
         .map(|s| s.to_string())
         .collect()
-}
-
-// ── State color ────────────────────────────────────────────────────────────────
-
-fn state_color(state: &str) -> (&'static str, &'static str) {
-    match state {
-        "new" => ("#2d2d4a", "#a0a0c8"),
-        "ready" => ("#1a3d28", "#86efac"),
-        "in-implementation" => ("#3d2e1a", "#fbbf24"),
-        "in-review" => ("#361a4a", "#c084fc"),
-        "done" => ("#1a3d28", "#4ade80"),
-        "cancelled" => ("#3d1a1a", "#f87171"),
-        _ => ("#2a2a3a", "#9ca3af"),
-    }
 }
 
 // ── Props ─────────────────────────────────────────────────────────────────────
@@ -387,7 +374,7 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
                             {
                                 let s_val = s.clone();
                                 let active = *state_filter.read() == Some(s_val.clone());
-                                let (bg, fg) = state_color(&s_val);
+                                let (bg, fg) = crate::types::state_colors(&s_val);
                                 let chip_border = if active {
                                     "2px solid #8080ff"
                                 } else {
@@ -553,7 +540,7 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
                                     .to_string();
                                 let state = ticket.state.as_deref().unwrap_or("").to_string();
                                 let t_type = ticket_type(ticket).to_string();
-                                let (state_bg, state_fg) = state_color(&state);
+                                let (state_bg, state_fg) = crate::types::state_colors(&state);
                                 let id_short = if id.len() >= 8 { &id[..8] } else { &id };
                                 let id_short = id_short.to_string();
                                 let is_hovered = *hovered_result.read() == Some(res_idx);

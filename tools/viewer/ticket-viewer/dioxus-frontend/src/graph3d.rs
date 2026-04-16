@@ -25,9 +25,9 @@ use web_sys::{
     HtmlCanvasElement, HtmlElement,
 };
 
-use crate::backend::{HttpTicketBackend, TicketBackend};
+use crate::api::{HttpTicketBackend, TicketBackend};
 use crate::components::ticket_card;
-use crate::graph::GraphLayout;
+use crate::layout::GraphLayout;
 
 // ── Constants ────────────────────────────────────────────────────────────────
 

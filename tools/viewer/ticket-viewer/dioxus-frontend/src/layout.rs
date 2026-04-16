@@ -3,13 +3,13 @@
 //! Ported from the log-viewer HypergraphView layout.ts (spring-electrical
 //! simulation). Nodes start on a circle, then the simulation runs until
 //! equilibrium producing a centred layout.
+//!
+//! Used by `graph3d::Layout3D::from_2d()` to compute initial node positions
+//! before 3D projection.
 
 use std::collections::HashMap;
 
-use crate::backend::{GraphEdgeItem, GraphNodeItem};
-
-pub const CARD_W: f64 = 160.0;
-pub const CARD_H: f64 = 72.0;
+use crate::types::{GraphEdgeItem, GraphNodeItem};
 
 // ── Data types ─────────────────────────────────────────────────────────────
 
@@ -184,116 +184,4 @@ impl GraphLayout {
             self.nodes[i].y += self.nodes[i].vy * DT;
         }
     }
-}
-
-// ── Canvas edge drawing ────────────────────────────────────────────────────
-
-/// Draw all graph edges on the `#webgpu-canvas` element.
-///
-/// `pan_x/pan_y` are in layout-space pixels.  `zoom` scales both axes.
-/// The origin of layout-space maps to the canvas centre.
-pub fn draw_edges(layout: &GraphLayout, pan_x: f64, pan_y: f64, zoom: f64) {
-    use wasm_bindgen::JsCast;
-
-    let window = match web_sys::window() {
-        Some(w) => w,
-        None => return,
-    };
-    let document = match window.document() {
-        Some(d) => d,
-        None => return,
-    };
-    let canvas_el = match document.get_element_by_id("webgpu-canvas") {
-        Some(el) => el,
-        None => return,
-    };
-    let canvas: web_sys::HtmlCanvasElement = match canvas_el.dyn_into() {
-        Ok(c) => c,
-        Err(_) => return,
-    };
-
-    // Keep canvas pixel dimensions in sync with its CSS display size.
-    let w = canvas.client_width() as u32;
-    let h = canvas.client_height() as u32;
-    if w == 0 || h == 0 {
-        return;
-    }
-    if canvas.width() != w {
-        canvas.set_width(w);
-    }
-    if canvas.height() != h {
-        canvas.set_height(h);
-    }
-
-    let ctx: web_sys::CanvasRenderingContext2d = match canvas
-        .get_context("2d")
-        .ok()
-        .flatten()
-        .and_then(|c| c.dyn_into().ok())
-    {
-        Some(c) => c,
-        None => return,
-    };
-
-    ctx.clear_rect(0.0, 0.0, w as f64, h as f64);
-
-    let cx = w as f64 / 2.0;
-    let cy = h as f64 / 2.0;
-
-    // Build id → screen-position map (anchor at card centre).
-    let positions: HashMap<&str, (f64, f64)> = layout
-        .nodes
-        .iter()
-        .map(|n| {
-            let sx = cx + (n.x + pan_x) * zoom;
-            let sy = cy + (n.y + pan_y) * zoom;
-            (n.id.as_str(), (sx, sy))
-        })
-        .collect();
-
-    ctx.set_line_width(1.5 * zoom.max(0.5));
-    ctx.set_global_alpha(0.75);
-
-    for edge in &layout.edges {
-        let Some(&(x1, y1)) = positions.get(edge.from.as_str()) else {
-            continue;
-        };
-        let Some(&(x2, y2)) = positions.get(edge.to.as_str()) else {
-            continue;
-        };
-
-        // Edge colour keyed on kind.
-        let color = if edge.kind == "depends_on" {
-            "#5b8dd9"
-        } else {
-            "#a0a0a0"
-        };
-        #[allow(deprecated)]
-        ctx.set_stroke_style(&js_sys::JsString::from(color).into());
-
-        // Line body.
-        ctx.begin_path();
-        ctx.move_to(x1, y1);
-        ctx.line_to(x2, y2);
-        ctx.stroke();
-
-        // Arrowhead at target end.
-        let angle = (y2 - y1).atan2(x2 - x1);
-        let arrow_len = 10.0 * zoom.clamp(0.5, 2.0);
-        let spread = 0.42_f64;
-        ctx.begin_path();
-        ctx.move_to(x2, y2);
-        ctx.line_to(
-            x2 - arrow_len * (angle - spread).cos(),
-            y2 - arrow_len * (angle - spread).sin(),
-        );
-        ctx.move_to(x2, y2);
-        ctx.line_to(
-            x2 - arrow_len * (angle + spread).cos(),
-            y2 - arrow_len * (angle + spread).sin(),
-        );
-        ctx.stroke();
-    }
-
-    ctx.set_global_alpha(1.0);
 }

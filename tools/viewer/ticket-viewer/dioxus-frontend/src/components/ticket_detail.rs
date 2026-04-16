@@ -16,7 +16,8 @@ use gloo_events::EventListener;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use wasm_bindgen::JsCast as _;
 
-use crate::backend::{HttpTicketBackend, TicketBackend, TicketPatch, TypeSchema};
+use crate::api::{HttpTicketBackend, TicketBackend};
+use crate::types::{TicketPatch, TypeSchema};
 
 // ── Known enum values ─────────────────────────────────────────────────────
 
@@ -50,21 +51,9 @@ fn field_bool(fields: &serde_json::Value, key: &str) -> bool {
 
 // ── StateBadge ────────────────────────────────────────────────────────────
 
-fn state_colors(state: &str) -> (&'static str, &'static str) {
-    match state {
-        "new" => ("#2d2d4a", "#a0a0c8"),
-        "ready" => ("#1a3d28", "#86efac"),
-        "in-implementation" => ("#3d2e1a", "#fbbf24"),
-        "in-review" => ("#361a4a", "#c084fc"),
-        "done" => ("#1a3d28", "#4ade80"),
-        "cancelled" => ("#3d1a1a", "#f87171"),
-        _ => ("#2a2a3a", "#9ca3af"),
-    }
-}
-
 #[component]
 fn StateBadge(state: String) -> Element {
-    let (bg, fg) = state_colors(&state);
+    let (bg, fg) = crate::types::state_colors(&state);
     rsx! {
         span {
             style: "

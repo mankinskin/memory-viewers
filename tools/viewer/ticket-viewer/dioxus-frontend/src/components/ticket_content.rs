@@ -10,7 +10,7 @@
 use dioxus::prelude::*;
 use viewer_api_dioxus::FileContentViewer;
 
-use crate::backend::{HttpTicketBackend, TicketBackend};
+use crate::api::{HttpTicketBackend, TicketBackend};
 
 // ── Tab identifier ────────────────────────────────────────────────────────────
 

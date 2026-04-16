@@ -1,11 +1,12 @@
-mod backend;
+mod api;
 mod components;
-mod graph;
 #[cfg(target_arch = "wasm32")]
 mod graph3d;
+mod layout;
 mod routes;
-mod store;
 mod sse;
+mod store;
+mod types;
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::ViewerShell;

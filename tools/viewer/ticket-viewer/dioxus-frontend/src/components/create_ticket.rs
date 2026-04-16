@@ -19,7 +19,8 @@ use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
 
-use crate::backend::{CreateTicketRequest, HttpTicketBackend, SchemaListResponse, TicketBackend, TicketSummary, TypeSchema};
+use crate::api::{HttpTicketBackend, TicketBackend};
+use crate::types::{CreateTicketRequest, SchemaListResponse, TicketSummary, TypeSchema};
 use crate::routes::Route;
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -496,7 +497,7 @@ pub fn CreateTicketModal(props: CreateTicketModalProps) -> Element {
                     // ── Schema-driven fields ──────────────────────────────
                     if let Some(ts) = &maybe_type_schema {
                         {
-                            let required_fields: Vec<(String, crate::backend::FieldDef)> = ts.fields.iter()
+                            let required_fields: Vec<(String, crate::types::FieldDef)> = ts.fields.iter()
                                 .filter(|(k, fd)| {
                                     fd.required
                                         && !matches!(k.as_str(), "title" | "description" | "priority" | "component" | "type" | "state")
@@ -504,7 +505,7 @@ pub fn CreateTicketModal(props: CreateTicketModalProps) -> Element {
                                 .map(|(k, fd)| (k.clone(), fd.clone()))
                                 .collect();
 
-                            let optional_fields: Vec<(String, crate::backend::FieldDef)> = ts.fields.iter()
+                            let optional_fields: Vec<(String, crate::types::FieldDef)> = ts.fields.iter()
                                 .filter(|(k, fd)| {
                                     !fd.required
                                         && !matches!(k.as_str(), "title" | "description" | "priority" | "component" | "type" | "state")
