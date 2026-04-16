@@ -1,7 +1,14 @@
 //! DepGraph — ticket dependency graph view.
 //!
-//! Renders the ticket dependency graph for a root ticket:
+//! Renders the ticket dependency graph for a root ticket.
 //!
+//! When the browser supports WebGPU this component mounts the GPU-accelerated
+//! [`crate::graph3d::Graph3D`] renderer which displays a full 3-D force-directed
+//! graph on the existing `#webgpu-canvas` element.  When WebGPU is absent or
+//! GPU initialisation fails the component transparently falls back to the DOM
+//! SVG path described below.
+//!
+//! **DOM / SVG fallback path:**
 //! * Nodes are real DOM `TicketCard` elements positioned by a force-directed
 //!   layout algorithm (ported from log-viewer HypergraphView layout.ts).
 //! * Edges are drawn as canvas lines on the `#webgpu-canvas` element that
@@ -109,11 +116,41 @@ pub struct DepGraphProps {
 
 // ── Component ──────────────────────────────────────────────────────────────
 
-/// Ticket dependency graph — DOM nodes + canvas edges.
+/// Ticket dependency graph — GPU 3-D when WebGPU is available, DOM+canvas otherwise.
+///
+/// The component first checks for WebGPU support via [`crate::graph3d::can_use_webgpu`].
+/// If available, it mounts [`crate::graph3d::Graph3D`] which renders on the
+/// `#webgpu-canvas` element provided by `ViewerShell`.  Clicking a node in the
+/// 3-D view navigates to that ticket via the Dioxus router.
+///
+/// When WebGPU is absent or the browser blocks GPU access the component falls
+/// back to the traditional DOM force-graph + `<canvas>` edge layout.
 #[component]
 pub fn DepGraph(props: DepGraphProps) -> Element {
     let workspace = props.workspace.clone();
     let root_id = props.root_id.clone();
+
+    // ── WebGPU 3-D path ────────────────────────────────────────────────
+    #[cfg(target_arch = "wasm32")]
+    if crate::graph3d::can_use_webgpu() {
+        let ws_gpu = workspace.clone();
+        let rid_gpu = root_id.clone();
+        let nav = use_navigator();
+        return rsx! {
+            crate::graph3d::Graph3D {
+                workspace: ws_gpu.clone(),
+                root_id: rid_gpu.clone(),
+                on_select: move |id: String| {
+                    nav.push(crate::routes::Route::TicketDetailPage {
+                        workspace: ws_gpu.clone(),
+                        id,
+                    });
+                }
+            }
+        };
+    }
+
+    // ── DOM SVG fallback path ──────────────────────────────────────────
 
     // ── Fetch / layout state ───────────────────────────────────────────
     let mut layout: Signal<Option<GraphLayout>> = use_signal(|| None);

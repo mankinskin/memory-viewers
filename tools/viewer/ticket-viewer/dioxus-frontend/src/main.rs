@@ -1,6 +1,8 @@
 mod backend;
 mod components;
 mod graph;
+#[cfg(target_arch = "wasm32")]
+mod graph3d;
 mod routes;
 mod store;
 mod sse;
@@ -22,6 +24,7 @@ fn main() {
 #[component]
 fn App() -> Element {
     rsx! {
+        style { "html, body, #main {{ overflow: hidden; margin: 0; padding: 0; width: 100%; height: 100%; }}" }
         ViewerShell {
             Router::<Route> {}
         }
