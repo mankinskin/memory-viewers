@@ -22,7 +22,7 @@
     "baseUrl": ".",
     "paths": {
       "@context-engine/types": [
-        "../../log-viewer/frontend/src/types/generated/index.ts"
+        "../../../log-viewer/frontend/src/types/generated/index.ts"
       ]
     }
   },

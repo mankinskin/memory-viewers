@@ -1,6 +1,6 @@
 //! API request and response types for the ticket viewer.
 //!
-//! Mirrors the TypeScript types in `tools/viewer/ticket-viewer/frontend/src/types.ts`.
+//! Mirrors the TypeScript types in `tools/viewer/ticket-viewer/frontend/ts/src/types.ts`.
 //! Kept separate from the HTTP client so components can import types without
 //! pulling in the transport layer.
 
