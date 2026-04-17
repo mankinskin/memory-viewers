@@ -195,6 +195,61 @@ pub struct TicketHistoryResponse {
     pub entries: Vec<HistoryEntry>,
 }
 
+// ── Batch operations ──────────────────────────────────────────────────────────
+
+/// A single command within a batch request sent to `POST /api/batch`.
+///
+/// The `op` field is the discriminator; matches the server-side `BatchCommand`
+/// serde representation.
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "op", rename_all = "snake_case")]
+pub enum BatchCommand {
+    Update {
+        id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        state: Option<String>,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        from_state: Option<String>,
+        #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+        fields: std::collections::BTreeMap<String, serde_json::Value>,
+    },
+    Close {
+        id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        target_state: Option<String>,
+    },
+    Cancel {
+        id: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        reason: Option<String>,
+    },
+}
+
+/// Request body for `POST /api/batch`.
+#[derive(Debug, Clone, Serialize)]
+pub struct BatchRequest {
+    pub workspace: String,
+    pub commands: Vec<BatchCommand>,
+}
+
+/// Per-command result returned in the batch response.
+#[derive(Debug, Clone, Deserialize)]
+pub struct BatchCommandResult {
+    /// The raw JSON result value for this command (ticket object, etc.).
+    pub result: Option<serde_json::Value>,
+    /// Error message if this command failed (non-transactional reporting).
+    pub error: Option<String>,
+}
+
+/// Response body from `POST /api/batch`.
+#[derive(Debug, Clone, Deserialize)]
+pub struct BatchResponse {
+    pub workspace: String,
+    pub status: String,
+    pub count: usize,
+    pub results: Vec<serde_json::Value>,
+}
+
 // ── State colours ─────────────────────────────────────────────────────────────
 
 /// Returns `(background, foreground)` CSS colour pair for a ticket state.

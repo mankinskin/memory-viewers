@@ -106,6 +106,11 @@ pub trait TicketBackend {
         id: &str,
         text: &str,
     ) -> impl std::future::Future<Output = Result<(), String>>;
+
+    fn batch_tickets(
+        &self,
+        body: &crate::types::BatchRequest,
+    ) -> impl std::future::Future<Output = Result<crate::types::BatchResponse, String>>;
 }
 
 // ── HTTP implementation ───────────────────────────────────────────────────────
@@ -395,5 +400,13 @@ impl TicketBackend for HttpTicketBackend {
         self.send_json::<serde_json::Value>("PATCH", &url, &body_str)
             .await
             .map(|_| ())
+    }
+
+    async fn batch_tickets(
+        &self,
+        body: &crate::types::BatchRequest,
+    ) -> Result<crate::types::BatchResponse, String> {
+        let body_str = serde_json::to_string(body).map_err(|e| e.to_string())?;
+        self.send_json("POST", "/api/batch", &body_str).await
     }
 }

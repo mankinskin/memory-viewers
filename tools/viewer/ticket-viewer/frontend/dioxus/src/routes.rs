@@ -13,6 +13,7 @@ use viewer_api_dioxus::{HamburgerIcon, Header, Layout, Sidebar};
 
 use crate::api::{HttpTicketBackend, TicketBackend};
 use crate::types::TicketSummary;
+use crate::components::batch_panel::BatchPanel;
 use crate::components::create_ticket::CreateTicketModal;
 use crate::components::dep_graph::DepGraph;
 use crate::components::search::SearchBar;
@@ -73,6 +74,13 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut state_filter = store.state_filter;
     let sort_key = store.sort_key;
 
+    // ── Multi-select state ────────────────────────────────────────────────
+    let mut selected_ids: Signal<Vec<String>> = use_signal(Vec::new);
+    // Whether the batch-selection checkbox mode is active (toggled by header).
+    let mut show_checkboxes: Signal<bool> = use_signal(|| false);
+    // Incrementing counter to force a ticket-list refresh after batch ops.
+    let mut refresh_counter: Signal<u32> = use_signal(|| 0);
+
     // ── SSE live-update hook ──────────────────────────────────────────────
     // Must be called before any conditional logic (hook ordering rule).
     // Mutates `tickets` in-place on `ticket.upsert` / `ticket.delete`;
@@ -87,6 +95,8 @@ pub fn TicketListPage(workspace: String) -> Element {
             // Read filter signals here so the effect re-runs when they change.
             let query = filter.read().clone();
             let state = state_filter.read().clone();
+            // Reading refresh_counter makes the effect re-run when it changes.
+            let _rev = *refresh_counter.read();
             loading.set(true);
             list_error.set(None);
             spawn(async move {
@@ -111,6 +121,8 @@ pub fn TicketListPage(workspace: String) -> Element {
     let ticket_count = tickets.read().len();
     let ws_for_new = workspace.clone();
     let ws_for_detail = workspace.clone();
+    // Pre-compute for RSX (avoids string literals inside {} format blocks).
+    let batch_btn_bg = if *show_checkboxes.read() { "var(--accent-blue)" } else { "var(--bg-secondary)" };
 
     rsx! {
         SearchBar { workspace: workspace.clone() }
@@ -137,6 +149,26 @@ pub fn TicketListPage(workspace: String) -> Element {
                         }
                     },
                     right: rsx! {
+                        // "Batch select" toggle — enables checkboxes in the tree.
+                        button {
+                            style: "
+                                padding: 6px 12px; border-radius: 6px;
+                                border: 1px solid var(--border-subtle);
+                                background: {batch_btn_bg};
+                                color: var(--text-primary);
+                                cursor: pointer; font-size: 12px; font-weight: 600;
+                                min-height: 32px; margin-right: 6px;
+                            ",
+                            onclick: move |_| {
+                                let currently = *show_checkboxes.read();
+                                show_checkboxes.set(!currently);
+                                if currently {
+                                    // Turning off: clear selection.
+                                    selected_ids.set(Vec::new());
+                                }
+                            },
+                            "☑ Batch"
+                        }
                         button {
                             style: "
                                 padding: 6px 14px; border-radius: 6px; border: none;
@@ -176,6 +208,24 @@ pub fn TicketListPage(workspace: String) -> Element {
                     on_select: move |tid: String| {
                         selected_id.set(Some(tid));
                         mobile_sidebar_open.set(false);
+                    },
+                    show_checkboxes: *show_checkboxes.read(),
+                    selected_ids: selected_ids.read().clone(),
+                    on_toggle_select: move |tid: String| {
+                        let mut ids = selected_ids.write();
+                        if let Some(pos) = ids.iter().position(|x| x == &tid) {
+                            ids.remove(pos);
+                        } else {
+                            ids.push(tid);
+                        }
+                    },
+                    on_select_all: move |check: bool| {
+                        if check {
+                            let ids: Vec<String> = tickets.read().iter().map(|t| t.id.clone()).collect();
+                            selected_ids.set(ids);
+                        } else {
+                            selected_ids.set(Vec::new());
+                        }
                     },
                 }
             }
@@ -221,6 +271,20 @@ pub fn TicketListPage(workspace: String) -> Element {
                         span { style: "font-size: 14px;", "Select a ticket from the sidebar to view details." }
                     }
                 }
+            }
+        }
+
+        // ── Batch panel — floats above everything when tickets are selected ──
+        if !selected_ids.read().is_empty() {
+            BatchPanel {
+                workspace: workspace.clone(),
+                selected_ids: selected_ids.read().clone(),
+                on_done: move |_| {
+                    selected_ids.set(Vec::new());
+                    show_checkboxes.set(false);
+                    // Bump refresh counter to re-trigger the ticket list fetch.
+                    *refresh_counter.write() += 1;
+                },
             }
         }
     }

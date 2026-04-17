@@ -32,6 +32,20 @@ pub struct TicketTreeProps {
     pub selected_id: Option<String>,
     /// Called when a ticket row is clicked.
     pub on_select: EventHandler<String>,
+
+    /// When true, each row shows a checkbox for batch selection.
+    #[props(default = false)]
+    pub show_checkboxes: bool,
+
+    /// IDs currently selected via checkboxes.
+    #[props(default)]
+    pub selected_ids: Vec<String>,
+
+    /// Called when a checkbox is toggled (ticket id passed).
+    pub on_toggle_select: Option<EventHandler<String>>,
+
+    /// Called when the "Select all" header checkbox is toggled.
+    pub on_select_all: Option<EventHandler<bool>>,
 }
 
 // ── State filter chip definitions ──────────────────────────────────────────
@@ -53,6 +67,19 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
     let filter = props.filter.clone();
     let state_filter_val = props.state_filter.clone();
 
+    // Pre-sort so the "Select all" checkbox knows the visible ticket IDs.
+    let mut sorted = props.tickets.clone();
+    match props.sort_key.as_str() {
+        "title" => sorted.sort_by(|a, b| a.title.cmp(&b.title)),
+        "state" => sorted.sort_by(|a, b| a.state.cmp(&b.state)),
+        "created_at" => sorted.sort_by(|a, b| b.created_at.cmp(&a.created_at)),
+        _ => sorted.sort_by(|a, b| b.updated_at.cmp(&a.updated_at)),
+    }
+
+    let all_checked = props.show_checkboxes
+        && !sorted.is_empty()
+        && sorted.iter().all(|t| props.selected_ids.contains(&t.id));
+
     rsx! {
         // ── Filter controls ────────────────────────────────────────────
         div {
@@ -63,6 +90,27 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                 flex-direction: column;
                 gap: 6px;
             ",
+            // ── Select-all row (only when checkboxes are on) ───────────
+            if props.show_checkboxes {
+                div {
+                    style: "display: flex; align-items: center; gap: 6px; padding-bottom: 2px;",
+                    input {
+                        r#type: "checkbox",
+                        checked: all_checked,
+                        style: "width: 14px; height: 14px; cursor: pointer; accent-color: var(--accent-blue);",
+                        aria_label: "Select all tickets",
+                        onchange: move |e| {
+                            if let Some(ref h) = props.on_select_all {
+                                h.call(e.value() == "true");
+                            }
+                        },
+                    }
+                    span {
+                        style: "font-size: 11px; color: var(--text-muted);",
+                        "Select all"
+                    }
+                }
+            }
             input {
                 r#type: "text",
                 placeholder: "Filter tickets…",
@@ -133,69 +181,94 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                     "No tickets in this workspace."
                 }
             }
-            {
-                let mut sorted = props.tickets.clone();
-                match props.sort_key.as_str() {
-                    "title" => sorted.sort_by(|a, b| a.title.cmp(&b.title)),
-                    "state" => sorted.sort_by(|a, b| a.state.cmp(&b.state)),
-                    "created_at" => sorted.sort_by(|a, b| b.created_at.cmp(&a.created_at)),
-                    _ => sorted.sort_by(|a, b| b.updated_at.cmp(&a.updated_at)),
-                }
-                rsx! {
-                    for ticket in sorted {
-                        {
-                            let tid = ticket.id.clone();
-                            let tid_click = tid.clone();
-                            let title = ticket.title.clone().unwrap_or_else(|| "Untitled".into());
-                            let state = ticket.state.clone().unwrap_or_else(|| "new".into());
-                            let is_selected = props.selected_id.as_deref() == Some(tid.as_str());
+            for ticket in sorted {
+                {
+                    let tid = ticket.id.clone();
+                    let tid_click = tid.clone();
+                    let tid_toggle = tid.clone();
+                    let title = ticket.title.clone().unwrap_or_else(|| "Untitled".into());
+                    let state = ticket.state.clone().unwrap_or_else(|| "new".into());
+                    let is_selected = props.selected_id.as_deref() == Some(tid.as_str());
+                    let is_checked = props.selected_ids.contains(&tid);
 
-                            let (state_bg_raw, state_fg) = state_colors(&state);
-                            // Convert the opaque hex state_bg to a low-opacity variant for the chip.
-                            let state_bg = format!("{}20", state_bg_raw);
+                    let (state_bg_raw, state_fg) = state_colors(&state);
+                    // Convert the opaque hex state_bg to a low-opacity variant for the chip.
+                    let state_bg = format!("{}20", state_bg_raw);
 
-                            let row_bg = if is_selected {
-                                "var(--bg-active)"
-                            } else {
-                                "transparent"
-                            };
+                    let row_bg = if is_selected {
+                        "var(--bg-active)"
+                    } else {
+                        "transparent"
+                    };
 
-                            rsx! {
-                                button {
-                                    key: "{tid}",
+                    let show_cb = props.show_checkboxes;
+
+                    rsx! {
+                        div {
+                            key: "{tid}",
+                            style: "
+                                display: flex;
+                                align-items: stretch;
+                                border-bottom: 1px solid var(--border-subtle);
+                                background: {row_bg};
+                            ",
+                            // Checkbox column (conditional)
+                            if show_cb {
+                                div {
                                     style: "
                                         display: flex;
-                                        flex-direction: column;
-                                        gap: 4px;
-                                        width: 100%;
-                                        padding: 10px 14px;
-                                        border: none;
-                                        border-bottom: 1px solid var(--border-subtle);
-                                        background: {row_bg};
-                                        color: var(--text-primary);
-                                        cursor: pointer;
-                                        text-align: left;
-                                        min-height: 44px;
+                                        align-items: center;
+                                        padding: 0 8px;
+                                        flex-shrink: 0;
                                     ",
-                                    onclick: move |_| {
-                                        props.on_select.call(tid_click.clone());
-                                    },
-                                    span {
-                                        style: "font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
-                                        "{title}"
+                                    input {
+                                        r#type: "checkbox",
+                                        checked: is_checked,
+                                        style: "width: 14px; height: 14px; cursor: pointer; accent-color: var(--accent-blue);",
+                                        aria_label: "Select ticket",
+                                        // Prevent the click from also triggering the row button.
+                                        onclick: move |e| e.stop_propagation(),
+                                        onchange: move |_| {
+                                            if let Some(ref h) = props.on_toggle_select {
+                                                h.call(tid_toggle.clone());
+                                            }
+                                        },
                                     }
-                                    span {
-                                        style: "
-                                            display: inline-block;
-                                            font-size: 10px;
-                                            font-weight: 600;
-                                            padding: 1px 7px;
-                                            border-radius: 10px;
-                                            background: {state_bg};
-                                            color: {state_fg};
-                                        ",
-                                        "{state}"
-                                    }
+                                }
+                            }
+                            // Main row button
+                            button {
+                                style: "
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 4px;
+                                    flex: 1;
+                                    padding: 10px 14px;
+                                    border: none;
+                                    background: transparent;
+                                    color: var(--text-primary);
+                                    cursor: pointer;
+                                    text-align: left;
+                                    min-height: 44px;
+                                ",
+                                onclick: move |_| {
+                                    props.on_select.call(tid_click.clone());
+                                },
+                                span {
+                                    style: "font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                                    "{title}"
+                                }
+                                span {
+                                    style: "
+                                        display: inline-block;
+                                        font-size: 10px;
+                                        font-weight: 600;
+                                        padding: 1px 7px;
+                                        border-radius: 10px;
+                                        background: {state_bg};
+                                        color: {state_fg};
+                                    ",
+                                    "{state}"
                                 }
                             }
                         }

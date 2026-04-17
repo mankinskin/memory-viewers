@@ -1,3 +1,4 @@
+pub mod batch_panel;
 pub mod create_ticket;
 pub mod dep_graph;
 pub mod history;
