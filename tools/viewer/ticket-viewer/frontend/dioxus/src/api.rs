@@ -87,11 +87,25 @@ pub trait TicketBackend {
         id: &str,
     ) -> impl std::future::Future<Output = Result<TicketHistoryResponse, String>>;
 
+    fn revert_ticket(
+        &self,
+        workspace: &str,
+        id: &str,
+        revision: u64,
+    ) -> impl std::future::Future<Output = Result<TicketDetailResponse, String>>;
+
     fn undo_ticket(
         &self,
         workspace: &str,
         id: &str,
     ) -> impl std::future::Future<Output = Result<TicketDetailResponse, String>>;
+
+    fn update_ticket_description(
+        &self,
+        workspace: &str,
+        id: &str,
+        text: &str,
+    ) -> impl std::future::Future<Output = Result<(), String>>;
 }
 
 // ── HTTP implementation ───────────────────────────────────────────────────────
@@ -108,6 +122,39 @@ pub struct HttpTicketBackend {
 impl HttpTicketBackend {
     pub fn new(token: Option<String>) -> Self {
         Self { token }
+    }
+
+    /// Returns `true` when a non-empty auth token is stored in `sessionStorage`
+    /// under the key `ticketViewerToken`.
+    pub fn has_auth_token() -> bool {
+        #[cfg(target_arch = "wasm32")]
+        {
+            web_sys::window()
+                .and_then(|w| w.session_storage().ok().flatten())
+                .and_then(|s| s.get_item("ticketViewerToken").ok().flatten())
+                .map(|t| !t.is_empty())
+                .unwrap_or(false)
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            false
+        }
+    }
+
+    /// Reads the auth token from `sessionStorage`, returning `None` when absent
+    /// or empty.
+    pub fn read_auth_token() -> Option<String> {
+        #[cfg(target_arch = "wasm32")]
+        {
+            web_sys::window()
+                .and_then(|w| w.session_storage().ok().flatten())
+                .and_then(|s| s.get_item("ticketViewerToken").ok().flatten())
+                .filter(|t| !t.is_empty())
+        }
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            None
+        }
     }
 
     async fn fetch<T: for<'de> Deserialize<'de>>(&self, url: &str) -> Result<T, String> {
@@ -305,6 +352,17 @@ impl TicketBackend for HttpTicketBackend {
         self.fetch(&format!("/api/tickets/{id}/history?workspace={}", enc(workspace))).await
     }
 
+    async fn revert_ticket(
+        &self,
+        workspace: &str,
+        id: &str,
+        revision: u64,
+    ) -> Result<TicketDetailResponse, String> {
+        let url = format!("/api/tickets/{id}/revert?workspace={}", enc(workspace));
+        let body = serde_json::json!({ "revision": revision }).to_string();
+        self.send_json("POST", &url, &body).await
+    }
+
     async fn undo_ticket(
         &self,
         workspace: &str,
@@ -323,5 +381,19 @@ impl TicketBackend for HttpTicketBackend {
             return Err(format!("{status} POST {url}: {body}"));
         }
         resp.json::<TicketDetailResponse>().await.map_err(|e| e.to_string())
+    }
+
+    async fn update_ticket_description(
+        &self,
+        workspace: &str,
+        id: &str,
+        text: &str,
+    ) -> Result<(), String> {
+        let url = format!("/api/tickets/{id}?workspace={}", enc(workspace));
+        let body = serde_json::json!({ "description": text });
+        let body_str = serde_json::to_string(&body).map_err(|e| e.to_string())?;
+        self.send_json::<serde_json::Value>("PATCH", &url, &body_str)
+            .await
+            .map(|_| ())
     }
 }

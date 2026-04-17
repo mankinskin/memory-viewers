@@ -179,10 +179,11 @@ pub struct EdgeMutationBody {
 
 // ── History ───────────────────────────────────────────────────────────────────
 
-#[derive(Debug, Clone, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct HistoryEntry {
     pub rev: u64,
     pub ts: String,
+    pub author: Option<String>,
     pub fields: serde_json::Value,
 }
 
