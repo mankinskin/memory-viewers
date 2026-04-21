@@ -116,7 +116,7 @@ pub trait TicketBackend {
 // ── HTTP implementation ───────────────────────────────────────────────────────
 
 /// HTTP client that targets the running `ticket-viewer` server.
-/// All paths are relative so they work both in dev (`dx serve` proxy) and
+/// All paths are relative so they work both in dev (`trunk serve` proxy) and
 /// in production (same-origin deployment).
 #[derive(Clone)]
 pub struct HttpTicketBackend {

@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 /**
  * Playwright configuration for the Dioxus ticket-viewer SPA end-to-end tests.
  *
- * Tests run against a `dx serve` dev server started automatically before the
+ * Tests run against a `trunk serve` dev server started automatically before the
  * suite. API calls are intercepted via `page.route()` — no real backend is
  * required.
  *
@@ -17,7 +17,7 @@ const DEV_SERVER_URL = 'http://127.0.0.1:8090';
 
 export default defineConfig({
   testDir: './e2e',
-  // dx serve is a single dev-server process; run tests sequentially to avoid
+  // trunk serve is a single dev-server process; run tests sequentially to avoid
   // parallel navigation fighting over the same WASM rebuild state.
   fullyParallel: false,
   workers: 1,
@@ -28,7 +28,7 @@ export default defineConfig({
   use: {
     baseURL: DEV_SERVER_URL,
     trace: 'on-first-retry',
-    // WASM hydration and dx-serve rebuilds are slower than JS-only apps.
+    // WASM hydration and trunk serve rebuilds are slower than JS-only apps.
     actionTimeout: 20_000,
     navigationTimeout: 30_000,
   },
@@ -44,9 +44,9 @@ export default defineConfig({
   ],
 
   webServer: {
-    command: 'dx serve --port 8090',
+    command: 'trunk serve --port 8090',
     url: DEV_SERVER_URL,
-    // dx serve keeps a compiled binary in dist/, so subsequent runs are fast.
+    // trunk serve keeps compiled WASM in dist/, so subsequent runs are fast.
     reuseExistingServer: !process.env['CI'],
     timeout: 120_000,
     stdout: 'ignore',

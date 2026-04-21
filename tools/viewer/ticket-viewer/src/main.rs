@@ -16,7 +16,7 @@
 //!
 //! # Environment variables
 //! - `PORT`       — HTTP listen port (default: 3002)
-/// - `STATIC_DIR` — Path to pre-built SPA static files (default: Dioxus build output, then <manifest>/static)
+/// - `STATIC_DIR` — Path to pre-built SPA static files (default: trunk build output)
 
 use std::{env, io::Write, path::PathBuf, sync::Arc};
 use tracing::info;
@@ -41,17 +41,12 @@ fn parse_cli_options() -> CliOptions {
     let mut static_dir: PathBuf = env::var("STATIC_DIR")
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
-            // Prefer the Dioxus WASM frontend build output (dx build --release).
+            // Prefer the trunk WASM frontend build output (trunk build --release).
             // Fall back to the legacy Preact/Vite static/ directory.
             let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            let dioxus_dist = manifest
-                .parent()           // tools/viewer/ticket-viewer/..
-                .unwrap()           // tools/viewer
-                .parent().unwrap()  // tools
-                .parent().unwrap()  // workspace root
-                .join("target/dx/ticket-viewer-dioxus/release/web/public");
-            if dioxus_dist.exists() {
-                dioxus_dist
+            let trunk_dist = manifest.join("frontend/dioxus/dist");
+            if trunk_dist.exists() {
+                trunk_dist
             } else {
                 manifest.join("static")
             }

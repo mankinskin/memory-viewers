@@ -41,14 +41,9 @@ fn parse_cli_options() -> CliOptions {
         .map(PathBuf::from)
         .unwrap_or_else(|_| {
             let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-            let dioxus_dist = manifest
-                .parent()           // tools/viewer/spec-viewer/..
-                .unwrap()           // tools/viewer
-                .parent().unwrap()  // tools
-                .parent().unwrap()  // workspace root
-                .join("target/dx/spec-viewer-dioxus/release/web/public");
-            if dioxus_dist.exists() {
-                dioxus_dist
+            let trunk_dist = manifest.join("frontend/dioxus/dist");
+            if trunk_dist.exists() {
+                trunk_dist
             } else {
                 manifest.join("static")
             }

@@ -3,14 +3,12 @@
  * Dioxus ticket-viewer SPA.
  *
  * All `/api/workspaces` calls are intercepted with `page.route()` so no real
- * `ticket serve` backend is required. The `dx serve` dev server is started
+ * `ticket serve` backend is required. The `trunk serve` dev server is started
  * automatically by the Playwright `webServer` config.
  *
- * ## dx-serve rebuild resilience
+ * ## trunk serve rebuild resilience
  *
- * `dx serve` shows a full-screen "Your app is being rebuilt." overlay whenever
- * a hot-reload–incompatible change is detected. `waitForApp()` (called in
- * every `beforeEach`) waits for that overlay to disappear before tests run.
+ * `trunk serve` may show a loading state while rebuilding.
  */
 
 import { test, expect, type Page, type Route } from '@playwright/test';
