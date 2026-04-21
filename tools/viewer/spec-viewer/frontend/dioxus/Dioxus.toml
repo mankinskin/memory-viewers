@@ -10,6 +10,9 @@ asset_dir = "public"
 [web.app]
 title = "Spec Viewer"
 
+[web.wasm_opt]
+level = "0"
+
 [web.watcher]
 reload_html = true
 watch_path = ["src", "public"]
