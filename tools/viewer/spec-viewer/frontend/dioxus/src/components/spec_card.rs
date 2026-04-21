@@ -1,7 +1,7 @@
 //! `SpecCard` — compact row in the spec list / tree sidebar.
 
 use dioxus::prelude::*;
-use crate::types::{SpecSummary, state_accent};
+use crate::types::SpecSummary;
 use super::state_badge::StateBadge;
 
 #[derive(Props, Clone, PartialEq)]
@@ -16,40 +16,34 @@ pub struct SpecCardProps {
 
 #[component]
 pub fn SpecCard(props: SpecCardProps) -> Element {
-    let accent = state_accent(props.spec.state.as_deref());
-    let bg = if props.selected { "#1e293b" } else { "transparent" };
+    let card_class = if props.selected {
+        "spec-card spec-card--selected"
+    } else {
+        "spec-card"
+    };
     let title = props.spec.title.as_deref().unwrap_or("Untitled");
     let slug = props.spec.slug.as_deref().unwrap_or("-");
     let state = props.spec.state.clone().unwrap_or_default();
     let id = props.spec.id.clone();
-    let indent_px = props.indent * 16;
+    let indent_style = if props.indent > 0 {
+        format!("padding-left: {}px", props.indent * 16 + 12)
+    } else {
+        String::new()
+    };
 
     rsx! {
         button {
-            style: "
-                display: flex;
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 3px;
-                width: 100%;
-                text-align: left;
-                padding: 8px 12px 8px {indent_px + 12}px;
-                border: none;
-                border-left: 3px solid {accent};
-                background: {bg};
-                color: #e5e7eb;
-                cursor: pointer;
-                transition: background 0.1s;
-            ",
+            class: "{card_class}",
+            style: "{indent_style}",
             onclick: move |_| props.on_click.call(id.clone()),
             span {
-                style: "font-size: 13px; font-weight: 500; color: #f9fafb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%;",
+                class: "spec-card__title",
                 "{title}"
             }
             div {
-                style: "display: flex; align-items: center; gap: 6px;",
+                class: "spec-card__meta",
                 span {
-                    style: "font-size: 11px; color: #6b7280; font-family: monospace;",
+                    class: "spec-card__slug",
                     "{slug}"
                 }
                 if !state.is_empty() {

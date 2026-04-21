@@ -1,24 +1,20 @@
 //! `StateBadge` — coloured pill that displays a spec state label.
 
 use dioxus::prelude::*;
-use crate::types::state_colors;
 
 #[component]
 pub fn StateBadge(state: String) -> Element {
-    let (bg, fg) = state_colors(&state);
+    let modifier = match state.as_str() {
+        "draft"    => "state-badge state-badge--draft",
+        "ready"    => "state-badge state-badge--ready",
+        "reviewed" => "state-badge state-badge--reviewed",
+        "approved" => "state-badge state-badge--approved",
+        "archived" => "state-badge state-badge--archived",
+        _          => "state-badge",
+    };
     rsx! {
         span {
-            style: "
-                display: inline-block;
-                padding: 3px 10px;
-                border-radius: 12px;
-                font-size: 11px;
-                font-weight: 600;
-                letter-spacing: 0.04em;
-                background: {bg};
-                color: {fg};
-                white-space: nowrap;
-            ",
+            class: "{modifier}",
             "{state}"
         }
     }
