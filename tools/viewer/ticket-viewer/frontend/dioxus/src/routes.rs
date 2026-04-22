@@ -9,7 +9,7 @@
 
 use dioxus::prelude::*;
 
-use viewer_api_dioxus::{HamburgerIcon, Header, Layout, Sidebar};
+use viewer_api_dioxus::{HamburgerIcon, Header, Layout, Sidebar, ThemeSettings};
 
 use crate::api::{HttpTicketBackend, TicketBackend};
 use crate::types::TicketSummary;
@@ -61,6 +61,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     // ── Layout state ──────────────────────────────────────────────────────
     let mut sidebar_collapsed = use_signal(|| false);
     let mut mobile_sidebar_open = use_signal(|| false);
+    let mut show_theme_settings = use_signal(|| false);
 
     // ── Ticket list state ─────────────────────────────────────────────────
     let mut tickets: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
@@ -149,6 +150,23 @@ pub fn TicketListPage(workspace: String) -> Element {
                         }
                     },
                     right: rsx! {
+                        // Theme settings toggle button.
+                        button {
+                            style: "
+                                padding: 6px 10px; border-radius: 6px;
+                                border: 1px solid var(--border-subtle);
+                                background: var(--bg-secondary);
+                                color: var(--text-primary);
+                                cursor: pointer; font-size: 14px;
+                                min-height: 32px; margin-right: 6px;
+                            ",
+                            aria_label: "Theme settings",
+                            onclick: move |_| {
+                                let cur = *show_theme_settings.read();
+                                show_theme_settings.set(!cur);
+                            },
+                            "🎨"
+                        }
                         // "Batch select" toggle — enables checkboxes in the tree.
                         button {
                             style: "
@@ -270,6 +288,19 @@ pub fn TicketListPage(workspace: String) -> Element {
                         span { style: "font-size: 2rem;", "🎫" }
                         span { style: "font-size: 14px;", "Select a ticket from the sidebar to view details." }
                     }
+                }
+            }
+        }
+
+        // ── Theme settings panel — floats above everything ──────────────────
+        if *show_theme_settings.read() {
+            div {
+                style: "
+                    position: fixed; top: 48px; right: 16px; z-index: 200;
+                    max-height: calc(100vh - 64px); overflow-y: auto;
+                ",
+                ThemeSettings {
+                    on_close: move |_| show_theme_settings.set(false),
                 }
             }
         }

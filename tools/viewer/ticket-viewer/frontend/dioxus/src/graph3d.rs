@@ -17,6 +17,7 @@ use std::rc::Rc;
 use dioxus::prelude::*;
 use gloo_events::EventListener;
 use js_sys::{Array, Function, Object, Reflect};
+use viewer_api_dioxus;
 use wasm_bindgen::prelude::*;
 use wasm_bindgen::JsCast;
 use wasm_bindgen_futures::JsFuture;
@@ -990,6 +991,11 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
 
     // Shared render state (accessed by rAF loop + event listeners)
     let render_rc: Signal<Option<Rc<RefCell<RenderState>>>> = use_signal(|| None);
+
+    // Claim canvas ownership so WgpuOverlay idles while Graph3D is mounted.
+    // Released in use_drop when this component unmounts.
+    viewer_api_dioxus::set_gpu_canvas_owner(true);
+    use_drop(|| viewer_api_dioxus::set_gpu_canvas_owner(false));
 
     // ── Async initialisation ─────────────────────────────────────────────
     use_effect(move || {

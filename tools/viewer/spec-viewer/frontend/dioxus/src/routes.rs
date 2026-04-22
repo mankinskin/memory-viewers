@@ -8,7 +8,7 @@
 //!   /specs/:id       → SpecDetailPage (detail page navigated directly)
 
 use dioxus::prelude::*;
-use viewer_api_dioxus::{Header, Layout, Sidebar};
+use viewer_api_dioxus::{Header, Layout, Sidebar, ThemeSettings};
 use wasm_bindgen_futures::spawn_local;
 
 use crate::api;
@@ -45,6 +45,7 @@ pub fn SpecListPage() -> Element {
     });
 
     let mut sidebar_collapsed = use_signal(|| false);
+    let mut show_theme_settings = use_signal(|| false);
 
     let mut specs: Signal<Vec<SpecSummary>> = use_signal(Vec::new);
     let mut loading: Signal<bool> = use_signal(|| true);
@@ -87,6 +88,24 @@ pub fn SpecListPage() -> Element {
                     left: rsx! {
                         span { class: "header-icon", "📐" }
                         span { class: "header-title", "Spec Viewer" }
+                    },
+                    right: rsx! {
+                        button {
+                            style: "
+                                padding: 6px 10px; border-radius: 6px;
+                                border: 1px solid var(--border-subtle);
+                                background: var(--bg-secondary);
+                                color: var(--text-primary);
+                                cursor: pointer; font-size: 14px;
+                                min-height: 32px;
+                            ",
+                            aria_label: "Theme settings",
+                            onclick: move |_| {
+                                let cur = *show_theme_settings.read();
+                                show_theme_settings.set(!cur);
+                            },
+                            "🎨"
+                        }
                     },
                 }
             },
@@ -160,6 +179,19 @@ pub fn SpecListPage() -> Element {
                         font-size: 14px;
                     ",
                     "Select a specification to view details."
+                }
+            }
+        }
+
+        // ── Theme settings panel — floats above everything ──────────────────
+        if *show_theme_settings.read() {
+            div {
+                style: "
+                    position: fixed; top: 48px; right: 16px; z-index: 200;
+                    max-height: calc(100vh - 64px); overflow-y: auto;
+                ",
+                ThemeSettings {
+                    on_close: move |_| show_theme_settings.set(false),
                 }
             }
         }
