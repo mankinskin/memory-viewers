@@ -111,7 +111,7 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                 flex-direction: column;
                 height: 100%;
                 overflow: hidden;
-                background: #0f172a;
+                background: var(--bg-primary);
             ",
 
             // ── Header ────────────────────────────────────────────────────
@@ -121,11 +121,11 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                     align-items: center;
                     gap: 10px;
                     padding: 12px 16px;
-                    border-bottom: 1px solid #1f2937;
+                    border-bottom: 1px solid var(--border-color);
                     flex-shrink: 0;
                 ",
                 span {
-                    style: "font-size: 14px; font-weight: 600; color: #f9fafb; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                    style: "font-size: 14px; font-weight: 600; color: var(--text-primary); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
                     "{title}"
                 }
                 if !state.is_empty() {
@@ -138,7 +138,7 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                 style: "
                     display: flex;
                     gap: 0;
-                    border-bottom: 1px solid #1f2937;
+                    border-bottom: 1px solid var(--border-color);
                     flex-shrink: 0;
                     padding: 0 12px;
                 ",
@@ -147,8 +147,16 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                         let key_str = key.to_string();
                         let label_str = label.to_string();
                         let is_active = props.active_tab == *key;
-                        let border = if is_active { "border-bottom: 2px solid #3b82f6;" } else { "border-bottom: 2px solid transparent;" };
-                        let color = if is_active { "#60a5fa" } else { "#6b7280" };
+                        let border = if is_active {
+                            "border-bottom: 2px solid var(--accent-blue);"
+                        } else {
+                            "border-bottom: 2px solid transparent;"
+                        };
+                        let color = if is_active {
+                            "var(--accent-blue)"
+                        } else {
+                            "var(--text-muted)"
+                        };
                         rsx! {
                             button {
                                 key: "{key_str}",
@@ -175,15 +183,15 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                 style: "flex: 1; overflow-y: auto; padding: 16px;",
 
                 if *full_loading.read() {
-                    p { style: "color: #6b7280; font-size: 13px;", "Loading…" }
+                    p { style: "color: var(--text-muted); font-size: 13px;", "Loading…" }
                 } else if let Some(err) = full_error.read().as_deref() {
-                    p { style: "color: #f87171; font-size: 13px;", "{err}" }
+                    p { style: "color: var(--accent-red); font-size: 13px;", "{err}" }
                 } else if let Some(data) = full_data.as_ref() {
                     {
                         match props.active_tab.as_str() {
                             "body" => rsx! {
                                 div {
-                                    style: "color: #d1d5db;",
+                                    style: "color: var(--text-primary);",
                                     FileContentViewer {
                                         content: data.body.clone(),
                                         filename: "body.md".to_string(),
@@ -197,7 +205,7 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                                     div {
                                         style: "display: flex; flex-direction: column; gap: 6px;",
                                         if sections.is_empty() {
-                                            p { style: "color: #6b7280; font-size: 13px;", "No sections." }
+                                                p { style: "color: var(--text-muted); font-size: 13px;", "No sections." }
                                         } else {
                                             for section_name in sections.iter() {
                                                 {
@@ -208,15 +216,15 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                                                     rsx! {
                                                         div {
                                                             key: "{sn}",
-                                                            style: "border: 1px solid #1f2937; border-radius: 6px; overflow: hidden;",
+                                                            style: "border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;",
                                                             button {
                                                                 style: "
                                                                     width: 100%;
                                                                     text-align: left;
                                                                     padding: 8px 12px;
-                                                                    background: #1a1a2e;
+                                                                    background: var(--bg-secondary);
                                                                     border: none;
-                                                                    color: #e5e7eb;
+                                                                    color: var(--text-primary);
                                                                     font-size: 13px;
                                                                     font-weight: 500;
                                                                     cursor: pointer;
@@ -247,18 +255,18 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                                                                     }
                                                                 },
                                                                 span {
-                                                                    style: "margin-right: 6px; color: #6b7280;",
+                                                                    style: "margin-right: 6px; color: var(--text-muted);",
                                                                     if is_expanded { "▾" } else { "▸" }
                                                                 }
                                                                 "{sn2}"
                                                             }
                                                             if is_expanded {
                                                                 div {
-                                                                    style: "padding: 12px 16px; background: #0f172a; border-top: 1px solid #1f2937;",
+                                                                    style: "padding: 12px 16px; background: var(--bg-primary); border-top: 1px solid var(--border-color);",
                                                                     if *section_loading.read() {
-                                                                        p { style: "color: #6b7280; font-size: 12px;", "Loading section…" }
+                                                                        p { style: "color: var(--text-muted); font-size: 12px;", "Loading section…" }
                                                                     } else if let Some(err) = section_error.read().as_deref() {
-                                                                        p { style: "color: #f87171; font-size: 12px;", "{err}" }
+                                                                        p { style: "color: var(--accent-red); font-size: 12px;", "{err}" }
                                                                     } else if let Some(sb) = section_body.read().as_ref() {
                                                                         FileContentViewer {
                                                                             content: sb.content.clone(),
