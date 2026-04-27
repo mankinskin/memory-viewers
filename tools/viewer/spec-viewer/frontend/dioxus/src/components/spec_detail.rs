@@ -111,7 +111,9 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                 flex-direction: column;
                 height: 100%;
                 overflow: hidden;
-                background: var(--bg-primary);
+                background: var(--panel-bg);
+                backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+                -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
             ",
 
             // ── Header ────────────────────────────────────────────────────
@@ -262,7 +264,7 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                                                             }
                                                             if is_expanded {
                                                                 div {
-                                                                    style: "padding: 12px 16px; background: var(--bg-primary); border-top: 1px solid var(--border-color);",
+                                                                    style: "padding: 12px 16px; background: var(--panel-bg-floor); border-top: 1px solid var(--border-color);",
                                                                     if *section_loading.read() {
                                                                         p { style: "color: var(--text-muted); font-size: 12px;", "Loading section…" }
                                                                     } else if let Some(err) = section_error.read().as_deref() {

@@ -1,0 +1,4 @@
+/* spec-viewer-overrides.css — per-viewer tweaks loaded after the shared
+   modular CSS bundle.  Add only rules that should NOT apply to other
+   viewers; anything reusable belongs upstream in
+   tools/viewer/viewer-api/frontend/dioxus/public/css/. */
