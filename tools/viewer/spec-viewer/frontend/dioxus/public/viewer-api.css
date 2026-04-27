@@ -8,12 +8,14 @@
 /* ── variables.css ── */
 
 :root {
-  /* Background colors */
-  --bg-primary: #1a1a1c;
-  --bg-secondary: #212124;
-  --bg-tertiary: #28282c;
-  --bg-hover: #32323a;
-  --bg-active: #2a3a4a;
+  /* Background colors — translucent so the WebGPU smoke shader bleeds
+     through.  Opacity tuned so text remains legible on top of swirling
+     low-frequency noise. */
+  --bg-primary: rgba(26, 26, 28, 0.55);
+  --bg-secondary: rgba(33, 33, 36, 0.65);
+  --bg-tertiary: rgba(40, 40, 44, 0.75);
+  --bg-hover: rgba(50, 50, 58, 0.85);
+  --bg-active: rgba(42, 58, 74, 0.85);
 
   /* Text colors */
   --text-primary: #e0e0e4;
@@ -77,7 +79,8 @@ body {
   font-family: var(--font-sans);
   font-size: 14px;
   color: var(--text-primary);
-  background: var(--bg-primary);
+  /* Transparent so the #webgpu-canvas behind the DOM is visible. */
+  background: transparent;
   -webkit-font-smoothing: antialiased;
 }
 
