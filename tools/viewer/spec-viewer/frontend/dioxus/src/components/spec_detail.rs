@@ -40,7 +40,7 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
     let mut full_error: Signal<Option<String>> = use_signal(|| None);
 
     let spec_id_fetch = props.spec_id.clone();
-    use_effect(move || {
+    use_effect(use_reactive!(|spec_id_fetch| {
         full.set(None);
         full_loading.set(true);
         full_error.set(None);
@@ -57,7 +57,7 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                 }
             }
         });
-    });
+    }));
 
     // ── Expanded section body ─────────────────────────────────────────────
     let mut expanded_section: Signal<Option<String>> = use_signal(|| None);
@@ -72,7 +72,7 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
 
     let spec_id_health = props.spec_id.clone();
     let active_tab_clone = props.active_tab.clone();
-    use_effect(move || {
+    use_effect(use_reactive!(|spec_id_health, active_tab_clone| {
         if active_tab_clone == "health" && health.read().is_none() && !*health_loading.read() {
             health_loading.set(true);
             health_error.set(None);
@@ -90,7 +90,7 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                 }
             });
         }
-    });
+    }));
 
     let full_data = full.read();
     let title = full_data
