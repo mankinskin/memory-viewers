@@ -1,9 +1,12 @@
 //! `SpecTree` — sidebar widget that renders spec items using viewer-api
 //! [`FileTree`] and [`FilterDef`] components.
 //!
-//! Specs are displayed as flat leaf nodes, each with a [`NodeIcon::Doc`] icon.
-//! State filter chips are provided as [`FilterDef`] buttons, and a search
-//! input sits above the tree.
+//! Specs are grouped by their `component` field into folder nodes. Specs
+//! without a component appear at the root level. Each spec leaf uses a
+//! [`NodeIcon::Doc`] icon. State filter chips are provided as [`FilterDef`]
+//! buttons, and a search input sits above the tree.
+
+use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::{FileTree, FilterDef, NodeIcon, SortKey, TreeNode};
@@ -39,6 +42,66 @@ fn count_state(specs: &[SpecSummary], state: &str) -> usize {
         .count()
 }
 
+fn badge_color(state: &str) -> Option<String> {
+    match state {
+        "draft"    => Some("var(--text-muted)".to_string()),
+        "ready"    => Some("var(--accent-blue)".to_string()),
+        "reviewed" => Some("var(--accent-green)".to_string()),
+        "approved" => Some("var(--accent-green)".to_string()),
+        "archived" => Some("var(--text-muted)".to_string()),
+        _          => None,
+    }
+}
+
+/// Build a `TreeNode` leaf for a single spec.
+fn spec_leaf(s: &SpecSummary) -> TreeNode {
+    let label = s
+        .title
+        .as_deref()
+        .filter(|t| !t.is_empty())
+        .unwrap_or_else(|| s.slug.as_deref().unwrap_or("Untitled"))
+        .to_string();
+    let state = s.state.clone().unwrap_or_default();
+    TreeNode {
+        id: s.id.clone(),
+        label,
+        badge: if state.is_empty() { None } else { Some(state.clone()) },
+        badge_color: badge_color(&state),
+        tooltip: s.slug.clone(),
+        is_dir: false,
+        icon: NodeIcon::Doc,
+        children: vec![],
+    }
+}
+
+/// Build nested `TreeNode`s from a flat spec list, grouping by `component`.
+///
+/// Specs with a non-empty `component` value are placed inside a folder node
+/// named after the component. Specs without a component appear at the root.
+fn build_nodes(specs: &[SpecSummary]) -> Vec<TreeNode> {
+    let mut folders: BTreeMap<String, Vec<TreeNode>> = BTreeMap::new();
+    let mut root_leaves: Vec<TreeNode> = Vec::new();
+
+    for s in specs {
+        let leaf = spec_leaf(s);
+        if let Some(comp) = s.component.as_deref().filter(|c| !c.is_empty()) {
+            folders.entry(comp.to_string()).or_default().push(leaf);
+        } else {
+            root_leaves.push(leaf);
+        }
+    }
+
+    // Build folder nodes sorted by component name.
+    let mut nodes: Vec<TreeNode> = folders
+        .into_iter()
+        .map(|(comp, children)| TreeNode::dir(format!("__folder__{comp}"), comp, children))
+        .collect();
+
+    // Append root-level specs after folders.
+    nodes.extend(root_leaves);
+    nodes
+}
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 /// Sidebar spec list using viewer-api FileTree with state filter chips.
@@ -52,19 +115,11 @@ pub fn SpecTree(props: SpecTreeProps) -> Element {
             if count == 0 {
                 return None;
             }
-            let color = match state {
-                "draft"    => Some("var(--text-muted)".to_string()),
-                "ready"    => Some("var(--accent-blue)".to_string()),
-                "reviewed" => Some("var(--accent-green)".to_string()),
-                "approved" => Some("var(--accent-green)".to_string()),
-                "archived" => Some("var(--text-muted)".to_string()),
-                _          => None,
-            };
             Some(FilterDef {
                 key: state.to_string(),
                 label: state.to_string(),
                 count,
-                color,
+                color: badge_color(state),
             })
         })
         .collect();
@@ -75,42 +130,19 @@ pub fn SpecTree(props: SpecTreeProps) -> Element {
         vec![props.state_filter.clone()]
     };
 
-    // Convert matching specs to TreeNode items.
-    let nodes: Vec<TreeNode> = props
+    // Filter specs by active state, then build nested nodes.
+    let filtered: Vec<&SpecSummary> = props
         .specs
         .iter()
         .filter(|s| {
             props.state_filter.is_empty()
                 || s.state.as_deref() == Some(props.state_filter.as_str())
         })
-        .map(|s| {
-            let label = s
-                .title
-                .as_deref()
-                .filter(|t| !t.is_empty())
-                .unwrap_or_else(|| s.slug.as_deref().unwrap_or("Untitled"))
-                .to_string();
-            let state = s.state.clone().unwrap_or_default();
-            let badge_color = match state.as_str() {
-                "draft"    => Some("var(--text-muted)".to_string()),
-                "ready"    => Some("var(--accent-blue)".to_string()),
-                "reviewed" => Some("var(--accent-green)".to_string()),
-                "approved" => Some("var(--accent-green)".to_string()),
-                "archived" => Some("var(--text-muted)".to_string()),
-                _          => None,
-            };
-            TreeNode {
-                id: s.id.clone(),
-                label,
-                badge: if state.is_empty() { None } else { Some(state) },
-                badge_color,
-                tooltip: s.slug.clone(),
-                is_dir: false,
-                icon: NodeIcon::Doc,
-                children: vec![],
-            }
-        })
         .collect();
+
+    let nodes = build_nodes(
+        &filtered.into_iter().cloned().collect::<Vec<_>>(),
+    );
 
     let sort_keys = vec![SortKey::new("title", "Title")];
 
@@ -143,7 +175,12 @@ pub fn SpecTree(props: SpecTreeProps) -> Element {
                 active_filters,
                 loading: props.loading,
                 selected_id: props.selected_id.clone(),
-                on_select: move |id: String| on_select.call(id),
+                on_select: move |id: String| {
+                    // Ignore clicks on folder pseudo-nodes.
+                    if !id.starts_with("__folder__") {
+                        on_select.call(id);
+                    }
+                },
                 on_filter: move |key: String| {
                     // Toggle: if already active clear it, else set it.
                     let is_active = active_filters_closure.contains(&key);
@@ -153,4 +190,3 @@ pub fn SpecTree(props: SpecTreeProps) -> Element {
         }
     }
 }
-

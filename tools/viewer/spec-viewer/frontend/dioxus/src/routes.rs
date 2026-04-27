@@ -162,23 +162,26 @@ pub fn SpecListPage() -> Element {
                 }
 
             // ── Main content ──────────────────────────────────────────────
-            if let Some(id) = selected_id.read().clone() {
-                SpecDetail {
-                    spec_id: id,
-                    active_tab: active_tab.read().clone(),
-                    on_tab_change: move |tab| active_tab.set(tab),
-                }
-            } else {
-                div {
-                    style: "
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        height: 100%;
-                        color: #6b7280;
-                        font-size: 14px;
-                    ",
-                    "Select a specification to view details."
+            div {
+                class: "content",
+                if let Some(id) = selected_id.read().clone() {
+                    SpecDetail {
+                        spec_id: id,
+                        active_tab: active_tab.read().clone(),
+                        on_tab_change: move |tab| active_tab.set(tab),
+                    }
+                } else {
+                    div {
+                        style: "
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            height: 100%;
+                            color: #6b7280;
+                            font-size: 14px;
+                        ",
+                        "Select a specification to view details."
+                    }
                 }
             }
         }
