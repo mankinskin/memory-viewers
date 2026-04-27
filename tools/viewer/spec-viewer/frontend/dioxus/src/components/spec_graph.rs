@@ -179,7 +179,7 @@ pub fn SpecGraphPage() -> Element {
                                 div {
                                     key: "{id}",
                                     "data-node-idx": "{i}",
-                                    style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 170px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 6px; background: rgba(20,22,32,0.92); backdrop-filter: blur(2px); padding: 6px 8px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.5);",
+                                    style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 170px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 6px; background: rgba(18,16,14,0.65); backdrop-filter: blur(6px) saturate(140%); padding: 6px 8px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.5);",
                                     onclick: move |evt: Event<MouseData>| {
                                         evt.stop_propagation();
                                         nav2.push(crate::routes::Route::SpecDetailPage { id: id_click.clone() });
