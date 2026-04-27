@@ -13,6 +13,7 @@ use wasm_bindgen_futures::spawn_local;
 
 use crate::api;
 use crate::components::spec_detail::SpecDetail;
+use crate::components::spec_graph::SpecGraphPage as SpecGraphView;
 use crate::components::spec_tree::SpecTree;
 use crate::sse::use_sse;
 use crate::store::SpecListStore;
@@ -29,8 +30,16 @@ pub enum Route {
     #[route("/specs/tree")]
     SpecTreePage {},
 
+    #[route("/specs/graph")]
+    SpecGraphPage {},
+
     #[route("/specs/:id")]
     SpecDetailPage { id: String },
+}
+
+#[component]
+pub fn SpecGraphPage() -> Element {
+    rsx! { SpecGraphView {} }
 }
 
 // ── SpecListPage ──────────────────────────────────────────────────────────────
@@ -90,6 +99,12 @@ pub fn SpecListPage() -> Element {
                         span { class: "header-title", "Spec Viewer" }
                     },
                     right: rsx! {
+                        Link {
+                            to: Route::SpecGraphPage {},
+                            class: "header-nav-link",
+                            style: "padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; font-size: 14px; min-height: 32px; text-decoration: none; margin-right: 6px;",
+                            "🌐 Graph"
+                        }
                         button {
                             style: "
                                 padding: 6px 10px; border-radius: 6px;

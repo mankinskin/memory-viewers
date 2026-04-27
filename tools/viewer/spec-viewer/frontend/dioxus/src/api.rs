@@ -132,3 +132,10 @@ pub async fn health_check(id: Option<&str>) -> Result<HealthResponse, String> {
     };
     get_json(&format!("{base}/api/specs/health{qs}")).await
 }
+
+// ── Graph ─────────────────────────────────────────────────────────────────────
+
+pub async fn get_graph() -> Result<SpecGraphResponse, String> {
+    let base = api_base();
+    get_json(&format!("{base}/api/specs/graph")).await
+}

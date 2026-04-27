@@ -116,6 +116,30 @@ pub struct HealthResponse {
     pub issues: Vec<serde_json::Value>,
 }
 
+// ── Graph ─────────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct SpecGraphNode {
+    pub id:        String,
+    pub slug:      Option<String>,
+    pub title:     Option<String>,
+    pub state:     Option<String>,
+    pub component: Option<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct SpecGraphEdge {
+    pub from: String,
+    pub to:   String,
+    pub kind: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct SpecGraphResponse {
+    pub nodes: Vec<SpecGraphNode>,
+    pub edges: Vec<SpecGraphEdge>,
+}
+
 // ── SSE ───────────────────────────────────────────────────────────────────────
 
 /// Minimal spec snapshot embedded in `spec.updated` SSE events.
