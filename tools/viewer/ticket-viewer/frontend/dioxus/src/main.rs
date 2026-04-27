@@ -14,6 +14,8 @@ use viewer_api_dioxus::{ThemeProvider, ViewerShell, WgpuOverlay};
 use routes::Route;
 
 fn main() {
+    #[cfg(target_arch = "wasm32")]
+    viewer_api_dioxus::tracing_setup::install();
     dioxus::launch(App);
 }
 

@@ -21,6 +21,7 @@
 use std::{env, io::Write, path::PathBuf, sync::Arc};
 use tracing::info;
 use viewer_api::{display_host, init_tracing, with_static_files};
+use viewer_api::client_log::{client_log_router, ClientLogState};
 
 use ticket_api::storage::store::TicketStore;
 use ticket_http::serve::{WorkspaceRegistry, StreamBroker, AppState};
@@ -148,6 +149,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Build the ticket API router from ticket-http (includes /healthz).
     let app = ticket_http::build_router(state);
+    let app = app.merge(client_log_router(ClientLogState::default()));
 
     let app = with_static_files(app, Some(options.static_dir).filter(|p| p.exists()));
 

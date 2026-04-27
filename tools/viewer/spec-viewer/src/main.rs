@@ -21,6 +21,7 @@
 use std::{env, io::Write, path::PathBuf};
 use tracing::info;
 use viewer_api::{display_host, init_tracing, with_static_files};
+use viewer_api::client_log::{client_log_router, ClientLogState};
 
 use spec_api::SpecStore;
 use spec_http::state::SpecAppState;
@@ -131,6 +132,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let api_router = spec_http::build_router(state);
+    let api_router = api_router.merge(client_log_router(ClientLogState::default()));
     let app = with_static_files(api_router, Some(options.static_dir.clone()));
 
     let addr = format!("0.0.0.0:{}", options.port);
