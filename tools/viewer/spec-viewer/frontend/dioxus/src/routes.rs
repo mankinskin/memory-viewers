@@ -9,7 +9,8 @@
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
-    BreadcrumbItem, Breadcrumbs, Header, Layout, Sidebar, TabBar, TabItem, TabsStore, ThemeSettings,
+    BreadcrumbItem, Breadcrumbs, Card, CardGrid, CardSection, Header, Layout, Sidebar, TabBar,
+    TabItem, TabsStore, ThemeSettings,
 };
 use wasm_bindgen_futures::spawn_local;
 
@@ -366,16 +367,48 @@ pub fn SpecTreePage() -> Element {
                 if *loading.read() {
                     p { class: "spec-detail__loading", "Loading…" }
                 } else {
-                    for spec in specs.read().iter() {
-                        {
-                            let id = spec.id.clone();
-                            let nav2 = nav.clone();
-                            rsx! {
-                                button {
-                                    key: "{id}",
-                                    class: "spec-card",
-                                    onclick: move |_| { nav2.push(Route::SpecDetailPage { id: id.clone() }); },
-                                    {spec.title.as_deref().unwrap_or("Untitled")}
+                    {
+                        // Group specs by component ("category").  Specs without a
+                        // component go under an "Uncategorised" section.
+                        use std::collections::BTreeMap;
+                        let list = specs.read().clone();
+                        let mut grouped: BTreeMap<String, Vec<SpecSummary>> = BTreeMap::new();
+                        for spec in list {
+                            let cat = spec
+                                .component
+                                .clone()
+                                .unwrap_or_else(|| "Uncategorised".to_string());
+                            grouped.entry(cat).or_default().push(spec);
+                        }
+                        rsx! {
+                            for (category, items) in grouped.into_iter() {
+                                CardSection {
+                                    key: "{category}",
+                                    title: category.clone(),
+                                    count: Some(items.len()),
+                                    CardGrid {
+                                        for spec in items {
+                                            {
+                                                let id = spec.id.clone();
+                                                let title = spec
+                                                    .title
+                                                    .clone()
+                                                    .unwrap_or_else(|| "Untitled".to_string());
+                                                let description = spec.state.clone();
+                                                let nav2 = nav.clone();
+                                                rsx! {
+                                                    Card {
+                                                        key: "{spec.id}",
+                                                        title,
+                                                        description,
+                                                        on_click: EventHandler::new(move |_| {
+                                                            nav2.push(Route::SpecDetailPage { id: id.clone() });
+                                                        }),
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                         }
