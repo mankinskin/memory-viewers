@@ -9,8 +9,8 @@
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
-    BreadcrumbItem, Breadcrumbs, Card, CardGrid, CardSection, Header, Layout, Overlay, Sidebar,
-    TabBar, TabItem, TabsStore, ThemeSettings,
+    BreadcrumbItem, Breadcrumbs, Card, CardGrid, CardSection, Header, HeaderActions, Layout,
+    Overlay, Sidebar, TabBar, TabItem, TabsStore, ThemeSettings,
 };
 use wasm_bindgen_futures::spawn_local;
 
@@ -68,6 +68,7 @@ pub fn SpecListPage() -> Element {
 
     let mut sidebar_collapsed = use_signal(|| false);
     let mut show_theme_settings = use_signal(|| false);
+    let mut filter_panel_open = use_signal(|| false);
 
     let mut specs: Signal<Vec<SpecSummary>> = use_signal(Vec::new);
     let mut loading: Signal<bool> = use_signal(|| true);
@@ -170,14 +171,19 @@ pub fn SpecListPage() -> Element {
                             class: "btn-nav-link",
                             "🌐 Graph"
                         }
-                        button {
-                            class: "btn-nav-link",
-                            aria_label: "Theme settings",
-                            onclick: move |_| {
+                        HeaderActions {
+                            on_home: Some(EventHandler::new(move |_| {
+                                use_navigator().push(Route::SpecListPage {});
+                            })),
+                            on_filter_toggle: Some(EventHandler::new(move |_| {
+                                let cur = *filter_panel_open.read();
+                                filter_panel_open.set(!cur);
+                            })),
+                            on_theme_toggle: Some(EventHandler::new(move |_| {
                                 let cur = *show_theme_settings.read();
                                 show_theme_settings.set(!cur);
-                            },
-                            "🎨"
+                            })),
+                            filter_active: *filter_panel_open.read(),
                         }
                     },
                 }
