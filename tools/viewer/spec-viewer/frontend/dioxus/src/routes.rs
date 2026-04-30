@@ -7,10 +7,12 @@
 //!   /specs/tree      → SpecTreePage (hierarchical parent-child tree)
 //!   /specs/:id       → SpecDetailPage (detail page navigated directly)
 
+use std::collections::HashSet;
+
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
-    BreadcrumbItem, Breadcrumbs, Card, CardGrid, CardSection, Header, HeaderActions, Layout,
-    Overlay, Sidebar, TabBar, TabItem, TabsStore, ThemeSettings,
+    expand_path_to, BreadcrumbItem, Breadcrumbs, Card, CardGrid, CardSection, Header,
+    HeaderActions, Layout, Overlay, Sidebar, TabBar, TabItem, TabsStore, ThemeSettings,
 };
 use wasm_bindgen_futures::spawn_local;
 
@@ -30,6 +32,29 @@ fn label_for(specs: &[SpecSummary], id: &str) -> String {
         .find(|s| s.id == id)
         .and_then(|s| s.title.clone())
         .unwrap_or_else(|| id.to_string())
+}
+
+/// Compute the set of tree-folder ids that should start expanded so the
+/// active spec is visible.  We use [`expand_path_to`] over the
+/// `__folder__<component>` path so that future hierarchical components
+/// (e.g. `auth/login`) auto-expand each ancestor.
+fn initial_expanded_for(specs: &[SpecSummary], active_id: Option<&str>) -> Vec<String> {
+    let Some(id) = active_id else {
+        return Vec::new();
+    };
+    let Some(component) = specs
+        .iter()
+        .find(|s| s.id == id)
+        .and_then(|s| s.component.clone())
+        .filter(|c| !c.is_empty())
+    else {
+        return Vec::new();
+    };
+    let folder_id = format!("__folder__{component}");
+    let segments: Vec<&str> = folder_id.split(':').collect();
+    let mut set: HashSet<String> = HashSet::new();
+    expand_path_to(&mut set, &segments);
+    set.into_iter().collect()
 }
 
 // ── Route enum ────────────────────────────────────────────────────────────────
@@ -233,6 +258,10 @@ pub fn SpecListPage() -> Element {
                             });
                         },
                         selected_id: tabs.active.read().clone(),
+                        initially_expanded: initial_expanded_for(
+                            &specs.read(),
+                            tabs.active.read().as_deref(),
+                        ),
                         on_select: move |id: String| {
                             let label = label_for(&specs.peek(), &id);
                             tabs.open(id, label);

@@ -7,7 +7,9 @@
 use dioxus::prelude::*;
 use gloo_events::EventListener;
 use serde::{Deserialize, Serialize};
-use viewer_api_dioxus::{get_hash_param, remove_hash_param, set_hash_param};
+use viewer_api_dioxus::{
+    get_hash_param, remove_hash_param, set_hash_param, ColonSegmented, PathCodec,
+};
 
 // ── localStorage key ──────────────────────────────────────────────────────────
 
@@ -120,9 +122,11 @@ impl SpecListStore {
                 }
             }
         }
-        // Sync URL hash.
+        // Sync URL hash.  The spec id is encoded via [`ColonSegmented`] so
+        // hierarchical ids (e.g. `auth:login`) appear as path segments
+        // (`auth/login`) and round-trip back to the original id on reload.
         match snapshot.open_spec_id.as_deref() {
-            Some(id) => set_hash_param("id", id),
+            Some(id) => set_hash_param("id", &ColonSegmented.encode(id)),
             None => remove_hash_param("id"),
         }
     }
@@ -143,6 +147,8 @@ impl SpecListStore {
     }
 
     fn read_hash_id() -> Option<String> {
-        get_hash_param("id").filter(|s| !s.is_empty())
+        get_hash_param("id")
+            .filter(|s| !s.is_empty())
+            .and_then(|s| ColonSegmented.decode(&s))
     }
 }

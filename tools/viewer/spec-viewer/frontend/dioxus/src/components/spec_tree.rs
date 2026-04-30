@@ -29,6 +29,11 @@ pub struct SpecTreeProps {
 
     pub selected_id: Option<String>,
     pub on_select: EventHandler<String>,
+
+    /// Folder ids that should start expanded.  Driven from URL state in the
+    /// host component so deep-linked specs auto-reveal their ancestor folder.
+    #[props(default)]
+    pub initially_expanded: Vec<String>,
 }
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -175,8 +180,7 @@ pub fn SpecTree(props: SpecTreeProps) -> Element {
                 filters: filter_defs,
                 active_filters,
                 loading: props.loading,
-                selected_id: props.selected_id.clone(),
-                on_select: move |id: String| {
+                selected_id: props.selected_id.clone(),                initially_expanded: props.initially_expanded.clone(),                on_select: move |id: String| {
                     // Ignore clicks on folder pseudo-nodes.
                     if !id.starts_with("__folder__") {
                         on_select.call(id);
