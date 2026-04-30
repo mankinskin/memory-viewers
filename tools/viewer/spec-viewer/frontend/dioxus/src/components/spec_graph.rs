@@ -1,8 +1,10 @@
 //! Spec graph page — full 3-D view of every spec with parent + code-ref edges.
 //!
-//! Fetches `/api/specs/graph`, lays out nodes deterministically (BFS layers
-//! from roots → Z, angle around Y within each layer) and renders via the
-//! shared [`viewer_api_dioxus::Graph3D`] canvas.
+//! Fetches `/api/specs/graph`, lays out nodes via the user-selected algorithm
+//! and renders via the shared [`viewer_api_dioxus::Graph3D`] canvas.
+//!
+//! The right-hand settings panel lets the user pick a layout algorithm
+//! (rings-by-depth, force-directed, sphere, grid) and tune its parameters.
 
 use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 
@@ -13,21 +15,125 @@ use wasm_bindgen_futures::spawn_local;
 use crate::api;
 use crate::types::{SpecGraphEdge, SpecGraphNode};
 
-/// Lay nodes out as a stack of rings: BFS depth from a synthetic root → Z,
-/// angle around Y within each ring.
-fn layout_3d(nodes: &[SpecGraphNode], edges: &[SpecGraphEdge]) -> Layout3D {
+// ── Algorithm selection ──────────────────────────────────────────────────────
+
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum LayoutAlgorithm {
+    RingsByDepth,
+    ForceDirected,
+    Sphere,
+    Grid,
+}
+
+impl LayoutAlgorithm {
+    pub const ALL: &'static [LayoutAlgorithm] = &[
+        LayoutAlgorithm::RingsByDepth,
+        LayoutAlgorithm::ForceDirected,
+        LayoutAlgorithm::Sphere,
+        LayoutAlgorithm::Grid,
+    ];
+
+    pub fn label(self) -> &'static str {
+        match self {
+            LayoutAlgorithm::RingsByDepth  => "Rings by depth",
+            LayoutAlgorithm::ForceDirected => "Force-directed",
+            LayoutAlgorithm::Sphere        => "Sphere",
+            LayoutAlgorithm::Grid          => "Grid",
+        }
+    }
+
+    pub fn from_str_opt(s: &str) -> Option<Self> {
+        match s {
+            "rings"  => Some(LayoutAlgorithm::RingsByDepth),
+            "force"  => Some(LayoutAlgorithm::ForceDirected),
+            "sphere" => Some(LayoutAlgorithm::Sphere),
+            "grid"   => Some(LayoutAlgorithm::Grid),
+            _        => None,
+        }
+    }
+
+    pub fn as_str(self) -> &'static str {
+        match self {
+            LayoutAlgorithm::RingsByDepth  => "rings",
+            LayoutAlgorithm::ForceDirected => "force",
+            LayoutAlgorithm::Sphere        => "sphere",
+            LayoutAlgorithm::Grid          => "grid",
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub struct LayoutParams {
+    /// Overall scale multiplier applied to all positions (0.2 .. 4.0).
+    pub spread:     f32,
+    /// Vertical jitter / row-height for stack-based layouts (0.0 .. 4.0).
+    pub y_spacing:  f32,
+    /// Force-directed: number of iterations (10 .. 400).
+    pub iterations: u32,
+    /// Force-directed: edge target length (0.5 .. 6.0).
+    pub link_dist:  f32,
+    /// Force-directed: node-node repulsion strength (0.5 .. 8.0).
+    pub repulsion:  f32,
+}
+
+impl Default for LayoutParams {
+    fn default() -> Self {
+        Self {
+            spread:     1.0,
+            y_spacing:  0.8,
+            iterations: 120,
+            link_dist:  3.0,
+            repulsion:  2.0,
+        }
+    }
+}
+
+// ── Layout entry-point ───────────────────────────────────────────────────────
+
+pub fn build_layout(
+    algo:   LayoutAlgorithm,
+    params: LayoutParams,
+    nodes:  &[SpecGraphNode],
+    edges:  &[SpecGraphEdge],
+) -> Layout3D {
     if nodes.is_empty() {
         return Layout3D::default();
     }
+    let positioned = match algo {
+        LayoutAlgorithm::RingsByDepth  => layout_rings(nodes, edges, params),
+        LayoutAlgorithm::ForceDirected => layout_force(nodes, edges, params),
+        LayoutAlgorithm::Sphere        => layout_sphere(nodes, params),
+        LayoutAlgorithm::Grid          => layout_grid(nodes, params),
+    };
+    let idx: HashMap<&str, usize> = nodes
+        .iter()
+        .enumerate()
+        .map(|(i, n)| (n.id.as_str(), i))
+        .collect();
+    let out_edges: Vec<EdgeRef3D> = edges
+        .iter()
+        .filter_map(|e| {
+            let &from_idx = idx.get(e.from.as_str())?;
+            let &to_idx   = idx.get(e.to.as_str())?;
+            Some(EdgeRef3D { from_idx, to_idx, kind: e.kind.clone() })
+        })
+        .collect();
+    Layout3D::new(positioned, out_edges)
+}
 
-    // index lookup
+// ── Rings-by-depth (the original layout) ────────────────────────────────────
+
+fn layout_rings(
+    nodes:  &[SpecGraphNode],
+    edges:  &[SpecGraphEdge],
+    params: LayoutParams,
+) -> Vec<Node3D> {
     let idx: HashMap<&str, usize> = nodes
         .iter()
         .enumerate()
         .map(|(i, n)| (n.id.as_str(), i))
         .collect();
 
-    // children map from `parent` edges only (tree backbone).
     let mut children: HashMap<usize, Vec<usize>> = HashMap::new();
     let mut has_parent: HashSet<usize> = HashSet::new();
     for e in edges {
@@ -38,7 +144,6 @@ fn layout_3d(nodes: &[SpecGraphNode], edges: &[SpecGraphEdge]) -> Layout3D {
         has_parent.insert(to);
     }
 
-    // BFS depth from roots (nodes with no parent edge in).
     let mut depth = vec![u32::MAX; nodes.len()];
     let mut queue: VecDeque<usize> = VecDeque::new();
     for i in 0..nodes.len() {
@@ -58,58 +163,200 @@ fn layout_3d(nodes: &[SpecGraphNode], edges: &[SpecGraphEdge]) -> Layout3D {
             }
         }
     }
-    // Anything still untouched (orphan via code_ref only): put on depth 0.
     for d in depth.iter_mut() {
         if *d == u32::MAX { *d = 0; }
     }
 
-    // group by depth.
     let mut by_depth: BTreeMap<u32, Vec<usize>> = BTreeMap::new();
     for (i, &d) in depth.iter().enumerate() {
         by_depth.entry(d).or_default().push(i);
     }
 
-    // Place each ring.
-    let mut out_nodes = Vec::with_capacity(nodes.len());
-    out_nodes.resize(
-        nodes.len(),
-        Node3D { id: String::new(), label: None, state: None, x: 0.0, y: 0.0, z: 0.0 },
-    );
+    let mut out = vec![
+        Node3D { id: String::new(), label: None, state: None, x: 0.0, y: 0.0, z: 0.0 };
+        nodes.len()
+    ];
     for (&d, members) in &by_depth {
         let n = members.len() as f32;
-        // radius grows with member count, capped.
-        let radius = (n * 0.55 + 2.5).min(18.0);
-        let z = -(d as f32) * 4.5;
+        let radius = ((n * 0.55 + 2.5).min(18.0)) * params.spread;
+        let z = -(d as f32) * 4.5 * params.spread;
         for (k, &i) in members.iter().enumerate() {
             let theta = if n > 0.0 {
                 (k as f32) / n * std::f32::consts::TAU
             } else { 0.0 };
             let x = radius * theta.cos();
-            // small y-jitter by index so depth-rings don't perfectly stack.
-            let y = ((k % 3) as f32 - 1.0) * 0.8;
+            let y = ((k % 3) as f32 - 1.0) * params.y_spacing;
             let nd = &nodes[i];
-            out_nodes[i] = Node3D {
+            out[i] = Node3D {
                 id:    nd.id.clone(),
                 label: nd.title.clone(),
                 state: nd.state.clone(),
-                x, y, z: z + radius * theta.sin() * 0.0, // z determined by depth
+                x, y, z,
             };
-            // override z (the term above is intentionally zero — kept for clarity)
-            out_nodes[i].z = z;
         }
     }
+    out
+}
 
-    let out_edges: Vec<EdgeRef3D> = edges
+// ── Force-directed (Fruchterman–Reingold variant in 3-D) ────────────────────
+
+fn layout_force(
+    nodes:  &[SpecGraphNode],
+    edges:  &[SpecGraphEdge],
+    params: LayoutParams,
+) -> Vec<Node3D> {
+    let n = nodes.len();
+    let idx: HashMap<&str, usize> = nodes
         .iter()
-        .filter_map(|e| {
-            let &from_idx = idx.get(e.from.as_str())?;
-            let &to_idx   = idx.get(e.to.as_str())?;
-            Some(EdgeRef3D { from_idx, to_idx, kind: e.kind.clone() })
+        .enumerate()
+        .map(|(i, nd)| (nd.id.as_str(), i))
+        .collect();
+
+    // Deterministic initial positions on a sphere.
+    let mut pos: Vec<[f32; 3]> = (0..n)
+        .map(|i| {
+            let phi = (1.0 - 2.0 * (i as f32 + 0.5) / n as f32).acos();
+            let theta = std::f32::consts::PI * (1.0 + 5.0_f32.sqrt()) * (i as f32);
+            let r = 4.0 * params.spread;
+            [r * phi.sin() * theta.cos(),
+             r * phi.sin() * theta.sin(),
+             r * phi.cos()]
         })
         .collect();
 
-    Layout3D::new(out_nodes, out_edges)
+    let edges_idx: Vec<(usize, usize)> = edges
+        .iter()
+        .filter_map(|e| {
+            let &a = idx.get(e.from.as_str())?;
+            let &b = idx.get(e.to.as_str())?;
+            Some((a, b))
+        })
+        .collect();
+
+    let k = params.link_dist.max(0.1);
+    let rep = params.repulsion;
+    let iters = params.iterations.max(1);
+    let mut temperature = 0.6_f32 * params.spread;
+
+    for _ in 0..iters {
+        let mut disp = vec![[0.0_f32; 3]; n];
+
+        for i in 0..n {
+            for j in (i + 1)..n {
+                let dx = pos[i][0] - pos[j][0];
+                let dy = pos[i][1] - pos[j][1];
+                let dz = pos[i][2] - pos[j][2];
+                let dist2 = (dx * dx + dy * dy + dz * dz).max(0.01);
+                let dist = dist2.sqrt();
+                let f = rep * k * k / dist2;
+                let ux = dx / dist;
+                let uy = dy / dist;
+                let uz = dz / dist;
+                disp[i][0] += ux * f;
+                disp[i][1] += uy * f;
+                disp[i][2] += uz * f;
+                disp[j][0] -= ux * f;
+                disp[j][1] -= uy * f;
+                disp[j][2] -= uz * f;
+            }
+        }
+
+        for &(a, b) in &edges_idx {
+            if a == b { continue; }
+            let dx = pos[a][0] - pos[b][0];
+            let dy = pos[a][1] - pos[b][1];
+            let dz = pos[a][2] - pos[b][2];
+            let dist = (dx * dx + dy * dy + dz * dz).sqrt().max(0.01);
+            let f = dist * dist / k;
+            let ux = dx / dist;
+            let uy = dy / dist;
+            let uz = dz / dist;
+            disp[a][0] -= ux * f;
+            disp[a][1] -= uy * f;
+            disp[a][2] -= uz * f;
+            disp[b][0] += ux * f;
+            disp[b][1] += uy * f;
+            disp[b][2] += uz * f;
+        }
+
+        for i in 0..n {
+            let d = disp[i];
+            let mag = (d[0] * d[0] + d[1] * d[1] + d[2] * d[2]).sqrt().max(0.001);
+            let cap = mag.min(temperature);
+            pos[i][0] += d[0] / mag * cap;
+            pos[i][1] += d[1] / mag * cap;
+            pos[i][2] += d[2] / mag * cap;
+        }
+        temperature *= 0.97;
+    }
+
+    nodes
+        .iter()
+        .enumerate()
+        .map(|(i, nd)| Node3D {
+            id:    nd.id.clone(),
+            label: nd.title.clone(),
+            state: nd.state.clone(),
+            x: pos[i][0],
+            y: pos[i][1],
+            z: pos[i][2],
+        })
+        .collect()
 }
+
+// ── Sphere (Fibonacci lattice on a sphere) ───────────────────────────────────
+
+fn layout_sphere(nodes: &[SpecGraphNode], params: LayoutParams) -> Vec<Node3D> {
+    let n = nodes.len() as f32;
+    let radius = (n.sqrt() * 0.9 + 4.0) * params.spread;
+    let golden = std::f32::consts::PI * (1.0 + 5.0_f32.sqrt());
+    nodes
+        .iter()
+        .enumerate()
+        .map(|(i, nd)| {
+            let t = (i as f32 + 0.5) / n;
+            let phi = (1.0 - 2.0 * t).acos();
+            let theta = golden * (i as f32);
+            Node3D {
+                id:    nd.id.clone(),
+                label: nd.title.clone(),
+                state: nd.state.clone(),
+                x: radius * phi.sin() * theta.cos(),
+                y: radius * phi.cos(),
+                z: radius * phi.sin() * theta.sin(),
+            }
+        })
+        .collect()
+}
+
+// ── Grid (rectangular lattice in the XZ plane) ───────────────────────────────
+
+fn layout_grid(nodes: &[SpecGraphNode], params: LayoutParams) -> Vec<Node3D> {
+    let n = nodes.len();
+    let cols = ((n as f32).sqrt().ceil() as usize).max(1);
+    let cell = 2.5 * params.spread;
+    let half_w = (cols as f32 - 1.0) * 0.5 * cell;
+    let rows = (n + cols - 1) / cols;
+    let half_d = (rows as f32 - 1.0) * 0.5 * cell;
+    nodes
+        .iter()
+        .enumerate()
+        .map(|(i, nd)| {
+            let col = i % cols;
+            let row = i / cols;
+            Node3D {
+                id:    nd.id.clone(),
+                label: nd.title.clone(),
+                state: nd.state.clone(),
+                x: col as f32 * cell - half_w,
+                y: ((row % 2) as f32 - 0.5) * params.y_spacing,
+                z: row as f32 * cell - half_d,
+            }
+        })
+        .collect()
+}
+
+// ── State color helper ───────────────────────────────────────────────────────
 
 fn state_color(state: Option<&str>) -> &'static str {
     match state.unwrap_or("draft") {
@@ -122,16 +369,22 @@ fn state_color(state: Option<&str>) -> &'static str {
     }
 }
 
+// ── Main page ────────────────────────────────────────────────────────────────
+
 #[component]
 pub fn SpecGraphPage() -> Element {
-    let mut layout: Signal<Option<Layout3D>> = use_signal(|| None);
-    let mut error:  Signal<Option<String>>   = use_signal(|| None);
+    let mut raw:    Signal<Option<(Vec<SpecGraphNode>, Vec<SpecGraphEdge>)>> = use_signal(|| None);
+    let mut error:  Signal<Option<String>> = use_signal(|| None);
+    let mut algo:   Signal<LayoutAlgorithm> = use_signal(|| LayoutAlgorithm::ForceDirected);
+    let mut params: Signal<LayoutParams>    = use_signal(LayoutParams::default);
+    let mut panel_open: Signal<bool>        = use_signal(|| true);
+    let mut show_edges: Signal<bool>        = use_signal(|| true);
     let nav = use_navigator();
 
     use_effect(move || {
         spawn_local(async move {
             match api::get_graph().await {
-                Ok(resp) => layout.set(Some(layout_3d(&resp.nodes, &resp.edges))),
+                Ok(resp) => raw.set(Some((resp.nodes, resp.edges))),
                 Err(e)   => error.set(Some(e)),
             }
         });
@@ -147,7 +400,7 @@ pub fn SpecGraphPage() -> Element {
         };
     }
 
-    let Some(l) = layout.read().clone() else {
+    let Some((nodes_raw, edges_raw)) = raw.read().clone() else {
         return rsx! {
             div {
                 class: "empty-state",
@@ -156,8 +409,17 @@ pub fn SpecGraphPage() -> Element {
         };
     };
 
+    let cur_algo   = *algo.read();
+    let cur_params = *params.read();
+    let edges_for_layout: Vec<SpecGraphEdge> = if *show_edges.read() {
+        edges_raw.clone()
+    } else {
+        Vec::new()
+    };
+    let l = build_layout(cur_algo, cur_params, &nodes_raw, &edges_for_layout);
     let nodes = l.nodes.clone();
     let node_count = nodes.len();
+    let edge_count = l.edges.len();
 
     rsx! {
         div { class: "graph-overlay",
@@ -180,10 +442,8 @@ pub fn SpecGraphPage() -> Element {
                                 div {
                                     key: "{id}",
                                     "data-node-idx": "{i}",
-                                    // Only the dynamic left-border accent colour stays inline;
-                                    // all structural styles live in graph-overlay.css.
                                     class: "graph-node-card",
-                                    style: "border-left-color: {color};",
+                                    style: "border-left: 3px solid {color};",
                                     onclick: move |evt: Event<MouseData>| {
                                         evt.stop_propagation();
                                         nav2.push(crate::routes::Route::SpecDetailPage { id: id_click.clone() });
@@ -196,7 +456,6 @@ pub fn SpecGraphPage() -> Element {
                                         class: "graph-node-card__meta",
                                         span {
                                             class: "graph-node-card__state",
-                                            // State colour stays inline — it is a dynamic per-node value.
                                             style: "color: {color};",
                                             "{state}"
                                         }
@@ -213,7 +472,169 @@ pub fn SpecGraphPage() -> Element {
                 if node_count > 0 {
                     div {
                         class: "graph-count-badge",
-                        "{node_count} specs"
+                        "{node_count} specs \u{00b7} {edge_count} edges"
+                    }
+                }
+                button {
+                    class: "graph-settings-toggle",
+                    "data-testid": "graph-settings-toggle",
+                    aria_label: "Toggle graph settings",
+                    onclick: move |evt: Event<MouseData>| {
+                        evt.stop_propagation();
+                        let v = *panel_open.read();
+                        panel_open.set(!v);
+                    },
+                    if *panel_open.read() { "\u{2715} Settings" } else { "\u{2699} Settings" }
+                }
+                if *panel_open.read() {
+                    div {
+                        class: "graph-settings-panel",
+                        "data-testid": "graph-settings-panel",
+                        onclick: move |evt: Event<MouseData>| evt.stop_propagation(),
+                        onmousedown: move |evt: Event<MouseData>| evt.stop_propagation(),
+                        onwheel: move |evt: Event<WheelData>| evt.stop_propagation(),
+
+                        h3 { class: "graph-settings-panel__title", "Graph settings" }
+
+                        div { class: "graph-settings-section",
+                            label { class: "graph-settings-label", "Layout algorithm" }
+                            select {
+                                class: "graph-settings-select",
+                                "data-testid": "graph-algo-select",
+                                value: cur_algo.as_str(),
+                                onchange: move |evt| {
+                                    if let Some(a) = LayoutAlgorithm::from_str_opt(&evt.value()) {
+                                        algo.set(a);
+                                    }
+                                },
+                                for a in LayoutAlgorithm::ALL.iter() {
+                                    option { value: a.as_str(), "{a.label()}" }
+                                }
+                            }
+                        }
+
+                        div { class: "graph-settings-section",
+                            label { class: "graph-settings-label",
+                                "Spread "
+                                span { class: "graph-settings-value", "{cur_params.spread:.2}" }
+                            }
+                            input {
+                                r#type: "range",
+                                min: "0.2", max: "4.0", step: "0.05",
+                                value: "{cur_params.spread}",
+                                oninput: move |evt| {
+                                    if let Ok(v) = evt.value().parse::<f32>() {
+                                        let mut p = *params.read();
+                                        p.spread = v;
+                                        params.set(p);
+                                    }
+                                },
+                            }
+                        }
+
+                        if matches!(cur_algo, LayoutAlgorithm::RingsByDepth | LayoutAlgorithm::Grid) {
+                            div { class: "graph-settings-section",
+                                label { class: "graph-settings-label",
+                                    "Y spacing "
+                                    span { class: "graph-settings-value", "{cur_params.y_spacing:.2}" }
+                                }
+                                input {
+                                    r#type: "range",
+                                    min: "0.0", max: "4.0", step: "0.05",
+                                    value: "{cur_params.y_spacing}",
+                                    oninput: move |evt| {
+                                        if let Ok(v) = evt.value().parse::<f32>() {
+                                            let mut p = *params.read();
+                                            p.y_spacing = v;
+                                            params.set(p);
+                                        }
+                                    },
+                                }
+                            }
+                        }
+
+                        if matches!(cur_algo, LayoutAlgorithm::ForceDirected) {
+                            div { class: "graph-settings-section",
+                                label { class: "graph-settings-label",
+                                    "Iterations "
+                                    span { class: "graph-settings-value", "{cur_params.iterations}" }
+                                }
+                                input {
+                                    r#type: "range",
+                                    min: "10", max: "400", step: "10",
+                                    value: "{cur_params.iterations}",
+                                    oninput: move |evt| {
+                                        if let Ok(v) = evt.value().parse::<u32>() {
+                                            let mut p = *params.read();
+                                            p.iterations = v;
+                                            params.set(p);
+                                        }
+                                    },
+                                }
+                            }
+                            div { class: "graph-settings-section",
+                                label { class: "graph-settings-label",
+                                    "Link distance "
+                                    span { class: "graph-settings-value", "{cur_params.link_dist:.2}" }
+                                }
+                                input {
+                                    r#type: "range",
+                                    min: "0.5", max: "6.0", step: "0.1",
+                                    value: "{cur_params.link_dist}",
+                                    oninput: move |evt| {
+                                        if let Ok(v) = evt.value().parse::<f32>() {
+                                            let mut p = *params.read();
+                                            p.link_dist = v;
+                                            params.set(p);
+                                        }
+                                    },
+                                }
+                            }
+                            div { class: "graph-settings-section",
+                                label { class: "graph-settings-label",
+                                    "Repulsion "
+                                    span { class: "graph-settings-value", "{cur_params.repulsion:.2}" }
+                                }
+                                input {
+                                    r#type: "range",
+                                    min: "0.5", max: "8.0", step: "0.1",
+                                    value: "{cur_params.repulsion}",
+                                    oninput: move |evt| {
+                                        if let Ok(v) = evt.value().parse::<f32>() {
+                                            let mut p = *params.read();
+                                            p.repulsion = v;
+                                            params.set(p);
+                                        }
+                                    },
+                                }
+                            }
+                        }
+
+                        div { class: "graph-settings-section",
+                            label { class: "graph-settings-label graph-settings-label--inline",
+                                input {
+                                    r#type: "checkbox",
+                                    "data-testid": "graph-toggle-edges",
+                                    checked: *show_edges.read(),
+                                    onchange: move |evt| {
+                                        show_edges.set(evt.checked());
+                                    },
+                                }
+                                " Show edges"
+                            }
+                        }
+
+                        div { class: "graph-settings-section",
+                            button {
+                                class: "graph-settings-reset",
+                                "data-testid": "graph-settings-reset",
+                                onclick: move |evt: Event<MouseData>| {
+                                    evt.stop_propagation();
+                                    params.set(LayoutParams::default());
+                                },
+                                "Reset parameters"
+                            }
+                        }
                     }
                 }
             }
