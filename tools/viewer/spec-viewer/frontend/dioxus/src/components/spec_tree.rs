@@ -68,6 +68,7 @@ fn spec_leaf(s: &SpecSummary) -> TreeNode {
         badge: if state.is_empty() { None } else { Some(state.clone()) },
         badge_color: badge_color(&state),
         tooltip: s.slug.clone(),
+        tooltip_render: None,
         is_dir: false,
         icon: NodeIcon::Doc,
         children: vec![],
