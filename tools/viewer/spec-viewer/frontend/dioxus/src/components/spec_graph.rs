@@ -375,10 +375,19 @@ fn state_color(state: Option<&str>) -> &'static str {
 pub fn SpecGraphPage() -> Element {
     let mut raw:    Signal<Option<(Vec<SpecGraphNode>, Vec<SpecGraphEdge>)>> = use_signal(|| None);
     let mut error:  Signal<Option<String>> = use_signal(|| None);
-    let mut algo:   Signal<LayoutAlgorithm> = use_signal(|| LayoutAlgorithm::ForceDirected);
-    let mut params: Signal<LayoutParams>    = use_signal(LayoutParams::default);
-    let mut panel_open: Signal<bool>        = use_signal(|| true);
-    let mut show_edges: Signal<bool>        = use_signal(|| true);
+
+    // Draft (edited) values — what the panel widgets bind to.
+    let mut draft_algo:   Signal<LayoutAlgorithm> = use_signal(|| LayoutAlgorithm::ForceDirected);
+    let mut draft_params: Signal<LayoutParams>    = use_signal(LayoutParams::default);
+    let mut draft_show_edges: Signal<bool>        = use_signal(|| true);
+
+    // Committed values — what is actually fed into build_layout.
+    let mut committed_algo:   Signal<LayoutAlgorithm> = use_signal(|| LayoutAlgorithm::ForceDirected);
+    let mut committed_params: Signal<LayoutParams>    = use_signal(LayoutParams::default);
+    let mut committed_show_edges: Signal<bool>        = use_signal(|| true);
+
+    let mut auto_apply: Signal<bool> = use_signal(|| true);
+    let mut panel_open: Signal<bool> = use_signal(|| true);
     let nav = use_navigator();
 
     use_effect(move || {
@@ -409,9 +418,9 @@ pub fn SpecGraphPage() -> Element {
         };
     };
 
-    let cur_algo   = *algo.read();
-    let cur_params = *params.read();
-    let edges_for_layout: Vec<SpecGraphEdge> = if *show_edges.read() {
+    let cur_algo   = *committed_algo.read();
+    let cur_params = *committed_params.read();
+    let edges_for_layout: Vec<SpecGraphEdge> = if *committed_show_edges.read() {
         edges_raw.clone()
     } else {
         Vec::new()
@@ -420,6 +429,13 @@ pub fn SpecGraphPage() -> Element {
     let nodes = l.nodes.clone();
     let node_count = nodes.len();
     let edge_count = l.edges.len();
+
+    let d_algo   = *draft_algo.read();
+    let d_params = *draft_params.read();
+    let d_show_edges = *draft_show_edges.read();
+    let is_auto = *auto_apply.read();
+    let dirty = d_algo != cur_algo || d_params != cur_params || d_show_edges != *committed_show_edges.read();
+    let apply_disabled = is_auto || !dirty;
 
     rsx! {
         div { class: "graph-overlay",
@@ -478,6 +494,7 @@ pub fn SpecGraphPage() -> Element {
                 button {
                     class: "graph-settings-toggle",
                     "data-testid": "graph-settings-toggle",
+                    "data-graph-passthrough": "false",
                     aria_label: "Toggle graph settings",
                     onclick: move |evt: Event<MouseData>| {
                         evt.stop_propagation();
@@ -490,21 +507,48 @@ pub fn SpecGraphPage() -> Element {
                     div {
                         class: "graph-settings-panel",
                         "data-testid": "graph-settings-panel",
+                        "data-graph-passthrough": "false",
                         onclick: move |evt: Event<MouseData>| evt.stop_propagation(),
                         onmousedown: move |evt: Event<MouseData>| evt.stop_propagation(),
                         onwheel: move |evt: Event<WheelData>| evt.stop_propagation(),
 
                         h3 { class: "graph-settings-panel__title", "Graph settings" }
 
+                        // ── Auto-apply toggle ──
+                        div { class: "graph-settings-section",
+                            label { class: "graph-settings-label graph-settings-label--inline",
+                                input {
+                                    r#type: "checkbox",
+                                    "data-testid": "graph-toggle-auto-apply",
+                                    checked: is_auto,
+                                    onchange: move |evt| {
+                                        let v = evt.checked();
+                                        auto_apply.set(v);
+                                        // Switching auto-apply on commits any pending draft.
+                                        if v {
+                                            committed_algo.set(*draft_algo.read());
+                                            committed_params.set(*draft_params.read());
+                                            committed_show_edges.set(*draft_show_edges.read());
+                                        }
+                                    },
+                                }
+                                " Auto-apply"
+                            }
+                        }
+
+                        // ── Layout algorithm ──
                         div { class: "graph-settings-section",
                             label { class: "graph-settings-label", "Layout algorithm" }
                             select {
                                 class: "graph-settings-select",
                                 "data-testid": "graph-algo-select",
-                                value: cur_algo.as_str(),
+                                value: d_algo.as_str(),
                                 onchange: move |evt| {
                                     if let Some(a) = LayoutAlgorithm::from_str_opt(&evt.value()) {
-                                        algo.set(a);
+                                        draft_algo.set(a);
+                                        if *auto_apply.read() {
+                                            committed_algo.set(a);
+                                        }
                                     }
                                 },
                                 for a in LayoutAlgorithm::ALL.iter() {
@@ -513,61 +557,65 @@ pub fn SpecGraphPage() -> Element {
                             }
                         }
 
+                        // ── Spread ──
                         div { class: "graph-settings-section",
                             label { class: "graph-settings-label",
                                 "Spread "
-                                span { class: "graph-settings-value", "{cur_params.spread:.2}" }
+                                span { class: "graph-settings-value", "{d_params.spread:.2}" }
                             }
                             input {
                                 r#type: "range",
                                 min: "0.2", max: "4.0", step: "0.05",
-                                value: "{cur_params.spread}",
+                                value: "{d_params.spread}",
                                 oninput: move |evt| {
                                     if let Ok(v) = evt.value().parse::<f32>() {
-                                        let mut p = *params.read();
+                                        let mut p = *draft_params.read();
                                         p.spread = v;
-                                        params.set(p);
+                                        draft_params.set(p);
+                                        if *auto_apply.read() { committed_params.set(p); }
                                     }
                                 },
                             }
                         }
 
-                        if matches!(cur_algo, LayoutAlgorithm::RingsByDepth | LayoutAlgorithm::Grid) {
+                        if matches!(d_algo, LayoutAlgorithm::RingsByDepth | LayoutAlgorithm::Grid) {
                             div { class: "graph-settings-section",
                                 label { class: "graph-settings-label",
                                     "Y spacing "
-                                    span { class: "graph-settings-value", "{cur_params.y_spacing:.2}" }
+                                    span { class: "graph-settings-value", "{d_params.y_spacing:.2}" }
                                 }
                                 input {
                                     r#type: "range",
                                     min: "0.0", max: "4.0", step: "0.05",
-                                    value: "{cur_params.y_spacing}",
+                                    value: "{d_params.y_spacing}",
                                     oninput: move |evt| {
                                         if let Ok(v) = evt.value().parse::<f32>() {
-                                            let mut p = *params.read();
+                                            let mut p = *draft_params.read();
                                             p.y_spacing = v;
-                                            params.set(p);
+                                            draft_params.set(p);
+                                            if *auto_apply.read() { committed_params.set(p); }
                                         }
                                     },
                                 }
                             }
                         }
 
-                        if matches!(cur_algo, LayoutAlgorithm::ForceDirected) {
+                        if matches!(d_algo, LayoutAlgorithm::ForceDirected) {
                             div { class: "graph-settings-section",
                                 label { class: "graph-settings-label",
                                     "Iterations "
-                                    span { class: "graph-settings-value", "{cur_params.iterations}" }
+                                    span { class: "graph-settings-value", "{d_params.iterations}" }
                                 }
                                 input {
                                     r#type: "range",
                                     min: "10", max: "400", step: "10",
-                                    value: "{cur_params.iterations}",
+                                    value: "{d_params.iterations}",
                                     oninput: move |evt| {
                                         if let Ok(v) = evt.value().parse::<u32>() {
-                                            let mut p = *params.read();
+                                            let mut p = *draft_params.read();
                                             p.iterations = v;
-                                            params.set(p);
+                                            draft_params.set(p);
+                                            if *auto_apply.read() { committed_params.set(p); }
                                         }
                                     },
                                 }
@@ -575,17 +623,18 @@ pub fn SpecGraphPage() -> Element {
                             div { class: "graph-settings-section",
                                 label { class: "graph-settings-label",
                                     "Link distance "
-                                    span { class: "graph-settings-value", "{cur_params.link_dist:.2}" }
+                                    span { class: "graph-settings-value", "{d_params.link_dist:.2}" }
                                 }
                                 input {
                                     r#type: "range",
                                     min: "0.5", max: "6.0", step: "0.1",
-                                    value: "{cur_params.link_dist}",
+                                    value: "{d_params.link_dist}",
                                     oninput: move |evt| {
                                         if let Ok(v) = evt.value().parse::<f32>() {
-                                            let mut p = *params.read();
+                                            let mut p = *draft_params.read();
                                             p.link_dist = v;
-                                            params.set(p);
+                                            draft_params.set(p);
+                                            if *auto_apply.read() { committed_params.set(p); }
                                         }
                                     },
                                 }
@@ -593,46 +642,65 @@ pub fn SpecGraphPage() -> Element {
                             div { class: "graph-settings-section",
                                 label { class: "graph-settings-label",
                                     "Repulsion "
-                                    span { class: "graph-settings-value", "{cur_params.repulsion:.2}" }
+                                    span { class: "graph-settings-value", "{d_params.repulsion:.2}" }
                                 }
                                 input {
                                     r#type: "range",
                                     min: "0.5", max: "8.0", step: "0.1",
-                                    value: "{cur_params.repulsion}",
+                                    value: "{d_params.repulsion}",
                                     oninput: move |evt| {
                                         if let Ok(v) = evt.value().parse::<f32>() {
-                                            let mut p = *params.read();
+                                            let mut p = *draft_params.read();
                                             p.repulsion = v;
-                                            params.set(p);
+                                            draft_params.set(p);
+                                            if *auto_apply.read() { committed_params.set(p); }
                                         }
                                     },
                                 }
                             }
                         }
 
+                        // ── Show edges ──
                         div { class: "graph-settings-section",
                             label { class: "graph-settings-label graph-settings-label--inline",
                                 input {
                                     r#type: "checkbox",
                                     "data-testid": "graph-toggle-edges",
-                                    checked: *show_edges.read(),
+                                    checked: d_show_edges,
                                     onchange: move |evt| {
-                                        show_edges.set(evt.checked());
+                                        let v = evt.checked();
+                                        draft_show_edges.set(v);
+                                        if *auto_apply.read() { committed_show_edges.set(v); }
                                     },
                                 }
                                 " Show edges"
                             }
                         }
 
-                        div { class: "graph-settings-section",
+                        // ── Apply / Reset ──
+                        div { class: "graph-settings-section graph-settings-actions",
+                            button {
+                                class: "graph-settings-apply",
+                                "data-testid": "graph-settings-apply",
+                                disabled: apply_disabled,
+                                onclick: move |evt: Event<MouseData>| {
+                                    evt.stop_propagation();
+                                    committed_algo.set(*draft_algo.read());
+                                    committed_params.set(*draft_params.read());
+                                    committed_show_edges.set(*draft_show_edges.read());
+                                },
+                                "Apply"
+                            }
                             button {
                                 class: "graph-settings-reset",
                                 "data-testid": "graph-settings-reset",
                                 onclick: move |evt: Event<MouseData>| {
                                     evt.stop_propagation();
-                                    params.set(LayoutParams::default());
+                                    let p = LayoutParams::default();
+                                    draft_params.set(p);
+                                    if *auto_apply.read() { committed_params.set(p); }
                                 },
-                                "Reset parameters"
+                                "Reset"
                             }
                         }
                     }

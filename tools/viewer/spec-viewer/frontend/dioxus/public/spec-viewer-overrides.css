@@ -6,8 +6,24 @@
 
 /* ── SpecDetailPage wrapper ─────────────────────────────────────────────────── */
 
+/* Standalone detail route: render on a solid surface so the spec body
+   isn't competing with the animated WgpuOverlay shown behind it.  Fills
+   the entire `.main-layout` flex row. */
 .spec-detail-page {
+  flex: 1;
+  min-width: 0;
   height: 100%;
+  background: var(--bg-primary, #0d1117);
+  overflow: hidden;
+}
+
+/* Cancel the translucent panel-bg on the inner detail panel when it's
+   embedded directly under .spec-detail-page (i.e. the dedicated route).
+   The panel inherits the solid surface from its parent instead. */
+.spec-detail-page > .spec-detail {
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
 }
 
 /* ── SpecTreePage ───────────────────────────────────────────────────────────── */
@@ -36,3 +52,44 @@
   padding: var(--spacing-md);
 }
 
+
+/* ── SpecDetailPage header (back button + breadcrumbs) ─────────────────────── */
+
+.btn-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  margin-right: var(--spacing-sm);
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-sm);
+  font-family: inherit;
+  font-size: 13px;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-back:hover {
+  background: var(--surface-hover);
+}
+
+.btn-nav-link {
+  padding: 4px 10px;
+  margin-left: var(--spacing-xs);
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+}
+
+.btn-nav-link:hover {
+  background: var(--surface-hover);
+  color: var(--text-primary);
+}
+
+.spec-detail__breadcrumbs {
+  display: inline-flex;
+  align-items: center;
+}

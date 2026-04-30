@@ -526,14 +526,71 @@ pub fn SpecTreePage() -> Element {
 #[component]
 pub fn SpecDetailPage(id: String) -> Element {
     let mut active_tab = use_signal(|| "body".to_string());
+    let nav = use_navigator();
 
+    // Use the spec id as the breadcrumb leaf.  Resolving the human-readable
+    // title would require loading the spec list, which the dedicated detail
+    // page intentionally avoids; SpecDetail itself fetches and displays the
+    // title in the body once loaded.
+    let title = id.clone();
+
+    let crumbs: Vec<BreadcrumbItem> = vec![
+        BreadcrumbItem::link(
+            "Specs",
+            EventHandler::new(move |_| {
+                nav.push(Route::SpecListPage {});
+            }),
+        )
+        .with_href("/specs"),
+        BreadcrumbItem::link(
+            "Graph",
+            EventHandler::new(move |_| {
+                nav.push(Route::SpecGraphPage {});
+            }),
+        )
+        .with_href("/specs/graph"),
+        BreadcrumbItem::current(title.clone()),
+    ];
+
+    let nav_back = nav;
     rsx! {
-        div {
-            class: "spec-detail-page",
-            SpecDetail {
-                spec_id: id,
-                active_tab: active_tab.read().clone(),
-                on_tab_change: move |tab| active_tab.set(tab),
+        Layout {
+            header: rsx! {
+                Header {
+                    left: rsx! {
+                        button {
+                            class: "btn-back",
+                            "data-testid": "spec-detail-back",
+                            aria_label: "Back",
+                            onclick: move |_| { nav_back.go_back(); },
+                            "\u{2190} Back"
+                        }
+                        Breadcrumbs {
+                            items: crumbs,
+                            class: "spec-detail__breadcrumbs".to_string(),
+                        }
+                    },
+                    right: rsx! {
+                        Link {
+                            to: Route::SpecListPage {},
+                            class: "btn-nav-link",
+                            "\u{1F4D0} Specs"
+                        }
+                        Link {
+                            to: Route::SpecGraphPage {},
+                            class: "btn-nav-link",
+                            "\u{1F310} Graph"
+                        }
+                    },
+                }
+            },
+            div {
+                class: "spec-detail-page",
+                SpecDetail {
+                    spec_id: id,
+                    active_tab: active_tab.read().clone(),
+                    on_tab_change: move |tab| active_tab.set(tab),
+                }
             }
         }
     }
