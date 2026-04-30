@@ -6,6 +6,15 @@
 
 /* ── SpecDetailPage wrapper ─────────────────────────────────────────────────── */
 
+/* The detail route wraps content in the standard `.app` shell.  Make the
+   header opaque on this route so the back button + breadcrumbs sit on a
+   solid surface instead of the animated WgpuOverlay bleeding through. */
+.app:has(> .main-layout > .spec-detail-page) > .header {
+  background: var(--bg-secondary, #161b22);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
 /* Standalone detail route: render on a solid surface so the spec body
    isn't competing with the animated WgpuOverlay shown behind it.  Fills
    the entire `.main-layout` flex row. */
@@ -61,18 +70,19 @@
   gap: 4px;
   padding: 4px 10px;
   margin-right: var(--spacing-sm);
-  background: transparent;
+  background: var(--bg-secondary, rgba(22, 27, 34, 0.95));
   color: var(--text-primary);
   border: 1px solid var(--border-color);
   border-radius: var(--radius-sm);
   font-family: inherit;
   font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   transition: background 0.15s;
 }
 
 .btn-back:hover {
-  background: var(--surface-hover);
+  background: var(--surface-hover, rgba(255, 255, 255, 0.08));
 }
 
 .btn-nav-link {
