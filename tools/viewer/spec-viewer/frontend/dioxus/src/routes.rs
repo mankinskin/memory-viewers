@@ -101,19 +101,11 @@ pub fn SpecListPage() -> Element {
                     right: rsx! {
                         Link {
                             to: Route::SpecGraphPage {},
-                            class: "header-nav-link",
-                            style: "padding: 6px 10px; border-radius: 6px; border: 1px solid var(--border-subtle); background: var(--bg-secondary); color: var(--text-primary); cursor: pointer; font-size: 14px; min-height: 32px; text-decoration: none; margin-right: 6px;",
+                            class: "btn-nav-link",
                             "🌐 Graph"
                         }
                         button {
-                            style: "
-                                padding: 6px 10px; border-radius: 6px;
-                                border: 1px solid var(--border-subtle);
-                                background: var(--bg-secondary);
-                                color: var(--text-primary);
-                                cursor: pointer; font-size: 14px;
-                                min-height: 32px;
-                            ",
+                            class: "btn-nav-link",
                             aria_label: "Theme settings",
                             onclick: move |_| {
                                 let cur = *show_theme_settings.read();
@@ -187,14 +179,7 @@ pub fn SpecListPage() -> Element {
                     }
                 } else {
                     div {
-                        style: "
-                            display: flex;
-                            align-items: center;
-                            justify-content: center;
-                            height: 100%;
-                            color: #6b7280;
-                            font-size: 14px;
-                        ",
+                        class: "empty-state",
                         "Select a specification to view details."
                     }
                 }
@@ -204,10 +189,7 @@ pub fn SpecListPage() -> Element {
         // ── Theme settings panel — floats above everything ──────────────────
         if *show_theme_settings.read() {
             div {
-                style: "
-                    position: fixed; top: 48px; right: 16px; z-index: 200;
-                    max-height: calc(100vh - 64px); overflow-y: auto;
-                ",
+                class: "theme-settings-floating",
                 ThemeSettings {
                     on_close: move |_| show_theme_settings.set(false),
                 }
@@ -236,18 +218,18 @@ pub fn SpecTreePage() -> Element {
 
     rsx! {
         div {
-            style: "display: flex; flex-direction: column; height: 100%;",
+            class: "spec-tree-page",
             div {
-                style: "padding: 16px; border-bottom: 1px solid #1f2937;",
+                class: "spec-tree-page__header",
                 h2 {
-                    style: "color: #f9fafb; font-size: 16px; font-weight: 600; margin: 0;",
+                    class: "spec-tree-page__title",
                     "Specification Tree"
                 }
             }
             div {
-                style: "flex: 1; overflow-y: auto; padding: 16px;",
+                class: "spec-tree-page__list",
                 if *loading.read() {
-                    p { style: "color: #6b7280;", "Loading…" }
+                    p { class: "spec-detail__loading", "Loading…" }
                 } else {
                     for spec in specs.read().iter() {
                         {
@@ -256,18 +238,7 @@ pub fn SpecTreePage() -> Element {
                             rsx! {
                                 button {
                                     key: "{id}",
-                                    style: "
-                                        display: block;
-                                        width: 100%;
-                                        text-align: left;
-                                        padding: 8px 12px;
-                                        background: none;
-                                        border: none;
-                                        border-bottom: 1px solid #1f2937;
-                                        color: #e5e7eb;
-                                        cursor: pointer;
-                                        font-size: 13px;
-                                    ",
+                                    class: "spec-card",
                                     onclick: move |_| { nav2.push(Route::SpecDetailPage { id: id.clone() }); },
                                     {spec.title.as_deref().unwrap_or("Untitled")}
                                 }
@@ -288,7 +259,7 @@ pub fn SpecDetailPage(id: String) -> Element {
 
     rsx! {
         div {
-            style: "height: 100%;",
+            class: "spec-detail-page",
             SpecDetail {
                 spec_id: id,
                 active_tab: active_tab.read().clone(),

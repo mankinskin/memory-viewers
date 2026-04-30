@@ -12,6 +12,11 @@ use super::code_ref_list::CodeRefList;
 use super::health_panel::HealthPanel;
 use super::state_badge::StateBadge;
 
+// ── CSS class constants ───────────────────────────────────────────────────────
+
+const TAB: &str = "spec-detail__tab";
+const TAB_ACTIVE: &str = "spec-detail__tab spec-detail__tab--active";
+
 // ── Tabs ──────────────────────────────────────────────────────────────────────
 
 const TABS: &[(&str, &str)] = &[
@@ -106,28 +111,13 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
 
     rsx! {
         div {
-            style: "
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-                overflow: hidden;
-                background: var(--panel-bg);
-                backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
-                -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
-            ",
+            class: "spec-detail",
 
             // ── Header ────────────────────────────────────────────────────
             div {
-                style: "
-                    display: flex;
-                    align-items: center;
-                    gap: 10px;
-                    padding: 12px 16px;
-                    border-bottom: 1px solid var(--border-color);
-                    flex-shrink: 0;
-                ",
+                class: "spec-detail__header",
                 span {
-                    style: "font-size: 14px; font-weight: 600; color: var(--text-primary); flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                    class: "spec-detail__title",
                     "{title}"
                 }
                 if !state.is_empty() {
@@ -137,41 +127,16 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
 
             // ── Tab bar ───────────────────────────────────────────────────
             div {
-                style: "
-                    display: flex;
-                    gap: 0;
-                    border-bottom: 1px solid var(--border-color);
-                    flex-shrink: 0;
-                    padding: 0 12px;
-                ",
+                class: "spec-detail__tabs",
                 for (key, label) in TABS.iter() {
                     {
                         let key_str = key.to_string();
                         let label_str = label.to_string();
-                        let is_active = props.active_tab == *key;
-                        let border = if is_active {
-                            "border-bottom: 2px solid var(--accent-blue);"
-                        } else {
-                            "border-bottom: 2px solid transparent;"
-                        };
-                        let color = if is_active {
-                            "var(--accent-blue)"
-                        } else {
-                            "var(--text-muted)"
-                        };
+                        let cls = if props.active_tab == *key { TAB_ACTIVE } else { TAB };
                         rsx! {
                             button {
                                 key: "{key_str}",
-                                style: "
-                                    background: none;
-                                    border: none;
-                                    padding: 8px 12px;
-                                    font-size: 12px;
-                                    font-weight: 500;
-                                    cursor: pointer;
-                                    color: {color};
-                                    {border}
-                                ",
+                                class: "{cls}",
                                 onclick: move |_| props.on_tab_change.call(key_str.clone()),
                                 "{label_str}"
                             }
@@ -182,22 +147,19 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
 
             // ── Tab content ───────────────────────────────────────────────
             div {
-                style: "flex: 1; overflow-y: auto; padding: 16px;",
+                class: "spec-detail__content",
 
                 if *full_loading.read() {
-                    p { style: "color: var(--text-muted); font-size: 13px;", "Loading…" }
+                    p { class: "spec-detail__loading", "Loading…" }
                 } else if let Some(err) = full_error.read().as_deref() {
-                    p { style: "color: var(--accent-red); font-size: 13px;", "{err}" }
+                    p { class: "spec-detail__error", "{err}" }
                 } else if let Some(data) = full_data.as_ref() {
                     {
                         match props.active_tab.as_str() {
                             "body" => rsx! {
-                                div {
-                                    style: "color: var(--text-primary);",
-                                    FileContentViewer {
-                                        content: data.body.clone(),
-                                        filename: "body.md".to_string(),
-                                    }
+                                FileContentViewer {
+                                    content: data.body.clone(),
+                                    filename: "body.md".to_string(),
                                 }
                             },
                             "sections" => {
@@ -205,9 +167,9 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                                 let spec_id_sec = props.spec_id.clone();
                                 rsx! {
                                     div {
-                                        style: "display: flex; flex-direction: column; gap: 6px;",
+                                        class: "accordion",
                                         if sections.is_empty() {
-                                                p { style: "color: var(--text-muted); font-size: 13px;", "No sections." }
+                                            p { class: "spec-detail__loading", "No sections." }
                                         } else {
                                             for section_name in sections.iter() {
                                                 {
@@ -218,19 +180,9 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                                                     rsx! {
                                                         div {
                                                             key: "{sn}",
-                                                            style: "border: 1px solid var(--border-color); border-radius: 6px; overflow: hidden;",
+                                                            class: "accordion-item",
                                                             button {
-                                                                style: "
-                                                                    width: 100%;
-                                                                    text-align: left;
-                                                                    padding: 8px 12px;
-                                                                    background: var(--bg-secondary);
-                                                                    border: none;
-                                                                    color: var(--text-primary);
-                                                                    font-size: 13px;
-                                                                    font-weight: 500;
-                                                                    cursor: pointer;
-                                                                ",
+                                                                class: "accordion-toggle",
                                                                 onclick: move |_| {
                                                                     if is_expanded {
                                                                         expanded_section.set(None);
@@ -257,18 +209,18 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                                                                     }
                                                                 },
                                                                 span {
-                                                                    style: "margin-right: 6px; color: var(--text-muted);",
+                                                                    class: "accordion-chevron",
                                                                     if is_expanded { "▾" } else { "▸" }
                                                                 }
                                                                 "{sn2}"
                                                             }
                                                             if is_expanded {
                                                                 div {
-                                                                    style: "padding: 12px 16px; background: var(--panel-bg-floor); border-top: 1px solid var(--border-color);",
+                                                                    class: "accordion-body",
                                                                     if *section_loading.read() {
-                                                                        p { style: "color: var(--text-muted); font-size: 12px;", "Loading section…" }
+                                                                        p { class: "spec-detail__loading", "Loading section…" }
                                                                     } else if let Some(err) = section_error.read().as_deref() {
-                                                                        p { style: "color: var(--accent-red); font-size: 12px;", "{err}" }
+                                                                        p { class: "spec-detail__error", "{err}" }
                                                                     } else if let Some(sb) = section_body.read().as_ref() {
                                                                         FileContentViewer {
                                                                             content: sb.content.clone(),

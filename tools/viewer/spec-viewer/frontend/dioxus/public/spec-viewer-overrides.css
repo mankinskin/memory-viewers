@@ -2,3 +2,47 @@
    modular CSS bundle.  Add only rules that should NOT apply to other
    viewers; anything reusable belongs upstream in
    tools/viewer/viewer-api/frontend/dioxus/public/css/. */
+
+/* ── Floating theme-settings panel ─────────────────────────────────────────── */
+
+.theme-settings-floating {
+  position: fixed;
+  top: 48px;
+  right: 16px;
+  z-index: 200;
+  max-height: calc(100vh - 64px);
+  overflow-y: auto;
+}
+
+/* ── SpecDetailPage wrapper ─────────────────────────────────────────────────── */
+
+.spec-detail-page {
+  height: 100%;
+}
+
+/* ── SpecTreePage ───────────────────────────────────────────────────────────── */
+
+.spec-tree-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.spec-tree-page__header {
+  padding: var(--spacing-md);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.spec-tree-page__title {
+  color: var(--text-primary);
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0;
+}
+
+.spec-tree-page__list {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--spacing-md);
+}
+

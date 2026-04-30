@@ -140,7 +140,8 @@ pub fn SpecGraphPage() -> Element {
     if let Some(msg) = error.read().clone() {
         return rsx! {
             div {
-                style: "display: flex; align-items: center; justify-content: center; height: 100%; color: #f87171; font-size: 14px; font-family: sans-serif;",
+                class: "empty-state",
+                style: "color: var(--error);",
                 "Failed to load graph: {msg}"
             }
         };
@@ -149,7 +150,7 @@ pub fn SpecGraphPage() -> Element {
     let Some(l) = layout.read().clone() else {
         return rsx! {
             div {
-                style: "display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af; font-size: 14px; font-family: sans-serif;",
+                class: "empty-state",
                 "Loading graph\u{2026}"
             }
         };
@@ -159,14 +160,14 @@ pub fn SpecGraphPage() -> Element {
     let node_count = nodes.len();
 
     rsx! {
-        div { style: "position: relative; width: 100%; height: 100%;",
+        div { class: "graph-overlay",
             viewer_api_dioxus::Graph3D {
                 layout: l,
                 container_id: "spec-graph3d-container".to_string(),
                 container_style: "position: absolute; inset: 0; overflow: hidden; user-select: none; cursor: grab;".to_string(),
                 div {
                     id: "spec-graph3d-nodes",
-                    style: "position: absolute; inset: 0; pointer-events: none;",
+                    class: "graph-nodes-layer",
                     for (i, n) in nodes.iter().enumerate() {
                         {
                             let id    = n.id.clone();
@@ -179,18 +180,26 @@ pub fn SpecGraphPage() -> Element {
                                 div {
                                     key: "{id}",
                                     "data-node-idx": "{i}",
-                                    style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 170px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 6px; background: rgba(18,16,14,0.65); backdrop-filter: blur(6px) saturate(140%); padding: 6px 8px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.5);",
+                                    // Only the dynamic left-border accent colour stays inline;
+                                    // all structural styles live in graph-overlay.css.
+                                    class: "graph-node-card",
+                                    style: "border-left-color: {color};",
                                     onclick: move |evt: Event<MouseData>| {
                                         evt.stop_propagation();
                                         nav2.push(crate::routes::Route::SpecDetailPage { id: id_click.clone() });
                                     },
                                     div {
-                                        style: "font-size: 12px; font-weight: 600; color: #e5e7eb; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                                        class: "graph-node-card__title",
                                         "{title}"
                                     }
                                     div {
-                                        style: "display: flex; align-items: center; gap: 6px; margin-top: 3px;",
-                                        span { style: "font-size: 10px; color: {color}; font-weight: 500;", "{state}" }
+                                        class: "graph-node-card__meta",
+                                        span {
+                                            class: "graph-node-card__state",
+                                            // State colour stays inline — it is a dynamic per-node value.
+                                            style: "color: {color};",
+                                            "{state}"
+                                        }
                                     }
                                 }
                             }
@@ -198,12 +207,12 @@ pub fn SpecGraphPage() -> Element {
                     }
                 }
                 div {
-                    style: "position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); font-size: 11px; color: rgba(255,255,255,0.3); font-family: sans-serif; pointer-events: none; white-space: nowrap;",
+                    class: "graph-controls-hint",
                     "Left-drag: orbit \u{00b7} Right-drag: pan \u{00b7} Scroll: zoom \u{00b7} Click card: open"
                 }
                 if node_count > 0 {
                     div {
-                        style: "position: absolute; top: 12px; right: 12px; font-size: 11px; color: rgba(255,255,255,0.35); font-family: sans-serif; pointer-events: none;",
+                        class: "graph-count-badge",
                         "{node_count} specs"
                     }
                 }
