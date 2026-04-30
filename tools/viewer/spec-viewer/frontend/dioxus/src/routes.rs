@@ -8,7 +8,9 @@
 //!   /specs/:id       → SpecDetailPage (detail page navigated directly)
 
 use dioxus::prelude::*;
-use viewer_api_dioxus::{Header, Layout, Sidebar, ThemeSettings};
+use viewer_api_dioxus::{
+    Header, Layout, Sidebar, TabBar, TabItem, TabsStore, ThemeSettings,
+};
 use wasm_bindgen_futures::spawn_local;
 
 use crate::api;
@@ -18,6 +20,16 @@ use crate::components::spec_tree::SpecTree;
 use crate::sse::use_sse;
 use crate::store::SpecListStore;
 use crate::types::SpecSummary;
+
+/// Resolve a tab label for `id` from the loaded spec list, falling back to
+/// the bare id when the spec hasn't loaded yet (e.g. on URL deep-link).
+fn label_for(specs: &[SpecSummary], id: &str) -> String {
+    specs
+        .iter()
+        .find(|s| s.id == id)
+        .and_then(|s| s.title.clone())
+        .unwrap_or_else(|| id.to_string())
+}
 
 // ── Route enum ────────────────────────────────────────────────────────────────
 
@@ -64,6 +76,59 @@ pub fn SpecListPage() -> Element {
     let mut filter = store.filter;
     let mut state_filter = store.state_filter;
     let mut active_tab = store.active_tab;
+
+    // Multi-spec tab store. Tab id == spec id; payload == cached label.
+    let mut tabs: TabsStore<String> = use_hook(TabsStore::new);
+
+    // Hydrate the tab set from the persisted `selected_id` on first mount.
+    use_hook(|| {
+        if let Some(id) = selected_id.peek().clone() {
+            tabs.open(id.clone(), id);
+        }
+    });
+
+    // Mirror the active tab id into `selected_id` so that the existing
+    // hash/localStorage persistence continues to work.
+    use_effect(move || {
+        let next = tabs.active.read().clone();
+        if *selected_id.peek() != next {
+            selected_id.set(next);
+        }
+    });
+
+    // External hash-id changes (deep link / back-forward) → open the tab.
+    use_effect(move || {
+        if let Some(id) = selected_id.read().clone() {
+            if tabs.active.peek().as_deref() != Some(id.as_str()) {
+                let label = label_for(&specs.peek(), &id);
+                tabs.open(id, label);
+            }
+        }
+    });
+
+    // Refresh tab labels once the spec list loads.
+    use_effect(move || {
+        let list = specs.read().clone();
+        if list.is_empty() {
+            return;
+        }
+        let snapshot = tabs.snapshot();
+        let mut updated = false;
+        let new_tabs: Vec<viewer_api_dioxus::Tab<String>> = snapshot
+            .tabs
+            .into_iter()
+            .map(|t| {
+                let label = label_for(&list, &t.id);
+                if label != t.payload {
+                    updated = true;
+                }
+                viewer_api_dioxus::Tab { id: t.id, payload: label }
+            })
+            .collect();
+        if updated {
+            tabs.set_tabs(new_tabs, snapshot.active);
+        }
+    });
 
     // Load spec list on mount and when filter / state_filter change.
     use_effect(move || {
@@ -160,9 +225,10 @@ pub fn SpecListPage() -> Element {
                                 }
                             });
                         },
-                        selected_id: selected_id.read().clone(),
+                        selected_id: tabs.active.read().clone(),
                         on_select: move |id: String| {
-                            selected_id.set(Some(id));
+                            let label = label_for(&specs.peek(), &id);
+                            tabs.open(id, label);
                             active_tab.set("body".to_string());
                         },
                     }
@@ -171,8 +237,32 @@ pub fn SpecListPage() -> Element {
             // ── Main content ──────────────────────────────────────────────
             div {
                 class: "content",
-                if let Some(id) = selected_id.read().clone() {
+                {
+                    let tab_items: Vec<TabItem> = tabs.tabs.read().iter().map(|t| {
+                        let mut item = TabItem::new(t.id.clone(), t.payload.clone());
+                        item.closeable = true;
+                        item
+                    }).collect();
+                    let active_tab_id = tabs.active.read().clone().unwrap_or_default();
+                    rsx! {
+                        if !tab_items.is_empty() {
+                            TabBar {
+                                tabs: tab_items,
+                                active_id: active_tab_id,
+                                on_select: move |id: String| {
+                                    tabs.activate(&id);
+                                    active_tab.set("body".to_string());
+                                },
+                                on_close: move |id: String| {
+                                    tabs.close(&id);
+                                },
+                            }
+                        }
+                    }
+                }
+                if let Some(id) = tabs.active.read().clone() {
                     SpecDetail {
+                        key: "{id}",
                         spec_id: id,
                         active_tab: active_tab.read().clone(),
                         on_tab_change: move |tab| active_tab.set(tab),
