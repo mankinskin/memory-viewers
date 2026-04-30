@@ -9,7 +9,7 @@
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
-    Header, Layout, Sidebar, TabBar, TabItem, TabsStore, ThemeSettings,
+    BreadcrumbItem, Breadcrumbs, Header, Layout, Sidebar, TabBar, TabItem, TabsStore, ThemeSettings,
 };
 use wasm_bindgen_futures::spawn_local;
 
@@ -261,6 +261,51 @@ pub fn SpecListPage() -> Element {
                     }
                 }
                 if let Some(id) = tabs.active.read().clone() {
+                    {
+                        let summary = specs.read().iter().find(|s| s.id == id).cloned();
+                        let component = summary
+                            .as_ref()
+                            .and_then(|s| s.component.clone());
+                        let title = summary
+                            .as_ref()
+                            .and_then(|s| s.title.clone())
+                            .unwrap_or_else(|| id.clone());
+                        let mut crumbs: Vec<BreadcrumbItem> = vec![BreadcrumbItem::link(
+                            "All specs",
+                            EventHandler::new(move |_| {
+                                state_filter.set(String::new());
+                                let q = filter.peek().clone();
+                                let q_opt = if q.is_empty() { None } else { Some(q) };
+                                spawn_local(async move {
+                                    if let Ok(resp) = api::list_specs(None, q_opt.as_deref(), None).await {
+                                        specs.set(resp.items);
+                                    }
+                                });
+                            }),
+                        )];
+                        if let Some(comp) = component {
+                            let comp_label = comp.clone();
+                            crumbs.push(BreadcrumbItem::link(
+                                comp_label,
+                                EventHandler::new(move |_| {
+                                    filter.set(comp.clone());
+                                    let q = comp.clone();
+                                    spawn_local(async move {
+                                        if let Ok(resp) = api::search_specs(&q, Some(50)).await {
+                                            specs.set(resp.items);
+                                        }
+                                    });
+                                }),
+                            ));
+                        }
+                        crumbs.push(BreadcrumbItem::current(title));
+                        rsx! {
+                            Breadcrumbs {
+                                items: crumbs,
+                                class: "spec-detail__breadcrumbs".to_string(),
+                            }
+                        }
+                    }
                     SpecDetail {
                         key: "{id}",
                         spec_id: id,
