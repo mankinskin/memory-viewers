@@ -24,6 +24,44 @@ use crate::sse::use_sse;
 use crate::store::SpecListStore;
 use crate::types::SpecSummary;
 
+/// Compute the spec ids whose details should be prefetched when `active`
+/// becomes the focused tab.  Returns same-component siblings plus the
+/// immediate prev/next neighbour in the spec list (deduplicated; `active`
+/// itself is excluded).
+fn compute_prefetch_targets(specs: &[SpecSummary], active: &str) -> Vec<String> {
+    let active_pos = specs.iter().position(|s| s.id == active);
+    let active_component = active_pos
+        .and_then(|i| specs.get(i))
+        .and_then(|s| s.component.clone())
+        .filter(|c| !c.is_empty());
+
+    let mut out: Vec<String> = Vec::new();
+    let mut push = |id: String| {
+        if id != active && !out.contains(&id) {
+            out.push(id);
+        }
+    };
+
+    if let Some(component) = active_component.as_deref() {
+        for s in specs {
+            if s.component.as_deref() == Some(component) {
+                push(s.id.clone());
+            }
+        }
+    }
+
+    if let Some(i) = active_pos {
+        if i > 0 {
+            push(specs[i - 1].id.clone());
+        }
+        if i + 1 < specs.len() {
+            push(specs[i + 1].id.clone());
+        }
+    }
+
+    out
+}
+
 /// Resolve a tab label for `id` from the loaded spec list, falling back to
 /// the bare id when the spec hasn't loaded yet (e.g. on URL deep-link).
 fn label_for(specs: &[SpecSummary], id: &str) -> String {
@@ -181,6 +219,34 @@ pub fn SpecListPage() -> Element {
 
     // SSE — keep list fresh from server push.
     use_sse(specs);
+
+    // P5.7: prefetch siblings of the active spec.  When the active tab
+    // changes, schedule background `get_spec_full` calls for the
+    // same-component siblings plus the immediate prev/next neighbour in
+    // the flat sorted list, so a tab switch typically resolves from the
+    // shared `SpecCache` LRU without a network round-trip.
+    let cache = use_context::<crate::SpecCache>();
+    use_effect(move || {
+        let Some(active) = tabs.active.read().clone() else {
+            return;
+        };
+        let list = specs.read().clone();
+        let neighbors = compute_prefetch_targets(&list, &active);
+        for id in neighbors {
+            if cache.get(&id).is_some() {
+                continue;
+            }
+            let cache = cache.clone();
+            spawn_local(async move {
+                if cache.get(&id).is_some() {
+                    return;
+                }
+                if let Ok(resp) = api::get_spec_full(&id).await {
+                    cache.insert(id, resp);
+                }
+            });
+        }
+    });
 
     rsx! {
         Layout {

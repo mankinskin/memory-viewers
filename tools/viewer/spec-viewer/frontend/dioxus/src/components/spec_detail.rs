@@ -44,15 +44,28 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
     let mut full_loading: Signal<bool> = use_signal(|| true);
     let mut full_error: Signal<Option<String>> = use_signal(|| None);
 
+    // Shared LRU cache; siblings of the active spec are pre-warmed by
+    // SpecListPage (P5.7) so a tab switch generally renders without I/O.
+    let cache = use_context::<crate::SpecCache>();
+
     let spec_id_fetch = props.spec_id.clone();
     use_effect(use_reactive!(|spec_id_fetch| {
+        let id = spec_id_fetch.clone();
+        // Cache hit: skip the loading flicker and short-circuit.
+        if let Some(cached) = cache.get(&id) {
+            full.set(Some(cached));
+            full_loading.set(false);
+            full_error.set(None);
+            return;
+        }
         full.set(None);
         full_loading.set(true);
         full_error.set(None);
-        let id = spec_id_fetch.clone();
+        let cache = cache.clone();
         spawn_local(async move {
             match api::get_spec_full(&id).await {
                 Ok(resp) => {
+                    cache.insert(id, resp.clone());
                     full.set(Some(resp));
                     full_loading.set(false);
                 }
