@@ -9,8 +9,8 @@
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
-    BreadcrumbItem, Breadcrumbs, Card, CardGrid, CardSection, Header, Layout, Sidebar, TabBar,
-    TabItem, TabsStore, ThemeSettings,
+    BreadcrumbItem, Breadcrumbs, Card, CardGrid, CardSection, Header, Layout, Overlay, Sidebar,
+    TabBar, TabItem, TabsStore, ThemeSettings,
 };
 use wasm_bindgen_futures::spawn_local;
 
@@ -322,13 +322,14 @@ pub fn SpecListPage() -> Element {
             }
         }
 
-        // ── Theme settings panel — floats above everything ──────────────────
-        if *show_theme_settings.read() {
-            div {
-                class: "theme-settings-floating",
-                ThemeSettings {
-                    on_close: move |_| show_theme_settings.set(false),
-                }
+        // ── Theme settings panel ─ modal overlay with backdrop dismiss ──────
+        Overlay {
+            open: *show_theme_settings.read(),
+            on_close: move |_| show_theme_settings.set(false),
+            panel_class: "theme-settings-modal".to_string(),
+            aria_label: "Theme settings".to_string(),
+            ThemeSettings {
+                on_close: move |_| show_theme_settings.set(false),
             }
         }
     }

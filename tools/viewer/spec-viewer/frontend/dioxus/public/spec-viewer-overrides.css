@@ -3,16 +3,6 @@
    viewers; anything reusable belongs upstream in
    tools/viewer/viewer-api/frontend/dioxus/public/css/. */
 
-/* ── Floating theme-settings panel ─────────────────────────────────────────── */
-
-.theme-settings-floating {
-  position: fixed;
-  top: 48px;
-  right: 16px;
-  z-index: 200;
-  max-height: calc(100vh - 64px);
-  overflow-y: auto;
-}
 
 /* ── SpecDetailPage wrapper ─────────────────────────────────────────────────── */
 
