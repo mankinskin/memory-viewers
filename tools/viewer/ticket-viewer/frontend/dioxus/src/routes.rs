@@ -118,6 +118,49 @@ pub fn TicketListPage(workspace: String) -> Element {
         });
     }
 
+    // ── Background prefetch — fill GraphCache for the first visible tickets ──
+    // Whenever the ticket list changes (filter, sort, initial load) we
+    // speculatively fetch the graph layouts for the first N entries that are
+    // not already in the cache.  This makes switching between tickets instant:
+    // the Graph3D component finds a hot cache entry and renders immediately,
+    // skipping the "Loading graph…" spinner.
+    #[cfg(target_arch = "wasm32")]
+    {
+        const PREFETCH_N: usize = 8;
+        let graph_cache = use_context::<crate::GraphCache>();
+        let ws_pre = workspace.clone();
+        use_effect(move || {
+            let tix = tickets.read().clone();
+            let to_prefetch: Vec<String> = tix
+                .iter()
+                .take(PREFETCH_N)
+                .filter(|t| graph_cache.get(&format!("{ws_pre}:{}", t.id)).is_none())
+                .map(|t| t.id.clone())
+                .collect();
+            if to_prefetch.is_empty() {
+                return;
+            }
+            let ws = ws_pre.clone();
+            let cache = graph_cache.clone();
+            spawn(async move {
+                for tid in to_prefetch {
+                    let cache_key = format!("{ws}:{tid}");
+                    // Skip if a concurrent prefetch already filled this slot.
+                    if cache.get(&cache_key).is_some() {
+                        continue;
+                    }
+                    let backend = HttpTicketBackend::new(None);
+                    if let Ok(resp) = backend.get_subgraph(&ws, &tid, 4).await {
+                        let layout = crate::graph3d::lift_2d(
+                            crate::layout::GraphLayout::build(resp.nodes, resp.edges),
+                        );
+                        cache.insert(cache_key, layout);
+                    }
+                }
+            });
+        });
+    }
+
     // ── Derived values ────────────────────────────────────────────────────
     let ticket_count = tickets.read().len();
     let ws_for_new = workspace.clone();

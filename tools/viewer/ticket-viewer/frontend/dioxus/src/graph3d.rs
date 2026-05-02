@@ -21,7 +21,7 @@ use crate::layout::GraphLayout;
 pub fn can_use_webgpu() -> bool { can_use_webgpu_graph3d() }
 
 /// Build a shared [`Layout3D`] from the 2-D force-directed layout.
-fn lift_2d(gl: GraphLayout) -> Layout3D {
+pub fn lift_2d(gl: GraphLayout) -> Layout3D {
     let scale = 1.0 / 100.0_f32;
 
     let nodes: Vec<Node3D> = gl
@@ -69,20 +69,39 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let root_id   = props.root_id.clone();
     let on_select = props.on_select;
 
-    let mut layout_sig: Signal<Option<Layout3D>> = use_signal(|| None);
+    // ── LRU cache ─────────────────────────────────────────────────────────
+    // Shared across the whole app (provided by App in main.rs).  A cache hit
+    // means we can initialise the signal with the precomputed layout
+    // synchronously — no "Loading graph…" flash on re-visits.
+    let cache: crate::GraphCache = use_context::<crate::GraphCache>();
+    let cache_key = format!("{workspace}:{root_id}");
+
+    // Synchronous cache hit: seed the signal with the stored layout so the
+    // graph renders immediately on the first frame without a network call.
+    let cached = cache.get(&cache_key);
+    let mut layout_sig: Signal<Option<Layout3D>> = use_signal(move || cached);
     let mut error_sig:  Signal<Option<String>>   = use_signal(|| None);
 
     use_effect(move || {
-        let ws = workspace.clone();
+        // Skip the fetch entirely when the layout is already in the cache.
+        if layout_sig.peek().is_some() {
+            return;
+        }
+
+        let ws  = workspace.clone();
         let rid = root_id.clone();
+        let key = cache_key.clone();
+        let cache = cache.clone();
         let mut layout_w = layout_sig;
         let mut error_w  = error_sig;
         spawn(async move {
             let backend = HttpTicketBackend::new(None);
             match backend.get_subgraph(&ws, &rid, 4).await {
                 Ok(resp) => {
-                    let gl = GraphLayout::build(resp.nodes, resp.edges);
-                    layout_w.set(Some(lift_2d(gl)));
+                    let layout = lift_2d(GraphLayout::build(resp.nodes, resp.edges));
+                    // Populate the cache so the next visit is instant.
+                    cache.insert(key, layout.clone());
+                    layout_w.set(Some(layout));
                 }
                 Err(e) => error_w.set(Some(format!("Fetch failed: {e}"))),
             }
