@@ -122,8 +122,12 @@ pub fn TicketListPage(workspace: String) -> Element {
     let ticket_count = tickets.read().len();
     let ws_for_new = workspace.clone();
     let ws_for_detail = workspace.clone();
-    // Pre-compute for RSX (avoids string literals inside {} format blocks).
-    let batch_btn_bg = if *show_checkboxes.read() { "var(--accent-blue)" } else { "var(--bg-secondary)" };
+    // Toggle batch button picks up an `.btn-active` modifier when checkbox mode is on.
+    let batch_btn_class = if *show_checkboxes.read() {
+        "btn btn-secondary btn-active"
+    } else {
+        "btn btn-secondary"
+    };
 
     rsx! {
         SearchBar { workspace: workspace.clone() }
@@ -145,21 +149,13 @@ pub fn TicketListPage(workspace: String) -> Element {
                         span { class: "header-title", "{workspace}" }
                         span {
                             class: "header-subtitle",
-                            style: "margin-left: 8px; font-size: 12px; color: var(--text-muted);",
                             "{workspace}"
                         }
                     },
                     right: rsx! {
-                        // Theme settings toggle button.
+                        // Theme settings — ghost icon button (transparent, hover-aware).
                         button {
-                            style: "
-                                padding: 6px 10px; border-radius: 6px;
-                                border: 1px solid var(--border-subtle);
-                                background: var(--bg-secondary);
-                                color: var(--text-primary);
-                                cursor: pointer; font-size: 14px;
-                                min-height: 32px; margin-right: 6px;
-                            ",
+                            class: "btn btn-icon",
                             aria_label: "Theme settings",
                             onclick: move |_| {
                                 let cur = *show_theme_settings.read();
@@ -167,16 +163,10 @@ pub fn TicketListPage(workspace: String) -> Element {
                             },
                             "🎨"
                         }
-                        // "Batch select" toggle — enables checkboxes in the tree.
+                        // Batch select toggle — secondary, takes `btn-active` when on.
                         button {
-                            style: "
-                                padding: 6px 12px; border-radius: 6px;
-                                border: 1px solid var(--border-subtle);
-                                background: {batch_btn_bg};
-                                color: var(--text-primary);
-                                cursor: pointer; font-size: 12px; font-weight: 600;
-                                min-height: 32px; margin-right: 6px;
-                            ",
+                            class: "{batch_btn_class}",
+                            aria_pressed: if *show_checkboxes.read() { "true" } else { "false" },
                             onclick: move |_| {
                                 let currently = *show_checkboxes.read();
                                 show_checkboxes.set(!currently);
@@ -187,13 +177,9 @@ pub fn TicketListPage(workspace: String) -> Element {
                             },
                             "☑ Batch"
                         }
+                        // Single primary action — solid accent.
                         button {
-                            style: "
-                                padding: 6px 14px; border-radius: 6px; border: none;
-                                background: var(--accent-blue); color: white;
-                                cursor: pointer; font-size: 13px; font-weight: 600;
-                                min-height: 32px;
-                            ",
+                            class: "btn btn-primary",
                             onclick: move |_| {
                                 nav.push(Route::NewTicketPage { workspace: ws_for_new.clone() });
                             },

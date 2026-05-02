@@ -133,21 +133,17 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                 for &(lab, val) in STATE_CHIPS.iter() {
                     {
                         let is_active = state_filter_val.as_str() == val;
-                        let chip_bg = if is_active { "var(--accent-blue)" } else { "var(--bg-secondary)" };
+                        let chip_class = if is_active {
+                            "chip chip--active"
+                        } else {
+                            "chip chip--neutral"
+                        };
                         let v = val.to_string();
                         rsx! {
                             button {
                                 key: "{val}",
-                                style: "
-                                    padding: 2px 8px;
-                                    border-radius: 10px;
-                                    border: 1px solid var(--border-subtle);
-                                    background: {chip_bg};
-                                    color: var(--text-primary);
-                                    font-size: 10px;
-                                    cursor: pointer;
-                                    font-weight: 600;
-                                ",
+                                class: "{chip_class}",
+                                aria_pressed: if is_active { "true" } else { "false" },
                                 onclick: move |_| props.on_state_filter_change.call(v.clone()),
                                 "{lab}"
                             }

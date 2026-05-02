@@ -91,12 +91,12 @@ fn ConflictDialog(
             ",
             div {
                 style: "
-                    background: #1e1e2d; border: 1px solid #4b4b6a;
+                    background: var(--bg-secondary); border: 1px solid var(--border-color);
                     border-radius: 8px; padding: 1.5rem; width: 360px;
-                    color: #e0e0e8; font-family: sans-serif;
+                    color: var(--text-primary); font-family: var(--font-sans);
                 ",
                 h3 {
-                    style: "margin: 0 0 0.75rem; font-size: 14px; color: #f59e0b;",
+                    style: "margin: 0 0 0.75rem; font-size: 14px; color: var(--accent-yellow);",
                     "Concurrent edit conflict"
                 }
                 p {
@@ -107,29 +107,25 @@ fn ConflictDialog(
                 }
                 div {
                     style: "
-                        font-size: 12px; background: #13131f;
+                        font-size: 12px; background: var(--bg-primary);
                         border-radius: 4px; padding: 0.5rem; margin-bottom: 1rem;
                     ",
-                    p { style: "margin: 0 0 0.25rem; color: #a0a0c0;", "Server value:" }
+                    p { style: "margin: 0 0 0.25rem; color: var(--text-secondary);", "Server value:" }
                     p { style: "margin: 0 0 0.5rem; font-weight: 600;", "{server_value}" }
-                    p { style: "margin: 0 0 0.25rem; color: #a0a0c0;", "Your draft:" }
+                    p { style: "margin: 0 0 0.25rem; color: var(--text-secondary);", "Your draft:" }
                     p { style: "margin: 0; font-weight: 600;", "{my_draft}" }
                 }
                 div {
                     style: "display: flex; gap: 0.5rem; justify-content: flex-end;",
                     button {
-                        style: "
-                            padding: 6px 14px; border-radius: 4px; border: none;
-                            background: #3c3c5a; color: #e0e0e8; cursor: pointer;
-                            font-size: 12px;
-                        ",
+                        class: "btn btn-secondary",
                         onclick: move |_| on_keep.call(()),
                         "Keep editing"
                     }
                     button {
                         style: "
                             padding: 6px 14px; border-radius: 4px; border: none;
-                            background: #ef4444; color: white; cursor: pointer;
+                            background: var(--accent-red); color: white; cursor: pointer;
                             font-size: 12px;
                         ",
                         onclick: move |_| on_discard.call(()),
@@ -184,7 +180,7 @@ fn FieldRow(props: FieldRowProps) -> Element {
             style: "margin-bottom: 0.5rem;",
             div {
                 style: "
-                    font-size: 10px; color: #6b7280; text-transform: uppercase;
+                    font-size: 10px; color: var(--text-muted); text-transform: uppercase;
                     letter-spacing: 0.05em; margin-bottom: 2px;
                 ",
                 "{label}"
@@ -195,8 +191,8 @@ fn FieldRow(props: FieldRowProps) -> Element {
                     // Enum field — immediate save on change.
                     select {
                         style: "
-                            width: 100%; background: #13131f; color: #e0e0e8;
-                            border: 1px solid #4b4b6a; border-radius: 4px;
+                            width: 100%; background: var(--bg-primary); color: var(--text-primary);
+                            border: 1px solid var(--border-color); border-radius: 4px;
                             padding: 4px 6px; font-size: 13px; cursor: pointer;
                         ",
                         disabled: is_pending,
@@ -221,8 +217,8 @@ fn FieldRow(props: FieldRowProps) -> Element {
                             value: "{draft}",
                             autofocus: true,
                             style: "
-                                flex: 1; background: #13131f; color: #e0e0e8;
-                                border: 1px solid #4b4b6a; border-radius: 4px;
+                                flex: 1; background: var(--bg-primary); color: var(--text-primary);
+                                border: 1px solid var(--border-color); border-radius: 4px;
                                 padding: 4px 6px; font-size: 13px; min-width: 0;
                             ",
                             disabled: is_pending,
@@ -237,11 +233,7 @@ fn FieldRow(props: FieldRowProps) -> Element {
                             },
                         }
                         button {
-                            style: "
-                                padding: 3px 8px; border-radius: 4px; border: none;
-                                background: #3b82f6; color: white;
-                                cursor: pointer; font-size: 11px;
-                            ",
+                            class: "btn btn-primary btn-sm",
                             disabled: is_pending,
                             onclick: {
                                 let draft3 = draft.clone();
@@ -250,11 +242,7 @@ fn FieldRow(props: FieldRowProps) -> Element {
                             "✓"
                         }
                         button {
-                            style: "
-                                padding: 3px 8px; border-radius: 4px; border: none;
-                                background: #3c3c5a; color: #e0e0e8;
-                                cursor: pointer; font-size: 11px;
-                            ",
+                            class: "btn btn-secondary btn-sm",
                             onclick: move |_| on_cancel.call(()),
                             "✕"
                         }
@@ -264,7 +252,7 @@ fn FieldRow(props: FieldRowProps) -> Element {
                 // Display mode — click to start editing.
                 div {
                     style: "
-                        font-size: 13px; color: #c0c0d8;
+                        font-size: 13px; color: var(--text-primary);
                         padding: 4px 6px; border-radius: 4px;
                         border: 1px solid transparent; min-height: 26px;
                         cursor: pointer; opacity: {display_opacity};
@@ -280,7 +268,7 @@ fn FieldRow(props: FieldRowProps) -> Element {
                         }
                     },
                     if current_value.is_empty() {
-                        span { style: "color: #4b4b6a; font-style: italic;", "—" }
+                        span { style: "color: var(--text-muted); font-style: italic;", "—" }
                     } else {
                         "{current_value}"
                     }
@@ -736,24 +724,28 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
             style: "
                 width: 300px; min-width: 300px; height: 100%;
                 overflow-y: auto; overflow-x: hidden;
-                background: rgba(15, 15, 28, 0.93);
-                border-left: 1px solid #2a2a45;
+                background: var(--panel-bg-strong);
+                backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+                -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+                border-left: 1px solid var(--border-color);
+                color: var(--text-primary);
                 padding: 1rem;
-                font-family: sans-serif;
+                font-family: var(--font-sans);
                 box-sizing: border-box;
                 flex-shrink: 0;
             ",
 
             if let Some(err) = load_error() {
-                p { style: "color: #ef4444; font-size: 12px;", "Error: {err}" }
+                p { style: "color: var(--accent-red); font-size: 12px;", "Error: {err}" }
             }
 
             if let Some(err) = save_error() {
                 div {
                     style: "
-                        background: rgba(239,68,68,0.15); border: 1px solid #ef4444;
+                        background: color-mix(in srgb, var(--accent-red) 15%, transparent);
+                        border: 1px solid var(--accent-red);
                         border-radius: 4px; padding: 0.5rem; margin-bottom: 0.75rem;
-                        font-size: 12px; color: #ef4444;
+                        font-size: 12px; color: var(--accent-red);
                     ",
                     "Save failed: {err}"
                 }
@@ -764,7 +756,7 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
                 style: "
                     margin-bottom: 1rem;
                     padding-bottom: 0.75rem;
-                    border-bottom: 1px solid #2a2a45;
+                    border-bottom: 1px solid var(--border-color);
                 ",
 
                 // State badge row.
@@ -772,7 +764,7 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
                     style: "margin-bottom: 0.75rem;",
                     div {
                         style: "
-                            font-size: 10px; color: #6b7280;
+                            font-size: 10px; color: var(--text-muted);
                             text-transform: uppercase; letter-spacing: 0.05em;
                             margin-bottom: 4px;
                         ",
@@ -787,7 +779,7 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
                         style: "margin-bottom: 0.5rem;",
                         div {
                             style: "
-                                font-size: 10px; color: #6b7280;
+                                font-size: 10px; color: var(--text-muted);
                                 text-transform: uppercase; letter-spacing: 0.05em;
                                 margin-bottom: 4px;
                             ",
@@ -808,24 +800,24 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
                                     } else {
                                         String::new()
                                     };
-                                    let btn_style = if is_blocked {
-                                        "padding: 4px 10px; border-radius: 4px;
-                                         border: 1px solid #3a3a5a; background: #1e1e2d;
-                                         color: #4b4b6a; font-size: 11px; cursor: not-allowed;
-                                         opacity: 0.5;"
+                                    let btn_class = if is_blocked {
+                                        "chip chip--neutral"
                                     } else {
-                                        "padding: 4px 10px; border-radius: 4px;
-                                         border: 1px solid #6366f1;
-                                         background: rgba(99,102,241,0.15);
-                                         color: #a5b4fc; font-size: 11px; cursor: pointer;"
+                                        "chip chip--feature chip-button"
+                                    };
+                                    let btn_extra_style = if is_blocked {
+                                        "opacity: 0.5; cursor: not-allowed;"
+                                    } else {
+                                        "cursor: pointer;"
                                     };
                                     let mut dt = do_transition.clone();
                                     rsx! {
                                         button {
                                             key: "{next}",
+                                            class: "{btn_class}",
+                                            style: "{btn_extra_style}",
                                             title: "{tooltip}",
                                             disabled: is_blocked || is_trans_pending,
-                                            style: "{btn_style}",
                                             onclick: move |_| {
                                                 if !is_blocked && !is_trans_pending {
                                                     dt(next.clone());
@@ -844,13 +836,8 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
                 div {
                     style: "margin-bottom: 0.25rem;",
                     button {
+                        class: "btn btn-ghost btn-sm",
                         disabled: is_trans_pending,
-                        style: "
-                            padding: 4px 10px; border-radius: 4px;
-                            border: 1px solid #4b4b6a;
-                            background: transparent; color: #a0a0c8;
-                            font-size: 11px; cursor: pointer;
-                        ",
                         onclick: {
                             let mut du = do_undo.clone();
                             move |_| du()
@@ -863,11 +850,11 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
                 if let Some(ref err) = trans_error {
                     div {
                         style: "
-                            background: rgba(239,68,68,0.15);
-                            border: 1px solid #ef4444;
+                            background: color-mix(in srgb, var(--accent-red) 15%, transparent);
+                            border: 1px solid var(--accent-red);
                             border-radius: 4px; padding: 0.5rem;
                             margin-top: 0.4rem;
-                            font-size: 12px; color: #ef4444;
+                            font-size: 12px; color: var(--accent-red);
                         ",
                         "Transition failed: {err}"
                     }
@@ -921,7 +908,7 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
                         label {
                             style: "
                                 display: flex; align-items: center; gap: 0.5rem;
-                                cursor: pointer; font-size: 12px; color: #c0c0d8;
+                                cursor: pointer; font-size: 12px; color: var(--text-primary);
                             ",
                             input {
                                 r#type: "checkbox",
