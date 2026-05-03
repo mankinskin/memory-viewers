@@ -118,46 +118,37 @@ pub fn TicketListPage(workspace: String) -> Element {
         });
     }
 
-    // ── Background prefetch — fill GraphCache for the first visible tickets ──
-    // Whenever the ticket list changes (filter, sort, initial load) we
-    // speculatively fetch the graph layouts for the first N entries that are
-    // not already in the cache.  This makes switching between tickets instant:
-    // the Graph3D component finds a hot cache entry and renders immediately,
-    // skipping the "Loading graph…" spinner.
+    // ── Graph prefetch — fill GraphCache via the central fetch service ────
+    // 1. When selected_id changes: immediately trigger a fetch for that ticket
+    //    so the graph is ready as fast as possible.
+    // 2. When the ticket list loads/changes: speculatively fetch the first N
+    //    tickets so switching to them is instant.
+    // Both paths use GraphFetchService.ensure_fetched which deduplicates
+    // concurrent requests and never spawns a duplicate fetch for a key that
+    // is already in-flight or cached.
+    #[cfg(target_arch = "wasm32")]
+    {
+        let svc = use_context::<crate::graph_fetch::GraphFetchService>();
+        let ws_sel = workspace.clone();
+        // Reactive on selected_id: fires immediately when a ticket is clicked.
+        use_effect(move || {
+            if let Some(ref id) = *selected_id.read() {
+                svc.ensure_fetched(&ws_sel, id);
+            }
+        });
+    }
+
     #[cfg(target_arch = "wasm32")]
     {
         const PREFETCH_N: usize = 8;
-        let graph_cache = use_context::<crate::GraphCache>();
+        let svc = use_context::<crate::graph_fetch::GraphFetchService>();
         let ws_pre = workspace.clone();
+        // Reactive on tickets: fires when the list loads or filter changes.
         use_effect(move || {
-            let tix = tickets.read().clone();
-            let to_prefetch: Vec<String> = tix
-                .iter()
-                .take(PREFETCH_N)
-                .filter(|t| graph_cache.get(&format!("{ws_pre}:{}", t.id)).is_none())
-                .map(|t| t.id.clone())
-                .collect();
-            if to_prefetch.is_empty() {
-                return;
+            let tix = tickets.read();
+            for t in tix.iter().take(PREFETCH_N) {
+                svc.ensure_fetched(&ws_pre, &t.id);
             }
-            let ws = ws_pre.clone();
-            let cache = graph_cache.clone();
-            spawn(async move {
-                for tid in to_prefetch {
-                    let cache_key = format!("{ws}:{tid}");
-                    // Skip if a concurrent prefetch already filled this slot.
-                    if cache.get(&cache_key).is_some() {
-                        continue;
-                    }
-                    let backend = HttpTicketBackend::new(None);
-                    if let Ok(resp) = backend.get_subgraph(&ws, &tid, 4).await {
-                        let layout = crate::graph3d::lift_2d(
-                            crate::layout::GraphLayout::build(resp.nodes, resp.edges),
-                        );
-                        cache.insert(cache_key, layout);
-                    }
-                }
-            });
         });
     }
 

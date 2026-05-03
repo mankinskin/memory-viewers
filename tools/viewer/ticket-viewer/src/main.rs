@@ -113,7 +113,7 @@ async fn shutdown_signal() {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = parse_cli_options();
 
-    init_tracing("info");
+    init_tracing("info,ticket_http::serve::handlers=debug");
     info!(
         port = options.port,
         static_dir = %options.static_dir.display(),

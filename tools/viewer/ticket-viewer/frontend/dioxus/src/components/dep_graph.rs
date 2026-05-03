@@ -146,6 +146,7 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
         let on_sel = on_select_prop.clone();
         return rsx! {
             crate::graph3d::Graph3D {
+                key: "{rid_gpu}",
                 workspace: ws_gpu.clone(),
                 root_id: rid_gpu.clone(),
                 on_select: move |id: String| {

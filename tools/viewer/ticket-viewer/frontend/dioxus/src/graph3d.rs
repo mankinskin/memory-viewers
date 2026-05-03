@@ -5,6 +5,16 @@
 //! layout, lifts the result to a shared [`Layout3D`] (depth → Z), and renders
 //! ticket cards as children of `<Graph3D>` so the shared renderer can position
 //! them every frame via `data-node-idx` lookups.
+//!
+//! # Debug logging
+//!
+//! Every lifecycle event (mount, unmount, cache hit, debounce, fetch) is
+//! emitted as a `tracing::debug!` record with `target = "ticket_viewer::graph3d"`.
+//! Open the viewer with `?log=debug` to route them to the browser console:
+//!
+//! ```text
+//! http://localhost:3002/workspace/default?log=ticket_viewer=debug
+//! ```
 
 use std::collections::HashMap;
 
@@ -12,9 +22,12 @@ use dioxus::prelude::*;
 
 use viewer_api_dioxus::{can_use_webgpu_graph3d, EdgeRef3D, Layout3D, Node3D};
 
-use crate::api::{HttpTicketBackend, TicketBackend};
 use crate::components::ticket_card;
 use crate::layout::GraphLayout;
+
+/// Tracing target used by all events in this module.
+const T: &str = "ticket_viewer::graph3d";
+
 
 /// Re-export so existing call sites (`crate::graph3d::can_use_webgpu`) keep
 /// working unchanged.
@@ -69,61 +82,75 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let root_id   = props.root_id.clone();
     let on_select = props.on_select;
 
-    // ── LRU cache ─────────────────────────────────────────────────────────
-    // Shared across the whole app (provided by App in main.rs).  A cache hit
-    // means we can initialise the signal with the precomputed layout
-    // synchronously — no "Loading graph…" flash on re-visits.
+    // ── Fetch service + cache ─────────────────────────────────────────────
+    // Graph3D never issues its own HTTP requests.  It reads the shared cache
+    // (populated by GraphFetchService) and re-renders whenever the service
+    // bumps its version counter after a fetch completes.
+    let svc: crate::graph_fetch::GraphFetchService =
+        use_context::<crate::graph_fetch::GraphFetchService>();
     let cache: crate::GraphCache = use_context::<crate::GraphCache>();
     let cache_key = format!("{workspace}:{root_id}");
 
-    // Synchronous cache hit: seed the signal with the stored layout so the
-    // graph renders immediately on the first frame without a network call.
-    let cached = cache.get(&cache_key);
-    let mut layout_sig: Signal<Option<Layout3D>> = use_signal(move || cached);
-    let mut error_sig:  Signal<Option<String>>   = use_signal(|| None);
-
-    use_effect(move || {
-        // Skip the fetch entirely when the layout is already in the cache.
-        if layout_sig.peek().is_some() {
-            return;
-        }
-
-        let ws  = workspace.clone();
-        let rid = root_id.clone();
-        let key = cache_key.clone();
-        let cache = cache.clone();
-        let mut layout_w = layout_sig;
-        let mut error_w  = error_sig;
-        spawn(async move {
-            let backend = HttpTicketBackend::new(None);
-            match backend.get_subgraph(&ws, &rid, 4).await {
-                Ok(resp) => {
-                    let layout = lift_2d(GraphLayout::build(resp.nodes, resp.edges));
-                    // Populate the cache so the next visit is instant.
-                    cache.insert(key, layout.clone());
-                    layout_w.set(Some(layout));
-                }
-                Err(e) => error_w.set(Some(format!("Fetch failed: {e}"))),
-            }
+    // ── Lifecycle logging ─────────────────────────────────────────────────
+    tracing::debug!(target: T, rid = %root_id, "mount");
+    {
+        let rid_drop = root_id.clone();
+        use_drop(move || {
+            tracing::debug!(target: T, rid = %rid_drop, "unmount");
         });
-    });
-
-    if let Some(msg) = error_sig.read().clone() {
-        return rsx! {
-            div {
-                style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #f88; font-size: 14px; font-family: sans-serif;",
-                "{msg}"
-            }
-        };
     }
 
-    let Some(layout) = layout_sig.read().clone() else {
-        return rsx! {
-            div {
-                style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 14px; font-family: sans-serif;",
-                "Loading graph\u{2026}"
+    // Subscribe to the version signal so Dioxus re-renders this component
+    // whenever a background fetch completes and writes a new layout to the
+    // cache.  The actual value is not used — the read is purely for reactivity.
+    let _ver = svc.version();
+    let fetch_state = svc.state_for(&workspace, &root_id);
+    #[cfg(target_arch = "wasm32")]
+    web_sys::console::log_1(&format!("[graph3d] render rid={root_id} ver={_ver}").into());
+    tracing::debug!(target: T, rid = %root_id, ver = _ver, state = ?fetch_state, "render");
+
+    // Try to get the layout from the cache.  If absent, show the spinner.
+    // GraphFetchService.ensure_fetched() was already called by TicketListPage
+    // when selected_id changed; we do NOT start a second fetch here.
+    let layout = match cache.get(&cache_key) {
+        Some(layout) => {
+            tracing::debug!(target: T, rid = %root_id, nodes = layout.nodes.len(), "cache_hit");
+            layout
+        }
+        None => {
+            match fetch_state {
+                crate::graph_fetch::GraphFetchState::Error { message, attempts } => {
+                    tracing::warn!(target: T, rid = %root_id, attempts, error = %message, "graph_fetch_failed");
+                    let svc_retry = svc.clone();
+                    let ws_retry = workspace.clone();
+                    let rid_retry = root_id.clone();
+                    return rsx! {
+                        div {
+                            style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 560px; color: #ddd; font-size: 13px; font-family: sans-serif; background: rgba(25, 28, 34, 0.92); border: 1px solid rgba(255, 120, 120, 0.35); border-radius: 8px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);",
+                            div { style: "font-weight: 600; color: #ff9d9d; margin-bottom: 6px;", "Failed to load graph" }
+                            div { style: "color: #f0c7c7; margin-bottom: 4px;", "{message}" }
+                            div { style: "color: #a8a8a8; font-size: 12px; margin-bottom: 10px;", "Attempts: {attempts}" }
+                            button {
+                                style: "padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #efefef; cursor: pointer;",
+                                onclick: move |_| {
+                                    svc_retry.retry(&ws_retry, &rid_retry);
+                                },
+                                "Retry"
+                            }
+                        }
+                    };
+                }
+                _ => {
+                    tracing::debug!(target: T, rid = %root_id, state = ?fetch_state, "waiting_for_cache");
+                    return rsx! {
+                        div {
+                            style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 14px; font-family: sans-serif;",
+                            "Loading graph\u{2026}"
+                        }
+                    };
+                }
             }
-        };
+        }
     };
 
     let nodes = layout.nodes.clone();

@@ -20,10 +20,14 @@ gloo-net = { version = "0.6", features = ["http"] }
 # Safe DOM event listener management (auto-removes on drop, no Closure::forget)
 gloo-events = "0.2"
 
+# Async timer primitives (TimeoutFuture for fetch debouncing)
+gloo-timers = { version = "0.3", features = ["futures"] }
+
 # Async support
 wasm-bindgen-futures = "0.4"
 wasm-bindgen = "0.2"
 js-sys = "0.3"
+futures-util = "0.3"
 
 # Web platform APIs for canvas drawing, SSE, and WebGPU 3-D graph
 web-sys = { version = "0.3", features = [
