@@ -1,6 +1,5 @@
 //! API request and response types for the ticket viewer.
 //!
-//! Mirrors the TypeScript types in `tools/viewer/ticket-viewer/frontend/ts/src/types.ts`.
 //! Kept separate from the HTTP client so components can import types without
 //! pulling in the transport layer.
 
@@ -59,6 +58,33 @@ pub struct TicketDescriptionResponse {
     pub id: String,
     pub workspace: String,
     pub description: Option<String>,
+}
+
+// ── Ticket file tree ──────────────────────────────────────────────────────────
+
+/// A single user-visible file belonging to a ticket.
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct TicketFileEntry {
+    /// Relative path within the ticket folder, e.g. `"description.md"` or
+    /// `"assets/design/plan.md"`.
+    pub path: String,
+    /// Display name (just the filename), e.g. `"plan.md"`.
+    pub name: String,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TicketFilesResponse {
+    pub id: String,
+    pub workspace: String,
+    pub files: Vec<TicketFileEntry>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+pub struct TicketAssetResponse {
+    pub id: String,
+    pub workspace: String,
+    pub path: String,
+    pub content: String,
 }
 
 // ── Graph / Subgraph ──────────────────────────────────────────────────────────

@@ -17,6 +17,7 @@ use crate::components::batch_panel::BatchPanel;
 use crate::components::create_ticket::CreateTicketModal;
 use crate::components::dep_graph::DepGraph;
 use crate::components::search::SearchBar;
+use crate::components::ticket_content::TicketContent;
 use crate::components::ticket_detail::TicketDetail;
 use crate::components::ticket_tree::TicketTree;
 use crate::sse::use_sse;
@@ -83,6 +84,9 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut refresh_counter: Signal<u32> = use_signal(|| 0);
     // ── View mode: "split" | "graph" | "content" ─────────────────────
     let mut view_mode: Signal<String> = use_signal(|| "split".to_string());
+    // ── Selected file: (ticket_id, relative_path) ────────────────────
+    // Set when the user clicks a file sub-row in the sidebar.
+    let mut selected_file: Signal<Option<(String, String)>> = use_signal(|| None);
     // ── SSE live-update hook ──────────────────────────────────────────────
     // Must be called before any conditional logic (hook ordering rule).
     // Mutates `tickets` in-place on `ticket.upsert` / `ticket.delete`;
@@ -157,6 +161,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     let ticket_count = tickets.read().len();
     let ws_for_new = workspace.clone();
     let ws_for_detail = workspace.clone();
+    let ws_for_content = workspace.clone();
     // Toggle batch button picks up an `.btn-active` modifier when checkbox mode is on.
     let batch_btn_class = if *show_checkboxes.read() {
         "btn btn-secondary btn-active"
@@ -235,6 +240,7 @@ pub fn TicketListPage(workspace: String) -> Element {
                 on_mobile_open_change: move |open| mobile_sidebar_open.set(open),
 
                 TicketTree {
+                    workspace: workspace.clone(),
                     tickets: tickets.read().clone(),
                     loading: *loading.read(),
                     error: list_error.read().clone(),
@@ -248,6 +254,16 @@ pub fn TicketListPage(workspace: String) -> Element {
                         selected_id.set(Some(tid));
                         mobile_sidebar_open.set(false);
                     },
+                    on_select_file: move |(tid, path): (String, String)| {
+                        selected_id.set(Some(tid.clone()));
+                        selected_file.set(Some((tid, path)));
+                        mobile_sidebar_open.set(false);
+                        // Switch to content view so the file is immediately visible.
+                        if view_mode.read().as_str() == "graph" {
+                            view_mode.set("content".to_string());
+                        }
+                    },
+                    selected_file: selected_file.read().clone(),
                     show_checkboxes: *show_checkboxes.read(),
                     selected_ids: selected_ids.read().clone(),
                     on_toggle_select: move |tid: String| {
@@ -335,7 +351,37 @@ pub fn TicketListPage(workspace: String) -> Element {
                                 }
                             }
                         }
-                        // Ticket detail — shown in "content" and "split" modes
+                        // Ticket content (description / asset viewer) — shown in
+                        // "content" and "split" modes.
+                        if view_mode.read().as_str() != "graph" {
+                            {
+                                // Determine the active asset path for this ticket.
+                                let active_asset = selected_file.read().as_ref()
+                                    .filter(|(tid, _)| tid == id)
+                                    .map(|(_, path)| path.clone());
+                                // Look up the ticket fields from the summary list for
+                                // the TOML tab.
+                                let fields = tickets.read()
+                                    .iter()
+                                    .find(|t| &t.id == id)
+                                    .map(|t| t.fields.clone())
+                                    .unwrap_or(serde_json::Value::Object(Default::default()));
+                                rsx! {
+                                    div {
+                                        key: "content-{id}",
+                                        style: "flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column;",
+                                        TicketContent {
+                                            workspace: ws_for_content.clone(),
+                                            ticket_id: id.clone(),
+                                            fields,
+                                            asset_path: active_asset,
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        // Ticket detail (metadata / state machine) — shown in all modes
+                        // as the narrow right sidebar.
                         if view_mode.read().as_str() != "graph" {
                             TicketDetail {
                                 key: "{id}",

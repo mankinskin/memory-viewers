@@ -88,15 +88,22 @@ const TAB_ACTIVE_STYLE: &str = "
 /// Tabbed content panel for a single ticket.
 ///
 /// Props:
-/// - `workspace`  — workspace the ticket belongs to.
-/// - `ticket_id`  — ticket identifier used to fetch the description.
-/// - `fields`     — ticket fields value (from the list/detail API response)
-///                  used to generate the TOML tab text.
+/// - `workspace`   — workspace the ticket belongs to.
+/// - `ticket_id`   — ticket identifier used to fetch the description.
+/// - `fields`      — ticket fields value (from the list/detail API response)
+///                   used to generate the TOML tab text.
+/// - `asset_path`  — optional relative file path within the ticket folder.
+///                   `None` or `"description.md"` loads the ticket description.
+///                   Any other path loads that asset via the `/asset` endpoint.
 #[component]
 pub fn TicketContent(
     workspace: String,
     ticket_id: String,
     fields: serde_json::Value,
+    /// Relative path of the file to display in the Content tab.  Defaults to
+    /// `description.md` when absent.
+    #[props(default)]
+    asset_path: Option<String>,
 ) -> Element {
     // ── Tab selection ──────────────────────────────────────────────────
     let mut active_tab: Signal<Tab> = use_signal(|| Tab::Description);
@@ -119,35 +126,72 @@ pub fn TicketContent(
     // Last save error, if any.
     let mut edit_error: Signal<Option<String>> = use_signal(|| None);
 
-    // ── Fetch description on mount ─────────────────────────────────────
-    // Note: description.md content is sourced from internal ticket files
-    // managed by the ticket-api; it is rendered as HTML via FileContentViewer
-    // (pulldown-cmark) which is safe for this trusted source.
+    // Determine whether we are showing description.md or an asset file.
+    let is_description = asset_path
+        .as_deref()
+        .map(|p| p == "description.md")
+        .unwrap_or(true);
+
+    // Label shown on the first tab.
+    let content_tab_label = if is_description {
+        "Description".to_string()
+    } else {
+        asset_path
+            .as_deref()
+            .and_then(|p| p.rsplit('/').next())
+            .unwrap_or("Content")
+            .to_string()
+    };
+
+    // ── Fetch content on mount / when ticket or asset_path changes ─────
+    // When switching to an asset file auto-select the Content tab.
     {
         let ws = workspace.clone();
         let tid = ticket_id.clone();
+        let apath = asset_path.clone();
+        let is_desc = is_description;
         use_effect(move || {
             let ws = ws.clone();
             let tid = tid.clone();
+            let apath = apath.clone();
             desc_loading.set(true);
             desc_text.set(None);
             desc_error.set(None);
-            // Reset edit state when ticket changes.
+            // Reset edit state whenever the loaded file changes.
             edit_draft.set(String::new());
             edit_success.set(false);
             edit_error.set(None);
+            // Always show the content tab when asset_path changes.
+            active_tab.set(Tab::Description);
             spawn(async move {
                 let backend = HttpTicketBackend::new(None);
-                match backend.get_ticket_description(&ws, &tid).await {
-                    Ok(resp) => {
-                        let content = resp.description.unwrap_or_default();
-                        edit_draft.set(content.clone());
-                        desc_text.set(if content.is_empty() { None } else { Some(content) });
-                        desc_loading.set(false);
+                if is_desc {
+                    // Load description.md via the description endpoint.
+                    match backend.get_ticket_description(&ws, &tid).await {
+                        Ok(resp) => {
+                            let content = resp.description.unwrap_or_default();
+                            edit_draft.set(content.clone());
+                            desc_text.set(if content.is_empty() { None } else { Some(content) });
+                            desc_loading.set(false);
+                        }
+                        Err(e) => {
+                            desc_loading.set(false);
+                            desc_error.set(Some(e));
+                        }
                     }
-                    Err(e) => {
-                        desc_loading.set(false);
-                        desc_error.set(Some(e));
+                } else {
+                    // Load an arbitrary asset file.
+                    let path = apath.unwrap_or_default();
+                    match backend.get_ticket_asset(&ws, &tid, &path).await {
+                        Ok(resp) => {
+                            let content = resp.content;
+                            desc_text.set(if content.is_empty() { None } else { Some(content) });
+                            desc_loading.set(false);
+                        }
+                        Err(e) => {
+                            desc_loading.set(false);
+                            desc_error.set(Some(e));
+                        }
                     }
                 }
             });
@@ -155,7 +199,8 @@ pub fn TicketContent(
     }
 
     // ── Whether the Edit tab should be visible ────────────────────────
-    let show_edit_tab = HttpTicketBackend::has_auth_token();
+    // Edit is only available for description.md (the writable main file).
+    let show_edit_tab = is_description && HttpTicketBackend::has_auth_token();
 
     // ── Fetch history (and re-fetch on revert) ────────────────────────
     {
@@ -208,14 +253,15 @@ pub fn TicketContent(
                     flex-shrink: 0;
                 ",
 
-                // Description tab
+
+                // Content/Description tab
                 button {
                     role: "tab",
                     "aria-selected": if active_tab() == Tab::Description { "true" } else { "false" },
                     "data-testid": "tab-description",
                     style: if active_tab() == Tab::Description { TAB_ACTIVE_STYLE } else { TAB_BASE_STYLE },
                     onclick: move |_| active_tab.set(Tab::Description),
-                    "Description"
+                    "{content_tab_label}"
                 }
 
                 // TOML tab
@@ -284,19 +330,27 @@ pub fn TicketContent(
                         // the content as Markdown HTML via pulldown-cmark.
                         // Content comes from trusted internal ticket files
                         // managed by ticket-api; pulldown-cmark output is safe.
-                        div {
-                            "data-testid": "desc-markdown",
-                            FileContentViewer {
-                                content,
-                                filename: "description.md".to_string(),
+                        {
+                            let display_filename = asset_path
+                                .as_deref()
+                                .unwrap_or("description.md")
+                                .to_string();
+                            rsx! {
+                                div {
+                                    "data-testid": "desc-markdown",
+                                    FileContentViewer {
+                                        content,
+                                        filename: display_filename,
+                                    }
+                                }
                             }
                         }
                     } else {
-                        // Ticket exists but has no description.md.
+                        // Ticket exists but has no content file.
                         em {
                             "data-testid": "desc-empty",
                             style: "color: #6b7280; font-size: 13px;",
-                            "No description.md found for this ticket."
+                            "No content found."
                         }
                     }
                 }

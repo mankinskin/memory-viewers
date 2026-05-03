@@ -107,6 +107,19 @@ pub trait TicketBackend {
         text: &str,
     ) -> impl std::future::Future<Output = Result<(), String>>;
 
+    fn list_ticket_files(
+        &self,
+        workspace: &str,
+        id: &str,
+    ) -> impl std::future::Future<Output = Result<crate::types::TicketFilesResponse, String>>;
+
+    fn get_ticket_asset(
+        &self,
+        workspace: &str,
+        id: &str,
+        path: &str,
+    ) -> impl std::future::Future<Output = Result<crate::types::TicketAssetResponse, String>>;
+
     fn batch_tickets(
         &self,
         body: &crate::types::BatchRequest,
@@ -400,6 +413,27 @@ impl TicketBackend for HttpTicketBackend {
         self.send_json::<serde_json::Value>("PATCH", &url, &body_str)
             .await
             .map(|_| ())
+    }
+
+    async fn list_ticket_files(
+        &self,
+        workspace: &str,
+        id: &str,
+    ) -> Result<crate::types::TicketFilesResponse, String> {
+        self.fetch(&format!("/api/tickets/{id}/files?workspace={}", enc(workspace))).await
+    }
+
+    async fn get_ticket_asset(
+        &self,
+        workspace: &str,
+        id: &str,
+        path: &str,
+    ) -> Result<crate::types::TicketAssetResponse, String> {
+        self.fetch(&format!(
+            "/api/tickets/{id}/asset?workspace={}&path={}",
+            enc(workspace),
+            enc(path),
+        )).await
     }
 
     async fn batch_tickets(
