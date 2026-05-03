@@ -5,7 +5,7 @@
 
 use dioxus::prelude::*;
 
-use crate::types::{state_colors, TicketSummary};
+use crate::types::TicketSummary;
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -169,7 +169,7 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
             }
         }
 
-        // ── Ticket list ────────────────────────────────────────────────
+        // ── Ticket list — compact single-line file-tree rows ───────────
         if !props.loading {
             if props.tickets.is_empty() {
                 div {
@@ -187,14 +187,17 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                     let is_selected = props.selected_id.as_deref() == Some(tid.as_str());
                     let is_checked = props.selected_ids.contains(&tid);
 
-                    let (state_bg_raw, state_fg) = state_colors(&state);
-                    // Convert the opaque hex state_bg to a low-opacity variant for the chip.
-                    let state_bg = format!("{}20", state_bg_raw);
+                    let dot_color = crate::types::state_accent(Some(&state));
 
                     let row_bg = if is_selected {
                         "var(--bg-active)"
                     } else {
                         "transparent"
+                    };
+                    let row_border = if is_selected {
+                        format!("border-left: 2px solid {dot_color};")
+                    } else {
+                        "border-left: 2px solid transparent;".to_string()
                     };
 
                     let show_cb = props.show_checkboxes;
@@ -204,25 +207,19 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                             key: "{tid}",
                             style: "
                                 display: flex;
-                                align-items: stretch;
-                                border-bottom: 1px solid var(--border-subtle);
+                                align-items: center;
                                 background: {row_bg};
+                                {row_border}
                             ",
-                            // Checkbox column (conditional)
+                            // Checkbox (conditional)
                             if show_cb {
                                 div {
-                                    style: "
-                                        display: flex;
-                                        align-items: center;
-                                        padding: 0 8px;
-                                        flex-shrink: 0;
-                                    ",
+                                    style: "display: flex; align-items: center; padding: 0 6px; flex-shrink: 0;",
                                     input {
                                         r#type: "checkbox",
                                         checked: is_checked,
-                                        style: "width: 14px; height: 14px; cursor: pointer; accent-color: var(--accent-blue);",
+                                        style: "width: 12px; height: 12px; cursor: pointer; accent-color: var(--accent-blue);",
                                         aria_label: "Select ticket",
-                                        // Prevent the click from also triggering the row button.
                                         onclick: move |e| e.stop_propagation(),
                                         onchange: move |_| {
                                             if let Some(ref h) = props.on_toggle_select {
@@ -232,37 +229,57 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                                     }
                                 }
                             }
-                            // Main row button
+                            // Single-line row button
                             button {
                                 style: "
                                     display: flex;
-                                    flex-direction: column;
-                                    gap: 4px;
+                                    align-items: center;
+                                    gap: 6px;
                                     flex: 1;
-                                    padding: 10px 14px;
+                                    padding: 5px 8px 5px 10px;
                                     border: none;
                                     background: transparent;
                                     color: var(--text-primary);
                                     cursor: pointer;
                                     text-align: left;
-                                    min-height: 44px;
+                                    min-height: 0;
+                                    overflow: hidden;
+                                    white-space: nowrap;
                                 ",
                                 onclick: move |_| {
                                     props.on_select.call(tid_click.clone());
                                 },
-                                span {
-                                    style: "font-size: 13px; font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
-                                    "{title}"
-                                }
+                                // State indicator dot
                                 span {
                                     style: "
-                                        display: inline-block;
+                                        width: 7px;
+                                        height: 7px;
+                                        border-radius: 50%;
+                                        background: {dot_color};
+                                        flex-shrink: 0;
+                                    ",
+                                    aria_hidden: "true",
+                                }
+                                // Title (truncated)
+                                span {
+                                    style: "
+                                        font-size: 12px;
+                                        font-weight: 400;
+                                        overflow: hidden;
+                                        text-overflow: ellipsis;
+                                        white-space: nowrap;
+                                        flex: 1;
+                                        min-width: 0;
+                                    ",
+                                    "{title}"
+                                }
+                                // State label (compact, right-aligned)
+                                span {
+                                    style: "
                                         font-size: 10px;
-                                        font-weight: 600;
-                                        padding: 1px 7px;
-                                        border-radius: 10px;
-                                        background: {state_bg};
-                                        color: {state_fg};
+                                        color: var(--text-muted);
+                                        flex-shrink: 0;
+                                        white-space: nowrap;
                                     ",
                                     "{state}"
                                 }

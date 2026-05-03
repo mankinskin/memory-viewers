@@ -69,6 +69,10 @@ pub struct GraphNodeItem {
     pub title: Option<String>,
     pub state: Option<String>,
     pub depth: usize,
+    #[serde(rename = "type", default)]
+    pub ticket_type: Option<String>,
+    #[serde(default)]
+    pub priority: Option<String>,
 }
 
 #[derive(Debug, Clone, Deserialize)]

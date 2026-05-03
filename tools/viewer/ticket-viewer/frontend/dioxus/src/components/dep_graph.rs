@@ -71,9 +71,25 @@ struct RemoveEdge {
 
 // ── Canvas size helper ─────────────────────────────────────────────────────
 
-/// Return the current pixel dimensions of `#webgpu-canvas`, defaulting to
-/// `(800, 600)` before the canvas has been laid out.
+/// Return the current pixel dimensions of the dep-graph viewport container,
+/// falling back to the `#webgpu-canvas` dimensions, then (800, 600).
+///
+/// Reading `#dep-graph-viewport` (the container that holds the DOM nodes)
+/// rather than `#webgpu-canvas` (full-screen) ensures the centering formula
+/// `container_w / 2 + layout_x` produces coordinates that are correct for
+/// `position: absolute` cards placed inside that container.
 fn canvas_size() -> (f64, f64) {
+    // Try the dep-graph container first (set once the component has rendered).
+    if let Some((w, h)) = web_sys::window()
+        .and_then(|win| win.document())
+        .and_then(|d| d.get_element_by_id("dep-graph-viewport"))
+        .and_then(|el| el.dyn_into::<web_sys::HtmlElement>().ok())
+        .map(|el| (el.client_width() as f64, el.client_height() as f64))
+        .filter(|&(w, h)| w > 0.0 && h > 0.0)
+    {
+        return (w, h);
+    }
+    // Fall back to the full-screen WebGPU canvas.
     web_sys::window()
         .and_then(|w| w.document())
         .and_then(|d| d.get_element_by_id("webgpu-canvas"))
@@ -450,6 +466,8 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
     rsx! {
         div {
             // Full-screen absolute container on top of the canvas.
+            // id is read by canvas_size() to determine centering dimensions.
+            id: "dep-graph-viewport",
             style: "
                 position: absolute;
                 top: 0; left: 0;
@@ -512,6 +530,8 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                                 let node_title = node.title.clone();
                                 let node_state = node.state.clone();
                                 let node_depth = node.depth;
+                                let node_priority = node.priority.clone();
+                                let node_ticket_type = node.ticket_type.clone();
                                 rsx! {
                                     TicketCard {
                                         key: "{node.id}",
@@ -519,6 +539,8 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                                         title: node_title,
                                         state: node_state,
                                         depth: node_depth,
+                                        priority: node_priority,
+                                        ticket_type: node_ticket_type,
                                         layout_x: nx,
                                         layout_y: ny,
                                         pan_x: px,

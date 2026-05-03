@@ -81,7 +81,8 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut show_checkboxes: Signal<bool> = use_signal(|| false);
     // Incrementing counter to force a ticket-list refresh after batch ops.
     let mut refresh_counter: Signal<u32> = use_signal(|| 0);
-
+    // ── View mode: "split" | "graph" | "content" ─────────────────────
+    let mut view_mode: Signal<String> = use_signal(|| "split".to_string());
     // ── SSE live-update hook ──────────────────────────────────────────────
     // Must be called before any conditional logic (hook ordering rule).
     // Mutates `tickets` in-place on `ticket.upsert` / `ticket.delete`;
@@ -271,25 +272,77 @@ pub fn TicketListPage(workspace: String) -> Element {
             // ── Main panel — dep graph + ticket detail ──────────────────
             div {
                 class: "content",
-                style: "display: flex; flex-direction: row; overflow: hidden;",
+                style: "display: flex; flex-direction: column; overflow: hidden;",
                 if let Some(ref id) = *selected_id.read() {
-                    // Center: dependency graph fills remaining space
-                    div {
-                        key: "{id}",
-                        style: "flex: 1; position: relative; min-width: 0; overflow: hidden;",
-                        DepGraph {
-                            workspace: ws_for_detail.clone(),
-                            root_id: id.clone(),
-                            on_select: move |new_id: String| {
-                                selected_id.set(Some(new_id));
-                            },
+                    // ── View mode toggle bar ───────────────────────────
+                    {
+                        let vm = view_mode.read().clone();
+                        let btn_style = |active: bool| format!(
+                            "padding: 3px 10px; font-size: 11px; font-weight: 600; \
+                             border: 1px solid var(--border-subtle); \
+                             border-radius: 4px; cursor: pointer; \
+                             background: {}; color: {};",
+                            if active { "var(--accent-blue)" } else { "var(--bg-secondary)" },
+                            if active { "#fff" } else { "var(--text-muted)" },
+                        );
+                        rsx! {
+                            div {
+                                style: "
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 4px;
+                                    padding: 4px 10px;
+                                    border-bottom: 1px solid var(--border-subtle);
+                                    background: var(--bg-primary);
+                                    flex-shrink: 0;
+                                ",
+                                span {
+                                    style: "font-size: 11px; color: var(--text-muted); margin-right: 4px;",
+                                    "View:"
+                                }
+                                button {
+                                    style: "{btn_style(vm == \"graph\")}",
+                                    onclick: move |_| view_mode.set("graph".to_string()),
+                                    "Graph"
+                                }
+                                button {
+                                    style: "{btn_style(vm == \"split\")}",
+                                    onclick: move |_| view_mode.set("split".to_string()),
+                                    "Split"
+                                }
+                                button {
+                                    style: "{btn_style(vm == \"content\")}",
+                                    onclick: move |_| view_mode.set("content".to_string()),
+                                    "Content"
+                                }
+                            }
                         }
                     }
-                    // Right sidebar: ticket detail editor
-                    TicketDetail {
-                        key: "{id}",
-                        workspace: ws_for_detail.clone(),
-                        id: id.clone(),
+                    // ── Ticket content area ────────────────────────────
+                    div {
+                        style: "display: flex; flex-direction: row; flex: 1; overflow: hidden; min-height: 0;",
+                        // Dep graph — shown in "graph" and "split" modes
+                        if view_mode.read().as_str() != "content" {
+                            div {
+                                key: "{id}",
+                                style: "flex: 1; position: relative; min-width: 0; overflow: hidden;",
+                                DepGraph {
+                                    workspace: ws_for_detail.clone(),
+                                    root_id: id.clone(),
+                                    on_select: move |new_id: String| {
+                                        selected_id.set(Some(new_id));
+                                    },
+                                }
+                            }
+                        }
+                        // Ticket detail — shown in "content" and "split" modes
+                        if view_mode.read().as_str() != "graph" {
+                            TicketDetail {
+                                key: "{id}",
+                                workspace: ws_for_detail.clone(),
+                                id: id.clone(),
+                            }
+                        }
                     }
                 } else {
                     div {
