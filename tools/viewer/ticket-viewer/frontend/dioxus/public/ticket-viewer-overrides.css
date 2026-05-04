@@ -2,3 +2,35 @@
    modular CSS bundle.  Add only rules that should NOT apply to other
    viewers; anything reusable belongs upstream in
    tools/viewer/viewer-api/frontend/dioxus/public/css/. */
+
+/* ── Priority-panel collapse strips ─────────────────────────────────────────
+   The 32px collapsed strips for TicketDetail (right edge) and DepGraph (left
+   edge) use inline styles from routes.rs; the hover/transition rules live here
+   to keep the Rust source free of presentation-only CSS.                     */
+
+/* The collapsed strip divs share a common hover interaction: brighten the
+   label colour and show a subtle background highlight.  We target them by
+   their unique border-direction (left vs right) within the flex row.        */
+
+/* Right edge — collapsed TicketDetail strip */
+.content div[style*="border-left: 1px solid var(--border-color)"][style*="writing-mode"] {
+  transition: background 0.15s ease;
+}
+.content div[style*="border-left: 1px solid var(--border-color)"][style*="writing-mode"]:hover {
+  background: color-mix(in srgb, var(--accent-blue) 15%, var(--panel-bg-strong)) !important;
+}
+.content div[style*="border-left: 1px solid var(--border-color)"][style*="writing-mode"]:hover > div {
+  color: var(--accent-blue) !important;
+}
+
+/* Left edge — collapsed DepGraph strip */
+.content div[style*="border-right: 1px solid var(--border-color)"][style*="writing-mode"] {
+  transition: background 0.15s ease;
+}
+.content div[style*="border-right: 1px solid var(--border-color)"][style*="writing-mode"]:hover {
+  background: color-mix(in srgb, var(--accent-blue) 15%, var(--panel-bg-strong)) !important;
+}
+.content div[style*="border-right: 1px solid var(--border-color)"][style*="writing-mode"]:hover > div {
+  color: var(--accent-blue) !important;
+}
+

@@ -20,7 +20,7 @@ use std::collections::HashMap;
 
 use dioxus::prelude::*;
 
-use viewer_api_dioxus::{can_use_webgpu_graph3d, EdgeRef3D, Layout3D, Node3D};
+use viewer_api_dioxus::{can_use_webgpu_graph3d, CameraCommand, EdgeRef3D, Layout3D, Node3D};
 
 use crate::components::ticket_card;
 use crate::layout::GraphLayout;
@@ -46,7 +46,7 @@ pub fn lift_2d(gl: GraphLayout) -> Layout3D {
             state: gn.state.clone(),
             x:     gn.x as f32 * scale,
             y:    -(gn.y as f32 * scale),
-            z:     gn.depth as f32 * -4.0,
+            z:     0.0,
         })
         .collect();
 
@@ -90,6 +90,14 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
         use_context::<crate::graph_fetch::GraphFetchService>();
     let cache: crate::GraphCache = use_context::<crate::GraphCache>();
     let cache_key = format!("{workspace}:{root_id}");
+
+    // ── Camera command channel ────────────────────────────────────────────
+    // Fire a one-time "look straight at the XY plane" reset the first time a
+    // layout loads for each root_id, so the 2-D force-directed view starts
+    // orthogonal to the graph plane (z = 0 for all nodes).
+    let mut cam_cmd:       Signal<Option<CameraCommand>> = use_hook(|| Signal::new(None));
+    let mut cam_seq:       Signal<u64>                   = use_hook(|| Signal::new(0_u64));
+    let mut last_cam_root: Signal<Option<String>>        = use_hook(|| Signal::new(None));
 
     // ── Lifecycle logging ─────────────────────────────────────────────────
     tracing::debug!(target: T, rid = %root_id, "mount");
@@ -156,9 +164,20 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let nodes = layout.nodes.clone();
     let node_count = nodes.len();
 
+    // Issue a one-time camera reset the first time a layout for this root_id
+    // becomes available, so the view starts orthogonal to the flat z=0 plane.
+    if last_cam_root.read().as_deref() != Some(root_id.as_str()) {
+        last_cam_root.set(Some(root_id.clone()));
+        cam_cmd.set(Some(CameraCommand::ResetTo { yaw: 0.0, pitch: 0.0 }));
+        let next_seq = *cam_seq.peek() + 1;
+        cam_seq.set(next_seq);
+    }
+
     rsx! {
         viewer_api_dioxus::Graph3D {
             layout: layout,
+            camera_command: *cam_cmd.read(),
+            camera_command_seq: *cam_seq.read(),
             div {
                 id: "graph3d-nodes",
                 style: "position: absolute; inset: 0; pointer-events: none;",
@@ -173,8 +192,9 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                         rsx! {
                             div {
                                 key: "{node_id}",
+                                class: "content",
                                 "data-node-idx": "{idx}",
-                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 160px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 6px; background: rgba(30,30,40,0.92); backdrop-filter: blur(2px); padding: 6px 8px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.5);",
+                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 220px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 6px; background: rgba(30,30,40,0.92); backdrop-filter: blur(2px); padding: 6px 8px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.5);",
                                 onclick: move |evt: Event<MouseData>| {
                                     evt.stop_propagation();
                                     on_select.call(node_id_click.clone());

@@ -241,6 +241,9 @@ pub fn TicketContent(
                 font-family: sans-serif;
                 color: #e0e0e8;
                 overflow: hidden;
+                background: var(--panel-bg-strong);
+                backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+                -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
             ",
 
             // ── Tab bar ───────────────────────────────────────────────

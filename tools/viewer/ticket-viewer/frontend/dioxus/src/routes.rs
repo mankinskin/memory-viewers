@@ -87,6 +87,42 @@ pub fn TicketListPage(workspace: String) -> Element {
     // ── Selected file: (ticket_id, relative_path) ────────────────────
     // Set when the user clicks a file sub-row in the sidebar.
     let mut selected_file: Signal<Option<(String, String)>> = use_signal(|| None);
+    // ── Responsive panel priority system ─────────────────────────────
+    // Minimum widths per panel (px) define the auto-collapse thresholds.
+    // Priority (highest = collapses last):
+    //   P0 — TicketContent  (never collapses — gets all remaining space)
+    //   P1 — DepGraph       (collapses second, in split mode only)
+    //   P2 — TicketDetail   (collapses first — lowest priority)
+    //   sidebar             (managed separately by existing toggle button)
+    //
+    // Thresholds are the minimum total viewport width needed to show each
+    // additional panel at its minimum size, from narrowest to widest:
+    //   DETAIL : sidebar(240) + graph(280) + content(360) + detail(280) = 1160
+    //   GRAPH  : sidebar(240) + graph(280) + content(360)               =  880
+    const DETAIL_COLLAPSE_PX: u32 = 1160;
+    const GRAPH_COLLAPSE_PX: u32 = 880;
+    // Live viewport width — updated by the resize listener registered below.
+    let mut window_width: Signal<u32> = use_signal(|| {
+        let w: u32 = {
+            #[cfg(target_arch = "wasm32")]
+            {
+                web_sys::window()
+                    .and_then(|w| w.inner_width().ok())
+                    .and_then(|v| v.as_f64())
+                    .map(|f| f as u32)
+                    .unwrap_or(1200)
+            }
+            #[cfg(not(target_arch = "wasm32"))]
+            { 1200 }
+        };
+        w
+    });
+    // Keep the resize EventListener alive in a Signal so it is not dropped.
+    #[cfg(target_arch = "wasm32")]
+    let mut _resize_guard: Signal<Option<gloo_events::EventListener>> = use_signal(|| None);
+    // Manual overrides: None = auto from viewport width; Some(b) = force state.
+    let mut detail_panel_override: Signal<Option<bool>> = use_signal(|| None);
+    let mut graph_panel_override: Signal<Option<bool>> = use_signal(|| None);
     // ── SSE live-update hook ──────────────────────────────────────────────
     // Must be called before any conditional logic (hook ordering rule).
     // Mutates `tickets` in-place on `ticket.upsert` / `ticket.delete`;
@@ -157,6 +193,23 @@ pub fn TicketListPage(workspace: String) -> Element {
         });
     }
 
+    // ── Register window resize listener (WASM only) ──────────────────────
+    #[cfg(target_arch = "wasm32")]
+    use_effect(move || {
+        if let Some(win) = web_sys::window() {
+            let listener = gloo_events::EventListener::new(&win, "resize", move |_| {
+                if let Some(w) = web_sys::window() {
+                    if let Ok(iw) = w.inner_width() {
+                        if let Some(v) = iw.as_f64() {
+                            window_width.set(v as u32);
+                        }
+                    }
+                }
+            });
+            _resize_guard.set(Some(listener));
+        }
+    });
+
     // ── Derived values ────────────────────────────────────────────────────
     let ticket_count = tickets.read().len();
     let ws_for_new = workspace.clone();
@@ -168,6 +221,11 @@ pub fn TicketListPage(workspace: String) -> Element {
     } else {
         "btn btn-secondary"
     };
+
+    // ── Panel collapse states (derived from viewport width + user override) ──
+    let win_w = *window_width.read();
+    let detail_is_collapsed = detail_panel_override.read().unwrap_or(win_w < DETAIL_COLLAPSE_PX);
+    let graph_panel_collapsed = graph_panel_override.read().unwrap_or(win_w < GRAPH_COLLAPSE_PX);
 
     rsx! {
         SearchBar { workspace: workspace.clone() }
@@ -301,6 +359,22 @@ pub fn TicketListPage(workspace: String) -> Element {
                             if active { "var(--accent-blue)" } else { "var(--bg-secondary)" },
                             if active { "#fff" } else { "var(--text-muted)" },
                         );
+                        // Panel toggle buttons: highlighted when the panel is collapsed
+                        // (indicating the user can click to expand it).
+                        let pnl_btn_style = |collapsed: bool| format!(
+                            "padding: 3px 8px; font-size: 10px; font-weight: 500; \
+                             border: 1px solid var(--border-subtle); \
+                             border-radius: 4px; cursor: pointer; \
+                             background: {}; color: {};",
+                            if collapsed {
+                                "color-mix(in srgb, var(--accent-blue) 25%, var(--bg-secondary))"
+                            } else {
+                                "var(--bg-secondary)"
+                            },
+                            if collapsed { "var(--accent-blue)" } else { "var(--text-muted)" },
+                        );
+                        let g_collapsed = graph_panel_collapsed;
+                        let d_collapsed = detail_is_collapsed;
                         rsx! {
                             div {
                                 style: "
@@ -331,14 +405,51 @@ pub fn TicketListPage(workspace: String) -> Element {
                                     onclick: move |_| view_mode.set("content".to_string()),
                                     "Content"
                                 }
+                                // Push panel toggles to the right edge.
+                                div { style: "flex: 1; min-width: 0;" }
+                                // Graph panel toggle — only meaningful in split mode.
+                                if vm == "split" {
+                                    button {
+                                        title: if g_collapsed {
+                                            "Show graph panel (auto-collapsed)"
+                                        } else {
+                                            "Collapse graph panel"
+                                        },
+                                        style: "{pnl_btn_style(g_collapsed)}",
+                                        onclick: move |_| {
+                                            let auto = *window_width.read() < GRAPH_COLLAPSE_PX;
+                                            let cur = graph_panel_override.read().unwrap_or(auto);
+                                            graph_panel_override.set(Some(!cur));
+                                        },
+                                        if g_collapsed { "⬡ Graph ›" } else { "⬡ Graph ‹" }
+                                    }
+                                }
+                                // Detail panel toggle — shown in split and content modes.
+                                if vm != "graph" {
+                                    button {
+                                        title: if d_collapsed {
+                                            "Show details panel (auto-collapsed)"
+                                        } else {
+                                            "Collapse details panel"
+                                        },
+                                        style: "{pnl_btn_style(d_collapsed)}",
+                                        onclick: move |_| {
+                                            let auto = *window_width.read() < DETAIL_COLLAPSE_PX;
+                                            let cur = detail_panel_override.read().unwrap_or(auto);
+                                            detail_panel_override.set(Some(!cur));
+                                        },
+                                        if d_collapsed { "☰ Details ›" } else { "☰ Details ‹" }
+                                    }
+                                }
                             }
                         }
                     }
                     // ── Ticket content area ────────────────────────────
                     div {
                         style: "display: flex; flex-direction: row; flex: 1; overflow: hidden; min-height: 0;",
-                        // Dep graph — shown in "graph" and "split" modes
-                        if view_mode.read().as_str() != "content" {
+                        // Dep graph — shown in "graph" and "split" modes,
+                        // and not auto-collapsed by the priority panel system.
+                        if view_mode.read().as_str() != "content" && !graph_panel_collapsed {
                             div {
                                 key: "{id}",
                                 style: "flex: 1; position: relative; min-width: 0; overflow: hidden;",
@@ -348,6 +459,38 @@ pub fn TicketListPage(workspace: String) -> Element {
                                     on_select: move |new_id: String| {
                                         selected_id.set(Some(new_id));
                                     },
+                                }
+                            }
+                        }
+                        // Collapsed graph strip — narrow left edge when graph is
+                        // priority-collapsed in split mode.
+                        if view_mode.read().as_str() == "split" && graph_panel_collapsed {
+                            div {
+                                style: "
+                                    width: 32px; min-width: 32px; height: 100%;
+                                    background: var(--panel-bg-strong);
+                                    backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+                                    -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+                                    border-right: 1px solid var(--border-color);
+                                    display: flex; flex-direction: column;
+                                    align-items: center; justify-content: center;
+                                    flex-shrink: 0; cursor: pointer;
+                                ",
+                                title: "Show graph panel",
+                                onclick: move |_| {
+                                    let auto = *window_width.read() < GRAPH_COLLAPSE_PX;
+                                    let cur = graph_panel_override.read().unwrap_or(auto);
+                                    graph_panel_override.set(Some(!cur));
+                                },
+                                div {
+                                    style: "
+                                        writing-mode: vertical-lr;
+                                        font-size: 10px; font-weight: 600;
+                                        color: var(--text-muted);
+                                        letter-spacing: 0.08em; text-transform: uppercase;
+                                        user-select: none; padding: 8px 0;
+                                    ",
+                                    "⬡ Graph ›"
                                 }
                             }
                         }
@@ -380,13 +523,46 @@ pub fn TicketListPage(workspace: String) -> Element {
                                 }
                             }
                         }
-                        // Ticket detail (metadata / state machine) — shown in all modes
-                        // as the narrow right sidebar.
-                        if view_mode.read().as_str() != "graph" {
+                        // Ticket detail (metadata / state machine) — shown in
+                        // content/split modes when not priority-collapsed.
+                        if view_mode.read().as_str() != "graph" && !detail_is_collapsed {
                             TicketDetail {
                                 key: "{id}",
                                 workspace: ws_for_detail.clone(),
                                 id: id.clone(),
+                            }
+                        }
+                        // Collapsed detail strip — narrow right edge giving the user
+                        // a click target to re-expand the detail panel.
+                        if view_mode.read().as_str() != "graph" && detail_is_collapsed {
+                            div {
+                                style: "
+                                    width: 32px; min-width: 32px; height: 100%;
+                                    background: var(--panel-bg-strong);
+                                    backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+                                    -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+                                    border-left: 1px solid var(--border-color);
+                                    display: flex; flex-direction: column;
+                                    align-items: center; justify-content: center;
+                                    flex-shrink: 0; cursor: pointer;
+                                ",
+                                title: "Show details panel",
+                                onclick: move |_| {
+                                    let auto = *window_width.read() < DETAIL_COLLAPSE_PX;
+                                    let cur = detail_panel_override.read().unwrap_or(auto);
+                                    detail_panel_override.set(Some(!cur));
+                                },
+                                div {
+                                    style: "
+                                        writing-mode: vertical-rl;
+                                        transform: rotate(180deg);
+                                        font-size: 10px; font-weight: 600;
+                                        color: var(--text-muted);
+                                        letter-spacing: 0.08em; text-transform: uppercase;
+                                        user-select: none; padding: 8px 0;
+                                    ",
+                                    "Details ›"
+                                }
                             }
                         }
                     }
