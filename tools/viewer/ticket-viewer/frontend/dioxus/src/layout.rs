@@ -110,8 +110,10 @@ impl GraphLayout {
     ///   distributed evenly, centred around x = 0.
     fn hierarchical_layout(&mut self) {
         // Pixel spacing constants.
-        const LAYER_SPACING: f64 = 200.0; // vertical gap between depth rows
-        const COL_SPACING: f64 = 240.0;   // horizontal gap between nodes in a row
+        // Larger values spread nodes further apart so edge beams are clearly
+        // visible between adjacent cards.
+        const LAYER_SPACING: f64 = 280.0; // vertical gap between depth rows
+        const COL_SPACING: f64 = 360.0;   // horizontal gap between nodes in a row
 
         // Group node indices by depth.
         let mut by_depth: HashMap<usize, Vec<usize>> = HashMap::new();

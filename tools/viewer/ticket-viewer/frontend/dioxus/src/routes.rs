@@ -234,13 +234,35 @@ pub fn TicketListPage(workspace: String) -> Element {
             header: rsx! {
                 Header {
                     left: rsx! {
-                        // Hamburger — visible on mobile only (CSS hides on desktop).
-                        // min 44×44px tap target per WCAG AAA.
+                        // Sidebar toggle — always visible on desktop; also serves as the
+                        // mobile hamburger.  Collapses / expands the ticket list panel.
                         button {
-                            class: "sidebar-hamburger",
-                            style: "min-width: 44px; min-height: 44px;",
-                            aria_label: "Open sidebar",
-                            onclick: move |_| mobile_sidebar_open.set(true),
+                            class: "btn btn-icon",
+                            aria_label: if *sidebar_collapsed.read() { "Open sidebar" } else { "Close sidebar" },
+                            onclick: move |_| {
+                                if *sidebar_collapsed.read() {
+                                    sidebar_collapsed.set(false);
+                                } else {
+                                    // On desktop: toggle collapse.
+                                    // On mobile: open the drawer.
+                                    #[cfg(target_arch = "wasm32")]
+                                    {
+                                        use web_sys::window;
+                                        let is_mobile = window()
+                                            .and_then(|w| w.inner_width().ok())
+                                            .and_then(|v| v.as_f64())
+                                            .map(|f| f < 640.0)
+                                            .unwrap_or(false);
+                                        if is_mobile {
+                                            mobile_sidebar_open.set(true);
+                                        } else {
+                                            sidebar_collapsed.toggle();
+                                        }
+                                    }
+                                    #[cfg(not(target_arch = "wasm32"))]
+                                    sidebar_collapsed.toggle();
+                                }
+                            },
                             HamburgerIcon {}
                         }
                         span { class: "header-icon", "🎫" }
@@ -251,15 +273,16 @@ pub fn TicketListPage(workspace: String) -> Element {
                         }
                     },
                     right: rsx! {
-                        // Theme settings — ghost icon button (transparent, hover-aware).
+                        // Settings — opens the theme / settings panel.
                         button {
                             class: "btn btn-icon",
-                            aria_label: "Theme settings",
+                            aria_label: "Settings",
+                            title: "Settings",
                             onclick: move |_| {
                                 let cur = *show_theme_settings.read();
                                 show_theme_settings.set(!cur);
                             },
-                            "🎨"
+                            "⚙"
                         }
                         // Batch select toggle — secondary, takes `btn-active` when on.
                         button {
@@ -274,14 +297,6 @@ pub fn TicketListPage(workspace: String) -> Element {
                                 }
                             },
                             "☑ Batch"
-                        }
-                        // Single primary action — solid accent.
-                        button {
-                            class: "btn btn-primary",
-                            onclick: move |_| {
-                                nav.push(Route::NewTicketPage { workspace: ws_for_new.clone() });
-                            },
-                            "+ New Ticket"
                         }
                     },
                 }
@@ -339,6 +354,9 @@ pub fn TicketListPage(workspace: String) -> Element {
                         } else {
                             selected_ids.set(Vec::new());
                         }
+                    },
+                    on_new_ticket: move |_| {
+                        nav.push(Route::NewTicketPage { workspace: ws_for_new.clone() });
                     },
                 }
             }

@@ -65,6 +65,10 @@ pub struct TicketTreeProps {
 
     /// Called when the "Select all" header checkbox is toggled.
     pub on_select_all: Option<EventHandler<bool>>,
+
+    /// Called when the user clicks the "+ New" button in the list header.
+    #[props(default)]
+    pub on_new_ticket: Option<EventHandler<()>>,
 }
 
 // ── State filter chip definitions ──────────────────────────────────────────
@@ -175,6 +179,21 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                                 "{lab}"
                             }
                         }
+                    }
+                }
+                // Spacer
+                div { style: "flex: 1;" }
+                // New-ticket shortcut button
+                if let Some(ref on_new) = props.on_new_ticket {
+                    button {
+                        class: "btn btn-primary btn-sm",
+                        style: "font-size: 11px; padding: 3px 8px; min-height: 24px;",
+                        aria_label: "Create new ticket",
+                        onclick: {
+                            let on_new = on_new.clone();
+                            move |_| on_new.call(())
+                        },
+                        "+ New"
                     }
                 }
             }
