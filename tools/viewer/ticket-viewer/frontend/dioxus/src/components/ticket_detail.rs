@@ -314,7 +314,16 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
     let mut conflict: Signal<Option<(String, String, String)>> = use_signal(|| None);
 
     // ── SSE handle (kept alive) ───────────────────────────────────────
-    let mut _sse: Signal<Option<(web_sys::EventSource, EventListener)>> = use_signal(|| None);
+    // The RAII wrapper calls `EventSource.close()` on drop so that switching
+    // tickets doesn't leak a persistent browser SSE connection per ticket
+    // (browsers limit HTTP/1.1 to ~6 connections per origin).
+    struct SseClose(web_sys::EventSource);
+    impl Drop for SseClose {
+        fn drop(&mut self) {
+            self.0.close();
+        }
+    }
+    let mut _sse: Signal<Option<(SseClose, EventListener)>> = use_signal(|| None);
 
     // ── Fetch ticket, schema, and history on mount ────────────────────
     {
@@ -416,7 +425,7 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
                         }
                     },
                 );
-                _sse.set(Some((es, listener)));
+                _sse.set(Some((SseClose(es), listener)));
             }
         });
     }

@@ -100,16 +100,39 @@ fn canvas_size() -> (f64, f64) {
 
 // ── SSE subscription ───────────────────────────────────────────────────────
 
-/// Attach an `EventSource` to `/api/stream?workspace=<ws>` and return the
-/// source + listeners.  Dropping them closes the connection and removes the
-/// handlers automatically (no `Closure::forget()` calls).
+// ── RAII SSE handle ───────────────────────────────────────────────────────
+
+/// Owns a live `EventSource` + its event listeners for the duration of the
+/// `DepGraph` component.
+///
+/// `web_sys::EventSource` does **not** call `EventSource.close()` when its
+/// Rust value is dropped — the browser keeps the connection alive and
+/// automatically reconnects.  This wrapper fixes that by explicitly calling
+/// `close()` in `Drop`, preventing phantom SSE connections from exhausting
+/// the browser's per-origin HTTP/1.1 connection pool (typically 6 slots).
+struct DepSseHandle {
+    es: web_sys::EventSource,
+    /// Held alive so the listeners remain registered; dropped before `es` is
+    /// closed (Rust drops struct fields in declaration order).
+    _listeners: [gloo_events::EventListener; 2],
+}
+
+impl Drop for DepSseHandle {
+    fn drop(&mut self) {
+        self.es.close();
+    }
+}
+
+/// Attach an `EventSource` to `/api/stream?workspace=<ws>` and return an
+/// RAII handle.  Dropping the handle closes the connection and removes the
+/// listeners automatically (no `Closure::forget()` calls).
 ///
 /// `fetch_trigger` is a `Signal<u32>` (Copy).  Interior mutation via
 /// `Signal::with_mut` takes `&self`, so the closures satisfy `Fn`.
 fn subscribe_sse(
     workspace: &str,
     fetch_trigger: Signal<u32>,
-) -> Option<(web_sys::EventSource, [gloo_events::EventListener; 2])> {
+) -> Option<DepSseHandle> {
     let url = format!("/api/stream?workspace={workspace}");
     let es = web_sys::EventSource::new(&url).ok()?;
     let mut ft1 = fetch_trigger;
@@ -120,7 +143,7 @@ fn subscribe_sse(
     let l2 = gloo_events::EventListener::new(&es, "edge.delete", move |_| {
         ft2.with_mut(|v| *v += 1);
     });
-    Some((es, [l1, l2]))
+    Some(DepSseHandle { es, _listeners: [l1, l2] })
 }
 
 // ── Props ──────────────────────────────────────────────────────────────────
@@ -198,8 +221,7 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
     let mut drag: Signal<Option<DragState>> = use_signal(|| None);
 
     // SSE resources kept alive while this component lives.
-    let mut _sse_handle: Signal<Option<(web_sys::EventSource, [gloo_events::EventListener; 2])>> =
-        use_signal(|| None);
+    let mut _sse_handle: Signal<Option<DepSseHandle>> = use_signal(|| None);
 
     // ── Add-dependency picker state ────────────────────────────────────────
     let mut picker_open: Signal<bool> = use_signal(|| false);
