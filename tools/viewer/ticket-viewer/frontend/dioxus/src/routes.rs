@@ -358,8 +358,13 @@ pub fn TicketListPage(workspace: String) -> Element {
                     on_new_ticket: move |_| {
                         nav.push(Route::NewTicketPage { workspace: ws_for_new.clone() });
                     },
-                }
-            }
+                    on_toggle_batch: move |_| {
+                        show_checkboxes.toggle();
+                        if !*show_checkboxes.read() {
+                            selected_ids.set(Vec::new());
+                        }
+                    },
+                }            }
 
             // ── Main panel — dep graph + ticket detail ──────────────────
             div {

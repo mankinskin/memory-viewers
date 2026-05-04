@@ -69,6 +69,10 @@ pub struct TicketTreeProps {
     /// Called when the user clicks the "+ New" button in the list header.
     #[props(default)]
     pub on_new_ticket: Option<EventHandler<()>>,
+
+    /// Called when the user clicks the "☑ Batch" toggle button in the list header.
+    #[props(default)]
+    pub on_toggle_batch: Option<EventHandler<()>>,
 }
 
 // ── State filter chip definitions ──────────────────────────────────────────
@@ -183,6 +187,20 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                 }
                 // Spacer
                 div { style: "flex: 1;" }
+                // Batch-select toggle button
+                if let Some(ref on_batch) = props.on_toggle_batch {
+                    button {
+                        class: if props.show_checkboxes { "btn btn-secondary btn-sm btn-active" } else { "btn btn-secondary btn-sm" },
+                        style: "font-size: 11px; padding: 3px 8px; min-height: 24px;",
+                        aria_label: "Toggle batch selection",
+                        aria_pressed: if props.show_checkboxes { "true" } else { "false" },
+                        onclick: {
+                            let on_batch = on_batch.clone();
+                            move |_| on_batch.call(())
+                        },
+                        "☑"
+                    }
+                }
                 // New-ticket shortcut button
                 if let Some(ref on_new) = props.on_new_ticket {
                     button {
@@ -299,7 +317,7 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                                         background: transparent;
                                         color: var(--text-muted);
                                         cursor: pointer;
-                                        font-size: 10px;
+                                        font-size: 16px;
                                         flex-shrink: 0;
                                     ",
                                     aria_label: if is_expanded { "Collapse ticket files" } else { "Expand ticket files" },
