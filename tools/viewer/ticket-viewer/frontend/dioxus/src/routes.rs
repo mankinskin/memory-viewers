@@ -71,6 +71,15 @@ pub fn TicketListPage(workspace: String) -> Element {
     // Selected ticket ID — backed by the store for persistence and hash sync.
     // Signal<T> is Copy so this is a zero-cost alias to the same backing cell.
     let mut selected_id = store.open_ticket_id;
+    // Graph-preview ticket ID — set when the user clicks a node in the dep graph.
+    // This overrides what is shown in the content panel without changing the
+    // primary list selection or the graph root.
+    let mut graph_content_id: Signal<Option<String>> = use_signal(|| None);
+    // Reset graph preview whenever the primary selection changes (sidebar click).
+    use_effect(move || {
+        let _ = selected_id.read(); // reactive dependency
+        graph_content_id.set(None);
+    });
     // Mutable aliases for filter/sort signals so closures can call `.set()`.
     let mut filter = store.filter;
     let mut state_filter = store.state_filter;
@@ -216,7 +225,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     let ws_for_detail = workspace.clone();
     let ws_for_content = workspace.clone();
     // Toggle batch button picks up an `.btn-active` modifier when checkbox mode is on.
-    let batch_btn_class = if *show_checkboxes.read() {
+    let _batch_btn_class = if *show_checkboxes.read() {
         "btn btn-secondary btn-active"
     } else {
         "btn btn-secondary"
@@ -283,20 +292,6 @@ pub fn TicketListPage(workspace: String) -> Element {
                                 show_theme_settings.set(!cur);
                             },
                             "⚙"
-                        }
-                        // Batch select toggle — secondary, takes `btn-active` when on.
-                        button {
-                            class: "{batch_btn_class}",
-                            aria_pressed: if *show_checkboxes.read() { "true" } else { "false" },
-                            onclick: move |_| {
-                                let currently = *show_checkboxes.read();
-                                show_checkboxes.set(!currently);
-                                if currently {
-                                    // Turning off: clear selection.
-                                    selected_ids.set(Vec::new());
-                                }
-                            },
-                            "☑ Batch"
                         }
                     },
                 }
@@ -479,8 +474,11 @@ pub fn TicketListPage(workspace: String) -> Element {
                                 DepGraph {
                                     workspace: ws_for_detail.clone(),
                                     root_id: id.clone(),
+                                    selected_node_id: graph_content_id.read().clone(),
                                     on_select: move |new_id: String| {
-                                        selected_id.set(Some(new_id));
+                                        // Graph node click: only update the content panel preview.
+                                        // It does NOT change the primary list selection or graph root.
+                                        graph_content_id.set(Some(new_id));
                                     },
                                 }
                             }
@@ -521,24 +519,29 @@ pub fn TicketListPage(workspace: String) -> Element {
                         // "content" and "split" modes.
                         if view_mode.read().as_str() != "graph" {
                             {
+                                // The content panel shows the graph-preview ticket when a
+                                // node is clicked, falling back to the primary selection.
+                                let content_id = graph_content_id.read()
+                                    .clone()
+                                    .unwrap_or_else(|| id.clone());
                                 // Determine the active asset path for this ticket.
                                 let active_asset = selected_file.read().as_ref()
-                                    .filter(|(tid, _)| tid == id)
+                                    .filter(|(tid, _)| tid == &content_id)
                                     .map(|(_, path)| path.clone());
                                 // Look up the ticket fields from the summary list for
                                 // the TOML tab.
                                 let fields = tickets.read()
                                     .iter()
-                                    .find(|t| &t.id == id)
+                                    .find(|t| t.id == content_id)
                                     .map(|t| t.fields.clone())
                                     .unwrap_or(serde_json::Value::Object(Default::default()));
                                 rsx! {
                                     div {
-                                        key: "content-{id}",
+                                        key: "content-{content_id}",
                                         style: "flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column;",
                                         TicketContent {
                                             workspace: ws_for_content.clone(),
-                                            ticket_id: id.clone(),
+                                            ticket_id: content_id.clone(),
                                             fields,
                                             asset_path: active_asset,
                                         }
@@ -549,10 +552,17 @@ pub fn TicketListPage(workspace: String) -> Element {
                         // Ticket detail (metadata / state machine) — shown in
                         // content/split modes when not priority-collapsed.
                         if view_mode.read().as_str() != "graph" && !detail_is_collapsed {
-                            TicketDetail {
-                                key: "{id}",
-                                workspace: ws_for_detail.clone(),
-                                id: id.clone(),
+                            {
+                                let detail_id = graph_content_id.read()
+                                    .clone()
+                                    .unwrap_or_else(|| id.clone());
+                                rsx! {
+                                    TicketDetail {
+                                        key: "{detail_id}",
+                                        workspace: ws_for_detail.clone(),
+                                        id: detail_id,
+                                    }
+                                }
                             }
                         }
                         // Collapsed detail strip — narrow right edge giving the user

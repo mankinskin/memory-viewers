@@ -157,6 +157,11 @@ pub struct DepGraphProps {
     /// `TicketDetailPage`.
     #[props(optional)]
     pub on_select: Option<EventHandler<String>>,
+    /// Graph-preview selection — the node ID currently shown in the content
+    /// panel (set by clicking a node). Highlights that card with an ember
+    /// border without changing the primary list selection.
+    #[props(optional)]
+    pub selected_node_id: Option<String>,
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -175,6 +180,7 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
     let workspace = props.workspace.clone();
     let root_id = props.root_id.clone();
     let on_select_prop = props.on_select.clone();
+    let selected_node_id = props.selected_node_id.clone();
 
     // ── WebGPU 3-D path ────────────────────────────────────────────────
     #[cfg(target_arch = "wasm32")]
@@ -183,11 +189,13 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
         let rid_gpu = root_id.clone();
         let nav = use_navigator();
         let on_sel = on_select_prop.clone();
+        let sel_id = selected_node_id.clone();
         return rsx! {
             crate::graph3d::Graph3D {
                 key: "{rid_gpu}",
                 workspace: ws_gpu.clone(),
                 root_id: rid_gpu.clone(),
+                selected_node_id: sel_id,
                 on_select: move |id: String| {
                     if let Some(ref cb) = on_sel {
                         cb.call(id);

@@ -74,6 +74,10 @@ pub struct Graph3DProps {
     pub workspace: String,
     pub root_id:   String,
     pub on_select: EventHandler<String>,
+    /// Optional graph-preview selection — highlights this node with an ember
+    /// border effect without changing the primary ticket-list selection.
+    #[props(optional)]
+    pub selected_node_id: Option<String>,
 }
 
 #[component]
@@ -81,6 +85,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let workspace = props.workspace.clone();
     let root_id   = props.root_id.clone();
     let on_select = props.on_select;
+    let selected_node_id = props.selected_node_id.clone();
 
     // ── Fetch service + cache ─────────────────────────────────────────────
     // Graph3D never issues its own HTTP requests.  It reads the shared cache
@@ -189,10 +194,16 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                         let color      = ticket_card::state_color(Some(state_str.as_str()));
                         let short_id   = if node_id.len() > 8 { node_id[..8].to_string() } else { node_id.clone() };
                         let node_id_click = node_id.clone();
+                        let is_selected = selected_node_id.as_deref() == Some(node_id.as_str());
+                        let card_class = if is_selected {
+                            "content node-card-selected"
+                        } else {
+                            "content"
+                        };
                         rsx! {
                             div {
                                 key: "{node_id}",
-                                class: "content",
+                                class: "{card_class}",
                                 "data-node-idx": "{idx}",
                                 style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 220px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 6px; background: rgba(30,30,40,0.92); backdrop-filter: blur(2px); padding: 6px 8px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.5);",
                                 onclick: move |evt: Event<MouseData>| {

@@ -125,27 +125,6 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                 flex-direction: column;
                 gap: 6px;
             ",
-            // ── Select-all row (only when checkboxes are on) ───────────
-            if props.show_checkboxes {
-                div {
-                    style: "display: flex; align-items: center; gap: 6px; padding-bottom: 2px;",
-                    input {
-                        r#type: "checkbox",
-                        checked: all_checked,
-                        style: "width: 14px; height: 14px; cursor: pointer; accent-color: var(--accent-blue);",
-                        aria_label: "Select all tickets",
-                        onchange: move |e| {
-                            if let Some(ref h) = props.on_select_all {
-                                h.call(e.value() == "true");
-                            }
-                        },
-                    }
-                    span {
-                        style: "font-size: 11px; color: var(--text-muted);",
-                        "Select all"
-                    }
-                }
-            }
             input {
                 r#type: "text",
                 placeholder: "Filter tickets…",
@@ -164,7 +143,7 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                 oninput: move |e| props.on_filter_change.call(e.value()),
             }
             div {
-                style: "display: flex; flex-wrap: wrap; gap: 4px;",
+                style: "display: flex; flex-wrap: wrap; align-items: center; gap: 4px;",
                 for &(lab, val) in STATE_CHIPS.iter() {
                     {
                         let is_active = state_filter_val.as_str() == val;
@@ -187,6 +166,20 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                 }
                 // Spacer
                 div { style: "flex: 1;" }
+                // Select-all checkbox — only when batch mode is active, inline before New
+                if props.show_checkboxes {
+                    input {
+                        r#type: "checkbox",
+                        checked: all_checked,
+                        style: "width: 14px; height: 14px; cursor: pointer; accent-color: var(--accent-blue); flex-shrink: 0;",
+                        aria_label: "Select all tickets",
+                        onchange: move |e| {
+                            if let Some(ref h) = props.on_select_all {
+                                h.call(e.value() == "true");
+                            }
+                        },
+                    }
+                }
                 // Batch-select toggle button
                 if let Some(ref on_batch) = props.on_toggle_batch {
                     button {
