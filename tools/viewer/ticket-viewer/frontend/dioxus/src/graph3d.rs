@@ -46,7 +46,7 @@ pub fn lift_2d(gl: GraphLayout) -> Layout3D {
             state: gn.state.clone(),
             x:     gn.x as f32 * scale,
             y:    -(gn.y as f32 * scale),
-            z:     0.0,
+            z:     gn.z as f32 * scale,
         })
         .collect();
 
@@ -173,7 +173,9 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     // becomes available, so the view starts orthogonal to the flat z=0 plane.
     if last_cam_root.read().as_deref() != Some(root_id.as_str()) {
         last_cam_root.set(Some(root_id.clone()));
-        cam_cmd.set(Some(CameraCommand::ResetTo { yaw: 0.0, pitch: 0.0 }));
+        // Angled view so the 3-D XZ spread within each hierarchy level
+        // is visible together with the Y-axis depth separation.
+        cam_cmd.set(Some(CameraCommand::ResetTo { yaw: 0.3, pitch: 0.4 }));
         let next_seq = *cam_seq.peek() + 1;
         cam_seq.set(next_seq);
     }

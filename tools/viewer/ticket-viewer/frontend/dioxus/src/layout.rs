@@ -30,9 +30,12 @@ pub struct GraphNode {
     /// Layout position (centre of card), layout-space pixels.
     pub x: f64,
     pub y: f64,
-    /// Kept for API compatibility with Graph3D path; unused in 2-D layout.
+    /// Z position — force-directed within each depth layer's XZ plane.
+    pub z: f64,
+    /// Physics velocities used by force simulations.
     pub vx: f64,
     pub vy: f64,
+    pub vz: f64,
 }
 
 /// One directed dependency edge.
@@ -84,8 +87,10 @@ impl GraphLayout {
                 priority: node.priority,
                 x: 0.0,
                 y: 0.0,
+                z: 0.0,
                 vx: 0.0,
                 vy: 0.0,
+                vz: 0.0,
             })
             .collect();
 
@@ -103,16 +108,16 @@ impl GraphLayout {
         layout
     }
 
-    /// Place nodes in rows by BFS depth (hierarchy), then refine X positions
-    /// with a horizontal-only force simulation so connected nodes cluster
-    /// together while same-layer nodes spread apart naturally.
+    /// Place nodes in a 3-D hierarchical layout:
     ///
     /// * Y axis: `depth * LAYER_SPACING` — deeper dependencies are lower.
-    /// * X axis: initial even distribution, then force-refined horizontally.
+    /// * XZ plane: nodes in each layer start on an evenly-spaced circle,
+    ///   then a force simulation clusters connected nodes while spreading
+    ///   same-layer siblings apart.
     fn hierarchical_layout(&mut self) {
         // Vertical gap between depth layers (dependency hierarchy).
         const LAYER_SPACING: f64 = 300.0;
-        // Initial horizontal spacing before force refinement.
+        // Minimum inter-node arc spacing on the initial placement circle.
         const COL_SPACING: f64 = 360.0;
 
         // Group node indices by depth.
@@ -127,8 +132,7 @@ impl GraphLayout {
         for depth in depths {
             let indices = by_depth.get_mut(&depth).unwrap();
 
-            // Sort within the row: priority (ascending = more important first),
-            // then alphabetically by title as a stable tiebreaker.
+            // Sort within the layer: priority then title for a stable seed.
             indices.sort_by(|&a, &b| {
                 let pa = priority_order(self.nodes[a].priority.as_deref());
                 let pb = priority_order(self.nodes[b].priority.as_deref());
@@ -140,37 +144,52 @@ impl GraphLayout {
             });
 
             let n = indices.len();
-            let total_width = (n as f64 - 1.0) * COL_SPACING;
-            let start_x = -total_width / 2.0;
             let y = depth as f64 * LAYER_SPACING;
 
-            for (slot, &node_idx) in indices.iter().enumerate() {
-                self.nodes[node_idx].x = start_x + slot as f64 * COL_SPACING;
-                self.nodes[node_idx].y = y;
+            if n == 1 {
+                // Single node: place at origin of its layer's XZ plane.
+                self.nodes[indices[0]].x = 0.0;
+                self.nodes[indices[0]].y = y;
+                self.nodes[indices[0]].z = 0.0;
+            } else {
+                // Spread nodes evenly around a circle in XZ so the force
+                // simulation starts from a symmetric, uncrowded seed.
+                let radius = (n as f64 * COL_SPACING / std::f64::consts::TAU)
+                    .max(COL_SPACING);
+                for (slot, &node_idx) in indices.iter().enumerate() {
+                    let angle = std::f64::consts::TAU * slot as f64 / n as f64;
+                    self.nodes[node_idx].x = radius * angle.cos();
+                    self.nodes[node_idx].y = y;
+                    self.nodes[node_idx].z = radius * angle.sin();
+                }
             }
         }
 
         // Centre vertically around y = 0.
         self.centre_y();
 
-        // Refine X positions: related nodes attract, same-layer nodes repel.
-        self.horizontal_force_refinement(150);
+        // Refine XZ positions: connected nodes attract in the XZ plane while
+        // same-layer siblings repel.  Y is frozen throughout.
+        self.xz_force_refinement(200);
+
+        // Re-centre XZ after force spread.
+        self.centre_xz();
     }
 
-    /// Horizontal-only force simulation that keeps the depth-layer Y positions
-    /// fixed while letting nodes slide in X.
+    /// XZ-plane force simulation that keeps depth-layer Y positions fixed.
     ///
-    /// * Same-layer nodes repel each other to prevent crowding.
-    /// * Edge-connected nodes attract in X so subtrees cluster under their
-    ///   parent, reducing visible edge crossings.
-    fn horizontal_force_refinement(&mut self, steps: usize) {
+    /// * Same-layer nodes repel each other in XZ to prevent crowding.
+    /// * Edge-connected nodes attract in XZ so linked subtrees cluster
+    ///   toward each other across the 3-D space of their layers.
+    /// * Cross-layer repulsion decays with Y distance so nodes primarily
+    ///   push away neighbours on the same or adjacent layers.
+    fn xz_force_refinement(&mut self, steps: usize) {
         let n = self.nodes.len();
         if n <= 1 {
             return;
         }
 
-        // Pre-compute (from_idx, to_idx) for every edge to avoid borrow
-        // conflicts inside the hot loop.
+        // Pre-compute (from_idx, to_idx) for every edge.
         let edge_pairs: Vec<(usize, usize)> = {
             let id_to_idx: HashMap<&str, usize> = self
                 .nodes
@@ -188,11 +207,11 @@ impl GraphLayout {
                 .collect()
         };
 
-        // Spring constant: pulls connected nodes toward the same X column.
-        const SPRING_K: f64 = 0.06;
-        // Repulsion strength between node pairs.
-        const REPULSION: f64 = 90_000.0;
-        // Minimum separation used in the repulsion denominator (px).
+        // Spring constant: pulls connected nodes toward each other in XZ.
+        const SPRING_K: f64 = 0.05;
+        // Repulsion strength in the XZ plane.
+        const REPULSION: f64 = 80_000.0;
+        // Minimum XZ distance used in the repulsion denominator (px).
         const MIN_DIST: f64 = 15.0;
         // Velocity damping per step.
         const DAMPING: f64 = 0.75;
@@ -200,44 +219,65 @@ impl GraphLayout {
 
         for _ in 0..steps {
             let mut fx = vec![0.0_f64; n];
+            let mut fz = vec![0.0_f64; n];
 
-            // X-axis repulsion between every pair of nodes.
-            // Repulsion decays for nodes far apart in Y (cross-layer) so that
-            // the force mainly keeps same-row siblings spread out.
+            // XZ repulsion between every pair of nodes.
+            // Repulsion decays for nodes far apart in Y (cross-layer) so the
+            // force mainly separates nodes on the same or nearby layers.
             for i in 0..n {
                 for j in (i + 1)..n {
                     let dx = self.nodes[i].x - self.nodes[j].x;
+                    let dz = self.nodes[i].z - self.nodes[j].z;
                     let dy = (self.nodes[i].y - self.nodes[j].y).abs();
-                    // Weight decays smoothly with inter-layer distance.
                     let layer_w = 1.0 / (1.0 + dy / 250.0);
-                    let d = dx.abs().max(MIN_DIST);
-                    let sign = if dx >= 0.0 { 1.0 } else { -1.0 };
-                    let f = REPULSION * layer_w / (d * d) * sign;
-                    fx[i] += f;
-                    fx[j] -= f;
+                    let d_xz = (dx * dx + dz * dz).sqrt().max(MIN_DIST);
+                    let f = REPULSION * layer_w / (d_xz * d_xz);
+                    fx[i] += f * dx / d_xz;
+                    fx[j] -= f * dx / d_xz;
+                    fz[i] += f * dz / d_xz;
+                    fz[j] -= f * dz / d_xz;
                 }
             }
 
-            // X-axis spring attraction along dependency edges.
-            // Pulls parent and child toward the same X so edges tend to be
-            // vertical, grouping related subtrees together.
+            // XZ spring attraction along dependency edges.
+            // Pulls parent and child toward each other in XZ so connected
+            // subtrees group together visually.
             for &(i, j) in &edge_pairs {
                 let dx = self.nodes[j].x - self.nodes[i].x;
-                let sfx = SPRING_K * dx;
-                fx[i] += sfx;
-                fx[j] -= sfx;
+                let dz = self.nodes[j].z - self.nodes[i].z;
+                fx[i] += SPRING_K * dx;
+                fx[j] -= SPRING_K * dx;
+                fz[i] += SPRING_K * dz;
+                fz[j] -= SPRING_K * dz;
             }
 
-            // Integrate X only; Y is frozen to preserve depth layers.
+            // Integrate X and Z; Y is frozen to preserve depth layers.
             for i in 0..n {
                 self.nodes[i].vx = (self.nodes[i].vx + fx[i] * DT) * DAMPING;
+                self.nodes[i].vz = (self.nodes[i].vz + fz[i] * DT) * DAMPING;
                 self.nodes[i].x += self.nodes[i].vx * DT;
+                self.nodes[i].z += self.nodes[i].vz * DT;
             }
         }
 
         // Zero velocities so the layout is stable when re-used.
         for nd in &mut self.nodes {
             nd.vx = 0.0;
+            nd.vz = 0.0;
+        }
+    }
+
+    /// Translate all nodes so the XZ centre of mass is at (0, 0).
+    fn centre_xz(&mut self) {
+        if self.nodes.is_empty() {
+            return;
+        }
+        let n = self.nodes.len() as f64;
+        let cx = self.nodes.iter().map(|nd| nd.x).sum::<f64>() / n;
+        let cz = self.nodes.iter().map(|nd| nd.z).sum::<f64>() / n;
+        for nd in &mut self.nodes {
+            nd.x -= cx;
+            nd.z -= cz;
         }
     }
 
