@@ -11,16 +11,19 @@ mod store;
 mod types;
 
 use dioxus::prelude::*;
-use viewer_api_dioxus::{Layout3D, Prefetcher, ThemeProvider, ViewerShell, WgpuOverlay};
+use viewer_api_dioxus::{Prefetcher, ThemeProvider, ViewerShell, WgpuOverlay};
 
+use crate::layout::GraphLayout;
 use routes::Route;
 
 /// LRU cache shared across all graph views in the ticket viewer.
 ///
-/// Keyed by `"{workspace}:{root_id}"`, holds a precomputed [`Layout3D`] so
+/// Keyed by `"{workspace}:{root_id}"`, holds a precomputed [`GraphLayout`] so
 /// that switching back to a previously-opened ticket renders the graph
-/// instantly without a round-trip to the backend.
-pub type GraphCache = Prefetcher<String, Layout3D>;
+/// instantly without a round-trip to the backend.  The [`crate::graph3d::lift_2d`]
+/// step is deferred to render time so the current [`crate::layout::LayoutMode`]
+/// can be applied without re-fetching.
+pub type GraphCache = Prefetcher<String, GraphLayout>;
 
 fn main() {
     #[cfg(target_arch = "wasm32")]

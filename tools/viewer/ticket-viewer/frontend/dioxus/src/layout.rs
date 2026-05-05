@@ -12,7 +12,11 @@ use std::collections::HashMap;
 
 use crate::types::{GraphEdgeItem, GraphNodeItem};
 
-// ── Data types ─────────────────────────────────────────────────────────────
+// ── Layout mode ────────────────────────────────────────────────────────────
+
+// Re-exported from viewer-api so callers don't need to import two crates.
+pub use viewer_api_dioxus::LayoutMode;
+
 
 /// One node in the rendered graph.  Coordinates are in layout-space pixels
 /// centred on (0, 0); the canvas/DOM layer applies pan + zoom on top.
@@ -70,12 +74,18 @@ fn priority_order(p: Option<&str>) -> u32 {
 // ── Layout construction ────────────────────────────────────────────────────
 
 impl GraphLayout {
-    /// Build a hierarchical layout from raw API items.
-    ///
-    /// Nodes are placed in rows by BFS depth (depth 0 at the top).  Within
-    /// each row they are sorted by priority then title, giving a stable
-    /// left-to-right ordering with higher-priority tickets on the left.
+    /// Build a hierarchical layout from raw API items using the default
+    /// [`LayoutMode::Hierarchical3D`] algorithm.
     pub fn build(api_nodes: Vec<GraphNodeItem>, api_edges: Vec<GraphEdgeItem>) -> Self {
+        Self::build_with_mode(api_nodes, api_edges, LayoutMode::default())
+    }
+
+    /// Build a layout using the specified [`LayoutMode`].
+    pub fn build_with_mode(
+        api_nodes: Vec<GraphNodeItem>,
+        api_edges: Vec<GraphEdgeItem>,
+        mode: LayoutMode,
+    ) -> Self {
         let nodes: Vec<GraphNode> = api_nodes
             .into_iter()
             .map(|node| GraphNode {
@@ -105,6 +115,15 @@ impl GraphLayout {
 
         let mut layout = Self { nodes, edges };
         layout.hierarchical_layout();
+
+        // For Flat2D, zero out all Z coords so the graph is a pure top-down
+        // 2-D projection (suitable for orthographic view).
+        if mode == LayoutMode::Flat2D {
+            for nd in &mut layout.nodes {
+                nd.z = 0.0;
+            }
+        }
+
         layout
     }
 

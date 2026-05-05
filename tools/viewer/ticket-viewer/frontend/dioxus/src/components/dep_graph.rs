@@ -26,8 +26,10 @@ use wasm_bindgen::JsCast;
 
 use crate::api::{HttpTicketBackend, TicketBackend};
 use crate::types::{EdgeMutationBody, TicketSummary};
-use crate::layout::GraphLayout;
+use crate::layout::{GraphLayout, LayoutMode};
 use crate::routes::Route;
+
+use viewer_api_dioxus::Projection;
 
 use super::ticket_card::TicketCard;
 
@@ -162,6 +164,18 @@ pub struct DepGraphProps {
     /// border without changing the primary list selection.
     #[props(optional)]
     pub selected_node_id: Option<String>,
+    /// Which 3-D layout algorithm to use.
+    #[props(default)]
+    pub layout_mode: LayoutMode,
+    /// Camera projection mode.
+    #[props(default)]
+    pub projection: Projection,
+    /// Callback from the built-in settings overlay when layout mode changes.
+    #[props(default)]
+    pub on_layout_mode_change: Option<EventHandler<LayoutMode>>,
+    /// Callback from the built-in settings overlay when projection changes.
+    #[props(default)]
+    pub on_projection_change: Option<EventHandler<Projection>>,
 }
 
 // ── Component ──────────────────────────────────────────────────────────────
@@ -196,6 +210,10 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                 workspace: ws_gpu.clone(),
                 root_id: rid_gpu.clone(),
                 selected_node_id: sel_id,
+                layout_mode: props.layout_mode,
+                projection: props.projection,
+                on_layout_mode_change: props.on_layout_mode_change.clone(),
+                on_projection_change: props.on_projection_change.clone(),
                 on_select: move |id: String| {
                     if let Some(ref cb) = on_sel {
                         cb.call(id);

@@ -20,10 +20,10 @@ use std::collections::HashMap;
 
 use dioxus::prelude::*;
 
-use viewer_api_dioxus::{can_use_webgpu_graph3d, CameraCommand, EdgeRef3D, Layout3D, Node3D};
+use viewer_api_dioxus::{can_use_webgpu_graph3d, CameraCommand, EdgeRef3D, Layout3D, Node3D, Projection};
 
 use crate::components::ticket_card;
-use crate::layout::GraphLayout;
+use crate::layout::{GraphLayout, LayoutMode};
 
 /// Tracing target used by all events in this module.
 const T: &str = "ticket_viewer::graph3d";
@@ -34,7 +34,7 @@ const T: &str = "ticket_viewer::graph3d";
 pub fn can_use_webgpu() -> bool { can_use_webgpu_graph3d() }
 
 /// Build a shared [`Layout3D`] from the 2-D force-directed layout.
-pub fn lift_2d(gl: GraphLayout) -> Layout3D {
+pub fn lift_2d(gl: GraphLayout, mode: LayoutMode) -> Layout3D {
     let scale = 1.0 / 100.0_f32;
 
     let nodes: Vec<Node3D> = gl
@@ -46,7 +46,10 @@ pub fn lift_2d(gl: GraphLayout) -> Layout3D {
             state: gn.state.clone(),
             x:     gn.x as f32 * scale,
             y:    -(gn.y as f32 * scale),
-            z:     gn.z as f32 * scale,
+            z:     match mode {
+                LayoutMode::Hierarchical3D => gn.z as f32 * scale,
+                LayoutMode::Flat2D         => 0.0,
+            },
         })
         .collect();
 
@@ -78,14 +81,30 @@ pub struct Graph3DProps {
     /// border effect without changing the primary ticket-list selection.
     #[props(optional)]
     pub selected_node_id: Option<String>,
+    /// Graph layout algorithm — drives `lift_2d` and the initial camera angle.
+    #[props(default)]
+    pub layout_mode: LayoutMode,
+    /// Camera projection mode.
+    #[props(default)]
+    pub projection: Projection,
+    /// Called by the built-in settings overlay when the user picks a new layout.
+    #[props(default)]
+    pub on_layout_mode_change: Option<EventHandler<LayoutMode>>,
+    /// Called by the built-in settings overlay when the user picks a new projection.
+    #[props(default)]
+    pub on_projection_change: Option<EventHandler<Projection>>,
 }
 
 #[component]
 pub fn Graph3D(props: Graph3DProps) -> Element {
-    let workspace = props.workspace.clone();
-    let root_id   = props.root_id.clone();
-    let on_select = props.on_select;
+    let workspace    = props.workspace.clone();
+    let root_id      = props.root_id.clone();
+    let on_select    = props.on_select;
     let selected_node_id = props.selected_node_id.clone();
+    let layout_mode  = props.layout_mode;
+    let projection   = props.projection;
+    let on_layout_mode_change = props.on_layout_mode_change.clone();
+    let on_projection_change  = props.on_projection_change.clone();
 
     // ── Fetch service + cache ─────────────────────────────────────────────
     // Graph3D never issues its own HTTP requests.  It reads the shared cache
@@ -97,12 +116,12 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let cache_key = format!("{workspace}:{root_id}");
 
     // ── Camera command channel ────────────────────────────────────────────
-    // Fire a one-time "look straight at the XY plane" reset the first time a
-    // layout loads for each root_id, so the 2-D force-directed view starts
-    // orthogonal to the graph plane (z = 0 for all nodes).
-    let mut cam_cmd:       Signal<Option<CameraCommand>> = use_hook(|| Signal::new(None));
-    let mut cam_seq:       Signal<u64>                   = use_hook(|| Signal::new(0_u64));
-    let mut last_cam_root: Signal<Option<String>>        = use_hook(|| Signal::new(None));
+    // Fire a one-time camera reset the first time a layout loads for each
+    // root_id, and again whenever the layout mode changes.
+    let mut cam_cmd:        Signal<Option<CameraCommand>> = use_hook(|| Signal::new(None));
+    let mut cam_seq:        Signal<u64>                   = use_hook(|| Signal::new(0_u64));
+    let mut last_cam_root:  Signal<Option<String>>        = use_hook(|| Signal::new(None));
+    let mut last_cam_mode:  Signal<Option<LayoutMode>>    = use_hook(|| Signal::new(None));
 
     // ── Lifecycle logging ─────────────────────────────────────────────────
     tracing::debug!(target: T, rid = %root_id, "mount");
@@ -128,7 +147,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let layout = match cache.get(&cache_key) {
         Some(layout) => {
             tracing::debug!(target: T, rid = %root_id, nodes = layout.nodes.len(), "cache_hit");
-            layout
+            lift_2d(layout, layout_mode)
         }
         None => {
             match fetch_state {
@@ -169,13 +188,20 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let nodes = layout.nodes.clone();
     let node_count = nodes.len();
 
-    // Issue a one-time camera reset the first time a layout for this root_id
-    // becomes available, so the view starts orthogonal to the flat z=0 plane.
-    if last_cam_root.read().as_deref() != Some(root_id.as_str()) {
-        last_cam_root.set(Some(root_id.clone()));
-        // Angled view so the 3-D XZ spread within each hierarchy level
-        // is visible together with the Y-axis depth separation.
-        cam_cmd.set(Some(CameraCommand::ResetTo { yaw: 0.3, pitch: 0.4 }));
+    // Issue a camera reset when root_id changes OR when layout_mode changes.
+    let root_changed = last_cam_root.read().as_deref() != Some(root_id.as_str());
+    let mode_changed = *last_cam_mode.read() != Some(layout_mode);
+    if root_changed || mode_changed {
+        if root_changed { last_cam_root.set(Some(root_id.clone())); }
+        if mode_changed { last_cam_mode.set(Some(layout_mode)); }
+        // Camera angle depends on layout mode:
+        // Hierarchical3D — angled view to show both Y depth and XZ spread.
+        // Flat2D — top-down so the 2-D layout reads like a flat diagram.
+        let (yaw, pitch) = match layout_mode {
+            LayoutMode::Hierarchical3D => (0.3_f32, 0.4_f32),
+            LayoutMode::Flat2D         => (0.0_f32, 0.0_f32),
+        };
+        cam_cmd.set(Some(CameraCommand::ResetTo { yaw, pitch }));
         let next_seq = *cam_seq.peek() + 1;
         cam_seq.set(next_seq);
     }
@@ -185,6 +211,10 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
             layout: layout,
             camera_command: *cam_cmd.read(),
             camera_command_seq: *cam_seq.read(),
+            projection: projection,
+            layout_mode: layout_mode,
+            on_layout_mode_change: on_layout_mode_change,
+            on_projection_change: on_projection_change,
             div {
                 id: "graph3d-nodes",
                 style: "position: absolute; inset: 0; pointer-events: none;",

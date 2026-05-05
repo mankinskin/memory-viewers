@@ -9,7 +9,7 @@
 
 use dioxus::prelude::*;
 
-use viewer_api_dioxus::{HamburgerIcon, Header, Layout, Sidebar, ThemeSettings};
+use viewer_api_dioxus::{HamburgerIcon, Header, Layout, LayoutMode, Projection, Sidebar, ThemeSettings};
 
 use crate::api::{HttpTicketBackend, TicketBackend};
 use crate::types::TicketSummary;
@@ -93,6 +93,9 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut refresh_counter: Signal<u32> = use_signal(|| 0);
     // ── View mode: "split" | "graph" | "content" ─────────────────────
     let mut view_mode: Signal<String> = use_signal(|| "split".to_string());
+    // ── Graph settings ────────────────────────────────────────────────
+    let mut graph_layout_mode: Signal<LayoutMode> = use_signal(LayoutMode::default);
+    let mut graph_projection:  Signal<Projection> = use_signal(Projection::default);
     // ── Selected file: (ticket_id, relative_path) ────────────────────
     // Set when the user clicks a file sub-row in the sidebar.
     let mut selected_file: Signal<Option<(String, String)>> = use_signal(|| None);
@@ -459,6 +462,7 @@ pub fn TicketListPage(workspace: String) -> Element {
                                         if d_collapsed { "☰ Details ›" } else { "☰ Details ‹" }
                                     }
                                 }
+
                             }
                         }
                     }
@@ -475,6 +479,10 @@ pub fn TicketListPage(workspace: String) -> Element {
                                     workspace: ws_for_detail.clone(),
                                     root_id: id.clone(),
                                     selected_node_id: graph_content_id.read().clone(),
+                                    layout_mode: *graph_layout_mode.read(),
+                                    projection: *graph_projection.read(),
+                                    on_layout_mode_change: move |m| graph_layout_mode.set(m),
+                                    on_projection_change: move |p| graph_projection.set(p),
                                     on_select: move |new_id: String| {
                                         // Graph node click: only update the content panel preview.
                                         // It does NOT change the primary list selection or graph root.

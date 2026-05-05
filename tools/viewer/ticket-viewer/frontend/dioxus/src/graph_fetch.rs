@@ -26,7 +26,6 @@ use futures_util::pin_mut;
 use gloo_timers::future::TimeoutFuture;
 
 use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::graph3d::lift_2d;
 use crate::layout::GraphLayout;
 use crate::GraphCache;
 
@@ -258,7 +257,7 @@ impl GraphFetchService {
         &self,
         workspace: &str,
         root_id: &str,
-    ) -> Result<viewer_api_dioxus::Layout3D, (String, u8)> {
+    ) -> Result<GraphLayout, (String, u8)> {
         let mut last_error = String::from("unknown error");
 
         for attempt in 0..=MAX_RETRIES {
@@ -282,7 +281,7 @@ impl GraphFetchService {
         Err((last_error, MAX_RETRIES + 1))
     }
 
-    async fn fetch_once_with_timeout(workspace: &str, root_id: &str) -> Result<viewer_api_dioxus::Layout3D, String> {
+    async fn fetch_once_with_timeout(workspace: &str, root_id: &str) -> Result<GraphLayout, String> {
         let backend = HttpTicketBackend::new(None);
         let fetch_fut = async move { backend.get_subgraph(workspace, root_id, 4).await };
         let timeout_fut = TimeoutFuture::new(REQUEST_TIMEOUT_MS);
@@ -292,7 +291,7 @@ impl GraphFetchService {
         match futures_util::future::select(fetch_fut, timeout_fut).await {
             futures_util::future::Either::Left((fetch_result, _)) => {
                 match fetch_result {
-                    Ok(resp) => Ok(lift_2d(GraphLayout::build(resp.nodes, resp.edges))),
+                    Ok(resp) => Ok(GraphLayout::build(resp.nodes, resp.edges)),
                     Err(e) => Err(format!("request failed: {e}")),
                 }
             }
