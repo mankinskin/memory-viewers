@@ -205,23 +205,23 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                 key: "{node_id}",
                                 class: "{card_class}",
                                 "data-node-idx": "{idx}",
-                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 220px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 6px; background: rgba(30,30,40,0.92); backdrop-filter: blur(2px); padding: 6px 8px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 2px 8px rgba(0,0,0,0.5);",
+                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 260px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 7px; background: rgba(30,30,40,0.92); backdrop-filter: blur(2px); padding: 9px 11px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 3px 12px rgba(0,0,0,0.6);",
                                 onclick: move |evt: Event<MouseData>| {
                                     evt.stop_propagation();
                                     on_select.call(node_id_click.clone());
                                 },
                                 div {
-                                    style: "font-size: 12px; font-weight: 600; color: #e8e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                                    style: "font-size: 13px; font-weight: 600; color: #e8e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
                                     "{title}"
                                 }
                                 div {
-                                    style: "display: flex; align-items: center; gap: 6px; margin-top: 3px;",
+                                    style: "display: flex; align-items: center; gap: 6px; margin-top: 4px;",
                                     span {
-                                        style: "font-size: 10px; color: {color}; font-weight: 500;",
+                                        style: "font-size: 11px; color: {color}; font-weight: 500;",
                                         "{state_str}"
                                     }
                                     span {
-                                        style: "font-size: 9px; color: #888;",
+                                        style: "font-size: 10px; color: #888;",
                                         "{short_id}"
                                     }
                                 }

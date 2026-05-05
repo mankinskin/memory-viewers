@@ -103,17 +103,17 @@ impl GraphLayout {
         layout
     }
 
-    /// Place nodes in a grid where each row corresponds to a BFS depth level.
+    /// Place nodes in rows by BFS depth (hierarchy), then refine X positions
+    /// with a horizontal-only force simulation so connected nodes cluster
+    /// together while same-layer nodes spread apart naturally.
     ///
-    /// * Y axis: `depth * LAYER_SPACING` — deeper nodes are lower on screen.
-    /// * X axis: nodes within a row are sorted by priority then title and
-    ///   distributed evenly, centred around x = 0.
+    /// * Y axis: `depth * LAYER_SPACING` — deeper dependencies are lower.
+    /// * X axis: initial even distribution, then force-refined horizontally.
     fn hierarchical_layout(&mut self) {
-        // Pixel spacing constants.
-        // Larger values spread nodes further apart so edge beams are clearly
-        // visible between adjacent cards.
-        const LAYER_SPACING: f64 = 280.0; // vertical gap between depth rows
-        const COL_SPACING: f64 = 360.0;   // horizontal gap between nodes in a row
+        // Vertical gap between depth layers (dependency hierarchy).
+        const LAYER_SPACING: f64 = 300.0;
+        // Initial horizontal spacing before force refinement.
+        const COL_SPACING: f64 = 360.0;
 
         // Group node indices by depth.
         let mut by_depth: HashMap<usize, Vec<usize>> = HashMap::new();
@@ -150,8 +150,95 @@ impl GraphLayout {
             }
         }
 
-        // Translate so the layout is centred vertically around y = 0.
+        // Centre vertically around y = 0.
         self.centre_y();
+
+        // Refine X positions: related nodes attract, same-layer nodes repel.
+        self.horizontal_force_refinement(150);
+    }
+
+    /// Horizontal-only force simulation that keeps the depth-layer Y positions
+    /// fixed while letting nodes slide in X.
+    ///
+    /// * Same-layer nodes repel each other to prevent crowding.
+    /// * Edge-connected nodes attract in X so subtrees cluster under their
+    ///   parent, reducing visible edge crossings.
+    fn horizontal_force_refinement(&mut self, steps: usize) {
+        let n = self.nodes.len();
+        if n <= 1 {
+            return;
+        }
+
+        // Pre-compute (from_idx, to_idx) for every edge to avoid borrow
+        // conflicts inside the hot loop.
+        let edge_pairs: Vec<(usize, usize)> = {
+            let id_to_idx: HashMap<&str, usize> = self
+                .nodes
+                .iter()
+                .enumerate()
+                .map(|(i, nd)| (nd.id.as_str(), i))
+                .collect();
+            self.edges
+                .iter()
+                .filter_map(|e| {
+                    let i = id_to_idx.get(e.from.as_str()).copied()?;
+                    let j = id_to_idx.get(e.to.as_str()).copied()?;
+                    Some((i, j))
+                })
+                .collect()
+        };
+
+        // Spring constant: pulls connected nodes toward the same X column.
+        const SPRING_K: f64 = 0.06;
+        // Repulsion strength between node pairs.
+        const REPULSION: f64 = 90_000.0;
+        // Minimum separation used in the repulsion denominator (px).
+        const MIN_DIST: f64 = 15.0;
+        // Velocity damping per step.
+        const DAMPING: f64 = 0.75;
+        const DT: f64 = 1.0;
+
+        for _ in 0..steps {
+            let mut fx = vec![0.0_f64; n];
+
+            // X-axis repulsion between every pair of nodes.
+            // Repulsion decays for nodes far apart in Y (cross-layer) so that
+            // the force mainly keeps same-row siblings spread out.
+            for i in 0..n {
+                for j in (i + 1)..n {
+                    let dx = self.nodes[i].x - self.nodes[j].x;
+                    let dy = (self.nodes[i].y - self.nodes[j].y).abs();
+                    // Weight decays smoothly with inter-layer distance.
+                    let layer_w = 1.0 / (1.0 + dy / 250.0);
+                    let d = dx.abs().max(MIN_DIST);
+                    let sign = if dx >= 0.0 { 1.0 } else { -1.0 };
+                    let f = REPULSION * layer_w / (d * d) * sign;
+                    fx[i] += f;
+                    fx[j] -= f;
+                }
+            }
+
+            // X-axis spring attraction along dependency edges.
+            // Pulls parent and child toward the same X so edges tend to be
+            // vertical, grouping related subtrees together.
+            for &(i, j) in &edge_pairs {
+                let dx = self.nodes[j].x - self.nodes[i].x;
+                let sfx = SPRING_K * dx;
+                fx[i] += sfx;
+                fx[j] -= sfx;
+            }
+
+            // Integrate X only; Y is frozen to preserve depth layers.
+            for i in 0..n {
+                self.nodes[i].vx = (self.nodes[i].vx + fx[i] * DT) * DAMPING;
+                self.nodes[i].x += self.nodes[i].vx * DT;
+            }
+        }
+
+        // Zero velocities so the layout is stable when re-used.
+        for nd in &mut self.nodes {
+            nd.vx = 0.0;
+        }
     }
 
     /// Return the centre of mass of all node positions.
