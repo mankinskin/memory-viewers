@@ -9,7 +9,7 @@
 
 use dioxus::prelude::*;
 
-use viewer_api_dioxus::{HamburgerIcon, Header, Layout, LayoutMode, Projection, Sidebar, ThemeSettings};
+use viewer_api_dioxus::{HamburgerIcon, Header, Layout, LayoutMode, PanelResizer, Projection, Sidebar, ThemeSettings};
 
 use crate::api::{HttpTicketBackend, TicketBackend};
 use crate::types::TicketSummary;
@@ -93,9 +93,12 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut refresh_counter: Signal<u32> = use_signal(|| 0);
     // ── View mode: "split" | "graph" | "content" ─────────────────────
     let mut view_mode: Signal<String> = use_signal(|| "split".to_string());
-    // ── Graph settings ────────────────────────────────────────────────
+    // ── Graph settings + panel width state ──────────────────────────────
     let mut graph_layout_mode: Signal<LayoutMode> = use_signal(LayoutMode::default);
     let mut graph_projection:  Signal<Projection> = use_signal(Projection::default);
+    // Initial widths for the resizable graph and detail panels.
+    let mut graph_panel_width:  Signal<f64> = use_signal(|| 320.0_f64);
+    let mut detail_panel_width: Signal<f64> = use_signal(|| 240.0_f64);
     // ── Selected file: (ticket_id, relative_path) ────────────────────
     // Set when the user clicks a file sub-row in the sidebar.
     let mut selected_file: Signal<Option<(String, String)>> = use_signal(|| None);
@@ -474,7 +477,13 @@ pub fn TicketListPage(workspace: String) -> Element {
                         if view_mode.read().as_str() != "content" && !graph_panel_collapsed {
                             div {
                                 key: "{id}",
-                                style: "flex: 1; position: relative; min-width: 0; overflow: hidden;",
+                                // In graph-only mode: flex: 1 (fills all space).
+                                // In split mode: explicit pixel width so it's resizable.
+                                style: if view_mode.read().as_str() == "graph" {
+                                    "flex: 1; position: relative; min-width: 0; overflow: hidden;".to_string()
+                                } else {
+                                    format!("width: {}px; flex-shrink: 0; position: relative; min-width: 0; overflow: hidden;", *graph_panel_width.read())
+                                },
                                 DepGraph {
                                     workspace: ws_for_detail.clone(),
                                     root_id: id.clone(),
@@ -487,6 +496,15 @@ pub fn TicketListPage(workspace: String) -> Element {
                                         // Graph node click: only update the content panel preview.
                                         // It does NOT change the primary list selection or graph root.
                                         graph_content_id.set(Some(new_id));
+                                    },
+                                }
+                            }
+                            // Resizer between graph and content (split mode only).
+                            if view_mode.read().as_str() == "split" {
+                                PanelResizer {
+                                    on_resize: move |delta: f64| {
+                                        let w = (*graph_panel_width.read() + delta).max(150.0);
+                                        graph_panel_width.set(w);
                                     },
                                 }
                             }
@@ -565,10 +583,20 @@ pub fn TicketListPage(workspace: String) -> Element {
                                     .clone()
                                     .unwrap_or_else(|| id.clone());
                                 rsx! {
-                                    TicketDetail {
-                                        key: "{detail_id}",
-                                        workspace: ws_for_detail.clone(),
-                                        id: detail_id,
+                                    // Resizer between content panel and detail panel.
+                                    PanelResizer {
+                                        on_resize: move |delta: f64| {
+                                            let w = (*detail_panel_width.read() - delta).max(150.0);
+                                            detail_panel_width.set(w);
+                                        },
+                                    }
+                                    div {
+                                        style: "width: {detail_panel_width}px; flex-shrink: 0; overflow: hidden; height: 100%;",
+                                        TicketDetail {
+                                            key: "{detail_id}",
+                                            workspace: ws_for_detail.clone(),
+                                            id: detail_id,
+                                        }
                                     }
                                 }
                             }

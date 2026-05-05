@@ -731,7 +731,7 @@ pub fn TicketDetail(workspace: String, id: String) -> Element {
         // ── Sidebar panel ────────────────────────────────────────────
         div {
             style: "
-                width: 300px; min-width: 300px; height: 100%;
+                width: 100%; min-width: 0; height: 100%;
                 overflow-y: auto; overflow-x: hidden;
                 background: var(--panel-bg-strong);
                 backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
