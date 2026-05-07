@@ -1,0 +1,6 @@
+[submodule "memory-api"]
+	path = memory-api
+	url = https://github.com/mankinskin/memory-api
+[submodule "viewer-api"]
+	path = viewer-api
+	url = https://github.com/mankinskin/viewer-api
