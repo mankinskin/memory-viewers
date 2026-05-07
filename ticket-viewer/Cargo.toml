@@ -10,11 +10,11 @@ path = "src/main.rs"
 
 [dependencies]
 # Ticket crates
-ticket-api = { path = "../../../../memory-api/crates/ticket-api" }
-ticket-http = { path = "../../../../memory-api/tools/http/ticket-http" }
+ticket-api = { path = "../memory-api/crates/ticket-api" }
+ticket-http = { path = "../memory-api/tools/http/ticket-http" }
 
 # Shared viewer infrastructure
-viewer-api = { path = "../../../../viewer-api/tools/viewer/viewer-api" }
+viewer-api = { path = "../viewer-api/viewer-api" }
 
 # Async runtime
 tokio = { version = "1", features = ["full"] }
