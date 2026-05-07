@@ -20,7 +20,7 @@ use std::collections::HashMap;
 
 use dioxus::prelude::*;
 
-use viewer_api_dioxus::{can_use_webgpu_graph3d, CameraCommand, EdgeRef3D, Layout3D, Node3D, Projection};
+use viewer_api_dioxus::{can_use_webgpu_graph3d, CameraCommand, EdgeRef3D, Layout3D, Node3D, NodeCardProfile, Projection};
 
 use crate::components::ticket_card;
 use crate::layout::{GraphLayout, LayoutMode};
@@ -69,7 +69,7 @@ pub fn lift_2d(gl: GraphLayout, mode: LayoutMode) -> Layout3D {
         })
         .collect();
 
-    Layout3D::new(nodes, edges)
+    Layout3D::new(nodes, edges).with_node_card_profile(NodeCardProfile::TicketWide)
 }
 
 #[derive(Props, Clone, PartialEq)]
@@ -237,7 +237,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                 key: "{node_id}",
                                 class: "{card_class}",
                                 "data-node-idx": "{idx}",
-                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 260px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 7px; background: rgba(30,30,40,0.92); backdrop-filter: blur(2px); padding: 9px 11px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 3px 12px rgba(0,0,0,0.6);",
+                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 260px; height: 56px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 7px; background: rgba(30,30,40,0.92); backdrop-filter: blur(2px); padding: 9px 11px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 3px 12px rgba(0,0,0,0.6);",
                                 onclick: move |evt: Event<MouseData>| {
                                     evt.stop_propagation();
                                     on_select.call(node_id_click.clone());
