@@ -6,6 +6,7 @@ node_modules/
 tools/viewer/**/static/
 tools/viewer/**/dist/
 tools/context-editor/**/dist/
+**/frontend/dioxus/dist/
 
 # Generated Playwright output
 **/playwright-report/
