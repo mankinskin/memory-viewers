@@ -119,12 +119,22 @@ pub struct HealthResponse {
 // ── Graph ─────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct SpecGraphMetrics {
+    pub child_count: usize,
+    pub code_ref_count: usize,
+    pub section_count: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct SpecGraphNode {
     pub id:        String,
     pub slug:      Option<String>,
     pub title:     Option<String>,
     pub state:     Option<String>,
     pub component: Option<String>,
+    pub scope:     Option<String>,
+    pub summary:   Option<String>,
+    pub metrics:   SpecGraphMetrics,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]

@@ -99,11 +99,11 @@ pub struct LayoutParams {
 impl Default for LayoutParams {
     fn default() -> Self {
         Self {
-            spread:     1.0,
-            y_spacing:  0.8,
+            spread:     1.35,
+            y_spacing:  1.0,
             iterations: 120,
-            link_dist:  3.0,
-            repulsion:  2.0,
+            link_dist:  3.8,
+            repulsion:  2.4,
         }
     }
 }
@@ -381,13 +381,35 @@ fn layout_grid(nodes: &[SpecGraphNode], params: LayoutParams) -> Vec<Node3D> {
 
 fn state_color(state: Option<&str>) -> &'static str {
     match state.unwrap_or("draft") {
-        "draft"        => "#9ca3af",
-        "review"       => "#f59e0b",
-        "approved"     => "#10b981",
-        "implemented"  => "#3b82f6",
-        "deprecated"   => "#6b7280",
-        _              => "#a78bfa",
+        "draft" => "#9ca3af",
+        "ready" => "#60a5fa",
+        "reviewed" => "#f59e0b",
+        "approved" => "#10b981",
+        "archived" => "#6b7280",
+        _ => "#a78bfa",
     }
+}
+
+fn short_id(id: &str) -> String {
+    id.chars().take(8).collect()
+}
+
+fn node_title(node: &SpecGraphNode) -> String {
+    node.title
+        .clone()
+        .or_else(|| node.slug.clone())
+        .unwrap_or_else(|| short_id(&node.id))
+}
+
+fn node_summary(node: &SpecGraphNode) -> String {
+    node.summary
+        .clone()
+        .unwrap_or_else(|| "No body summary yet.".to_string())
+}
+
+fn metric_text(count: usize, singular: &str, plural: &str) -> String {
+    let noun = if count == 1 { singular } else { plural };
+    format!("{count} {noun}")
 }
 
 // ── 2-D Tree (tidy tree in the XZ plane) ─────────────────────────────────────
@@ -626,16 +648,24 @@ pub fn SpecGraphPage() -> Element {
                     for (i, n) in nodes.iter().enumerate() {
                         {
                             let id    = n.id.clone();
-                            let title = n.label.clone().unwrap_or_else(|| "Untitled".into());
+                            let spec = nodes_raw[i].clone();
+                            let title = node_title(&spec);
+                            let slug = spec.slug.clone().unwrap_or_else(|| short_id(&id));
+                            let summary = node_summary(&spec);
+                            let component = spec.component.clone().unwrap_or_else(|| "uncategorized".to_string());
+                            let scope = spec.scope.clone().unwrap_or_else(|| "unspecified scope".to_string());
                             let state = n.state.clone().unwrap_or_else(|| "draft".into());
                             let color = state_color(Some(state.as_str()));
+                            let child_metric = metric_text(spec.metrics.child_count, "child", "children");
+                            let ref_metric = metric_text(spec.metrics.code_ref_count, "ref", "refs");
+                            let section_metric = metric_text(spec.metrics.section_count, "section", "sections");
                             let id_click = id.clone();
                             rsx! {
                                 div {
                                     key: "{id}",
                                     "data-node-idx": "{i}",
                                     class: "graph-node-card",
-                                    style: "border-left: 3px solid {color};",
+                                    style: "border-left: 4px solid {color}; min-width: 17.5rem; max-width: 19.5rem; padding: 0.8rem 0.95rem; border-radius: 14px; border: 1px solid rgba(255,255,255,0.08); background: rgba(17,24,39,0.94); box-shadow: 0 16px 34px rgba(0,0,0,0.26); display: flex; flex-direction: column; gap: 0.5rem;",
                                     onclick: move |evt: Event<MouseData>| {
                                         evt.stop_propagation();
                                         // Click opens the preview sidebar; a
@@ -644,15 +674,51 @@ pub fn SpecGraphPage() -> Element {
                                         preview_id.set(Some(id_click.clone()));
                                     },
                                     div {
+                                        style: "display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem;",
+                                        div {
+                                            style: "display: flex; flex-direction: column; gap: 0.2rem; min-width: 0;",
+                                            div {
+                                                style: "font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(226,232,240,0.68); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                                                "{component}"
+                                            }
+                                            div {
+                                                style: "font-size: 0.72rem; color: rgba(148,163,184,0.92); font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                                                "{slug}"
+                                            }
+                                        }
+                                        span {
+                                            class: "graph-node-card__state",
+                                            style: "color: {color}; border: 1px solid {color}; border-radius: 999px; padding: 0.18rem 0.45rem; font-size: 0.7rem; white-space: nowrap;",
+                                            "{state}"
+                                        }
+                                    }
+                                    div {
                                         class: "graph-node-card__title",
+                                        style: "font-size: 1rem; font-weight: 700; line-height: 1.2; color: #f8fafc; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;",
                                         "{title}"
                                     }
                                     div {
+                                        style: "font-size: 0.82rem; line-height: 1.45; color: rgba(226,232,240,0.86); min-height: 3.35rem; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden;",
+                                        "{summary}"
+                                    }
+                                    div {
                                         class: "graph-node-card__meta",
+                                        style: "font-size: 0.72rem; color: rgba(148,163,184,0.95); overflow: hidden; text-overflow: ellipsis; white-space: nowrap;",
+                                        "scope: {scope}"
+                                    }
+                                    div {
+                                        style: "display: flex; flex-wrap: wrap; gap: 0.35rem;",
                                         span {
-                                            class: "graph-node-card__state",
-                                            style: "color: {color};",
-                                            "{state}"
+                                            style: "font-size: 0.72rem; color: #dbeafe; background: rgba(59,130,246,0.14); border: 1px solid rgba(96,165,250,0.22); border-radius: 999px; padding: 0.18rem 0.48rem;",
+                                            "{child_metric}"
+                                        }
+                                        span {
+                                            style: "font-size: 0.72rem; color: #fef3c7; background: rgba(245,158,11,0.13); border: 1px solid rgba(245,158,11,0.22); border-radius: 999px; padding: 0.18rem 0.48rem;",
+                                            "{ref_metric}"
+                                        }
+                                        span {
+                                            style: "font-size: 0.72rem; color: #dcfce7; background: rgba(16,185,129,0.12); border: 1px solid rgba(16,185,129,0.2); border-radius: 999px; padding: 0.18rem 0.48rem;",
+                                            "{section_metric}"
                                         }
                                     }
                                 }
