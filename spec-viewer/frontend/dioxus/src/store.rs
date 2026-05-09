@@ -7,7 +7,7 @@
 use dioxus::prelude::*;
 use gloo_events::EventListener;
 use serde::{Deserialize, Serialize};
-use viewer_api_dioxus::Layout3D;
+use viewer_api_dioxus::{Camera, Layout3D};
 use viewer_api_dioxus::{
     get_hash_param, remove_hash_param, set_hash_param, ColonSegmented, PathCodec,
 };
@@ -172,6 +172,7 @@ pub struct SpecGraphStore {
     pub auto_apply: Signal<bool>,
     pub panel_open: Signal<bool>,
     pub current_layout: Signal<Option<Layout3D>>,
+    pub current_camera: Signal<Option<Camera>>,
     pub layout_generation: Signal<u64>,
     pub applied_layout_generation: Signal<u64>,
 }
@@ -190,6 +191,7 @@ impl SpecGraphStore {
             auto_apply: use_signal(|| true),
             panel_open: use_signal(|| true),
             current_layout: use_signal(|| None),
+            current_camera: use_signal(|| None),
             layout_generation: use_signal(|| 0),
             applied_layout_generation: use_signal(|| 0),
         }

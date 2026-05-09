@@ -1,5 +1,5 @@
 use dioxus::prelude::*;
-use viewer_api_dioxus::{CameraCommand, Layout3D};
+use viewer_api_dioxus::{Camera, CameraCommand, Layout3D};
 use wasm_bindgen_futures::spawn_local;
 
 use crate::api;
@@ -48,12 +48,16 @@ pub fn SpecGraphPage() -> Element {
         div { class: "graph-overlay",
             viewer_api_dioxus::Graph3D {
                 layout: layout.clone(),
+                initial_camera: store.current_camera.read().clone(),
                 container_id: "spec-graph3d-container".to_string(),
                 container_style: "position: absolute; inset: 0; overflow: hidden; user-select: none; cursor: grab;".to_string(),
                 camera_command,
                 camera_command_seq,
                 on_layout_change: Some(EventHandler::new(move |layout: Layout3D| {
                     store.current_layout.set(Some(layout));
+                })),
+                on_camera_change: Some(EventHandler::new(move |camera: Camera| {
+                    store.current_camera.set(Some(camera));
                 })),
                 {render_graph_node_cards(&nodes, &nodes_raw, preview_id)}
                 div {
