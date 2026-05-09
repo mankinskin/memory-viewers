@@ -11,8 +11,9 @@ use std::collections::HashSet;
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
-    expand_path_to, BreadcrumbItem, Breadcrumbs, Card, CardGrid, CardSection, Header,
-    HeaderActions, Layout, Overlay, Sidebar, TabBar, TabItem, TabsStore, ThemeSettings,
+    expand_path_to, is_mobile_sidebar_viewport, BreadcrumbItem, Breadcrumbs, Card, CardGrid,
+    CardSection, Header, HamburgerIcon, HeaderActions, Layout, Overlay, Sidebar, TabBar,
+    TabItem, TabsStore, ThemeSettings,
 };
 use wasm_bindgen_futures::spawn_local;
 
@@ -160,8 +161,26 @@ pub fn SpecListPage() -> Element {
     });
 
     let mut sidebar_collapsed = use_signal(|| false);
+    let mut mobile_sidebar_open = use_signal(|| false);
     let mut show_theme_settings = use_signal(|| false);
     let mut filter_panel_open = use_signal(|| false);
+    let sidebar_is_mobile = is_mobile_sidebar_viewport();
+    let sidebar_button_active = if sidebar_is_mobile {
+        *mobile_sidebar_open.read()
+    } else {
+        !*sidebar_collapsed.read()
+    };
+    let sidebar_button_label = if sidebar_is_mobile {
+        if *mobile_sidebar_open.read() {
+            "Close specifications sidebar"
+        } else {
+            "Open specifications sidebar"
+        }
+    } else if *sidebar_collapsed.read() {
+        "Open specifications sidebar"
+    } else {
+        "Collapse specifications sidebar"
+    };
 
     let mut specs: Signal<Vec<SpecSummary>> = use_signal(Vec::new);
     let mut loading: Signal<bool> = use_signal(|| true);
@@ -283,6 +302,20 @@ pub fn SpecListPage() -> Element {
             header: rsx! {
                 Header {
                     left: rsx! {
+                        button {
+                            class: if sidebar_button_active { "btn btn-icon btn-active" } else { "btn btn-icon" },
+                            aria_label: sidebar_button_label,
+                            title: sidebar_button_label,
+                            onclick: move |_| {
+                                if is_mobile_sidebar_viewport() {
+                                    let next = !*mobile_sidebar_open.read();
+                                    mobile_sidebar_open.set(next);
+                                } else {
+                                    sidebar_collapsed.toggle();
+                                }
+                            },
+                            HamburgerIcon {}
+                        }
                         span { class: "header-icon", "📐" }
                         span { class: "header-title", "Spec Viewer" }
                     },
@@ -305,6 +338,8 @@ pub fn SpecListPage() -> Element {
                                 show_theme_settings.set(!cur);
                             })),
                             filter_active: *filter_panel_open.read(),
+                            has_active_filters: !filter.read().trim().is_empty()
+                                || !state_filter.read().is_empty(),
                         }
                     },
                 }
@@ -313,45 +348,26 @@ pub fn SpecListPage() -> Element {
                 title: "Specifications".to_string(),
                 collapsed: *sidebar_collapsed.read(),
                 on_toggle: move |_| {
-                    let cur = *sidebar_collapsed.read();
-                    sidebar_collapsed.set(!cur);
+                    if is_mobile_sidebar_viewport() {
+                        mobile_sidebar_open.set(false);
+                    } else {
+                        let cur = *sidebar_collapsed.read();
+                        sidebar_collapsed.set(!cur);
+                    }
                 },
+                mobile_open: Some(*mobile_sidebar_open.read()),
+                on_mobile_open_change: move |open| mobile_sidebar_open.set(open),
                 SpecTree {
                         specs: specs.read().clone(),
                         loading: *loading.read(),
                         error: list_error.read().clone(),
                         filter: filter.read().clone(),
                         on_filter_change: move |v: String| {
-                            filter.set(v.clone());
-                            // Re-run search if it looks like a search query
-                            if v.len() >= 2 {
-                                let q = v.clone();
-                                spawn_local(async move {
-                                    if let Ok(resp) = api::search_specs(&q, Some(50)).await {
-                                        specs.set(resp.items);
-                                    }
-                                });
-                            } else if v.is_empty() {
-                                let s = state_filter.read().clone();
-                                let s_opt = if s.is_empty() { None } else { Some(s) };
-                                spawn_local(async move {
-                                    if let Ok(resp) = api::list_specs(s_opt.as_deref(), None, None).await {
-                                        specs.set(resp.items);
-                                    }
-                                });
-                            }
+                            filter.set(v);
                         },
                         state_filter: state_filter.read().clone(),
                         on_state_filter_change: move |v: String| {
-                            state_filter.set(v.clone());
-                            let s_opt = if v.is_empty() { None } else { Some(v) };
-                            let q = filter.read().clone();
-                            let q_opt = if q.is_empty() { None } else { Some(q) };
-                            spawn_local(async move {
-                                if let Ok(resp) = api::list_specs(s_opt.as_deref(), q_opt.as_deref(), None).await {
-                                    specs.set(resp.items);
-                                }
-                            });
+                            state_filter.set(v);
                         },
                         selected_id: tabs.active.read().clone(),
                         initially_expanded: initial_expanded_for(
@@ -362,6 +378,7 @@ pub fn SpecListPage() -> Element {
                             let label = label_for(&specs.peek(), &id);
                             tabs.open(id, label);
                             active_tab.set("body".to_string());
+                            mobile_sidebar_open.set(false);
                         },
                     }
                 }
@@ -439,7 +456,6 @@ pub fn SpecListPage() -> Element {
                         }
                     }
                     SpecDetail {
-                        key: "{id}",
                         spec_id: id,
                         active_tab: active_tab.read().clone(),
                         on_tab_change: move |tab| active_tab.set(tab),

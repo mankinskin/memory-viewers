@@ -9,7 +9,10 @@
 
 use dioxus::prelude::*;
 
-use viewer_api_dioxus::{HamburgerIcon, Header, Layout, LayoutMode, PanelResizer, Projection, Sidebar, ThemeSettings};
+use viewer_api_dioxus::{
+    is_mobile_sidebar_viewport, HamburgerIcon, Header, Layout, LayoutMode, PanelResizer,
+    Projection, Sidebar, SIDEBAR_MOBILE_BREAKPOINT_PX, ThemeSettings,
+};
 
 use crate::api::{HttpTicketBackend, TicketBackend};
 use crate::types::TicketSummary;
@@ -117,6 +120,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     const DETAIL_COLLAPSE_PX: u32 = 1160;
     const GRAPH_COLLAPSE_PX: u32 = 880;
     // Live viewport width — updated by the resize listener registered below.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut window_width: Signal<u32> = use_signal(|| {
         let w: u32 = {
             #[cfg(target_arch = "wasm32")]
@@ -241,6 +245,23 @@ pub fn TicketListPage(workspace: String) -> Element {
     let win_w = *window_width.read();
     let detail_is_collapsed = detail_panel_override.read().unwrap_or(win_w < DETAIL_COLLAPSE_PX);
     let graph_panel_collapsed = graph_panel_override.read().unwrap_or(win_w < GRAPH_COLLAPSE_PX);
+    let sidebar_is_mobile = (win_w as f64) <= SIDEBAR_MOBILE_BREAKPOINT_PX;
+    let sidebar_button_active = if sidebar_is_mobile {
+        *mobile_sidebar_open.read()
+    } else {
+        !*sidebar_collapsed.read()
+    };
+    let sidebar_button_label = if sidebar_is_mobile {
+        if *mobile_sidebar_open.read() {
+            "Close tickets sidebar"
+        } else {
+            "Open tickets sidebar"
+        }
+    } else if *sidebar_collapsed.read() {
+        "Open tickets sidebar"
+    } else {
+        "Collapse tickets sidebar"
+    };
 
     rsx! {
         SearchBar { workspace: workspace.clone() }
@@ -249,32 +270,17 @@ pub fn TicketListPage(workspace: String) -> Element {
             header: rsx! {
                 Header {
                     left: rsx! {
-                        // Sidebar toggle — always visible on desktop; also serves as the
-                        // mobile hamburger.  Collapses / expands the ticket list panel.
+                        // Sidebar toggle — collapses on desktop and opens/closes the
+                        // shared mobile drawer at the shared sidebar breakpoint.
                         button {
-                            class: "btn btn-icon",
-                            aria_label: if *sidebar_collapsed.read() { "Open sidebar" } else { "Close sidebar" },
+                            class: if sidebar_button_active { "btn btn-icon btn-active" } else { "btn btn-icon" },
+                            aria_label: sidebar_button_label,
+                            title: sidebar_button_label,
                             onclick: move |_| {
-                                if *sidebar_collapsed.read() {
-                                    sidebar_collapsed.set(false);
+                                if is_mobile_sidebar_viewport() {
+                                    let next = !*mobile_sidebar_open.read();
+                                    mobile_sidebar_open.set(next);
                                 } else {
-                                    // On desktop: toggle collapse.
-                                    // On mobile: open the drawer.
-                                    #[cfg(target_arch = "wasm32")]
-                                    {
-                                        use web_sys::window;
-                                        let is_mobile = window()
-                                            .and_then(|w| w.inner_width().ok())
-                                            .and_then(|v| v.as_f64())
-                                            .map(|f| f < 640.0)
-                                            .unwrap_or(false);
-                                        if is_mobile {
-                                            mobile_sidebar_open.set(true);
-                                        } else {
-                                            sidebar_collapsed.toggle();
-                                        }
-                                    }
-                                    #[cfg(not(target_arch = "wasm32"))]
                                     sidebar_collapsed.toggle();
                                 }
                             },
@@ -308,7 +314,13 @@ pub fn TicketListPage(workspace: String) -> Element {
                 title: "Tickets",
                 badge: if ticket_count > 0 { Some(ticket_count.to_string()) } else { None },
                 collapsed: *sidebar_collapsed.read(),
-                on_toggle: move |_| sidebar_collapsed.toggle(),
+                on_toggle: move |_| {
+                    if is_mobile_sidebar_viewport() {
+                        mobile_sidebar_open.set(false);
+                    } else {
+                        sidebar_collapsed.toggle();
+                    }
+                },
                 // Controlled mobile drawer — linked to the hamburger in the Header.
                 mobile_open: Some(*mobile_sidebar_open.read()),
                 on_mobile_open_change: move |open| mobile_sidebar_open.set(open),
