@@ -1,5 +1,8 @@
 use dioxus::prelude::*;
-use viewer_api_dioxus::{Header, Layout};
+use viewer_api_dioxus::{
+    Header,
+    Layout,
+};
 
 use crate::components::spec_graph::SpecGraphPage as SpecGraphView;
 

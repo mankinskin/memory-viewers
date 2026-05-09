@@ -10,13 +10,15 @@
 
 use std::collections::HashMap;
 
-use crate::types::{GraphEdgeItem, GraphNodeItem};
+use crate::types::{
+    GraphEdgeItem,
+    GraphNodeItem,
+};
 
 // ── Layout mode ────────────────────────────────────────────────────────────
 
 // Re-exported from viewer-api so callers don't need to import two crates.
 pub use viewer_api_dioxus::LayoutMode;
-
 
 /// One node in the rendered graph.  Coordinates are in layout-space pixels
 /// centred on (0, 0); the canvas/DOM layer applies pan + zoom on top.
@@ -76,7 +78,10 @@ fn priority_order(p: Option<&str>) -> u32 {
 impl GraphLayout {
     /// Build a hierarchical layout from raw API items using the default
     /// [`LayoutMode::Hierarchical3D`] algorithm.
-    pub fn build(api_nodes: Vec<GraphNodeItem>, api_edges: Vec<GraphEdgeItem>) -> Self {
+    pub fn build(
+        api_nodes: Vec<GraphNodeItem>,
+        api_edges: Vec<GraphEdgeItem>,
+    ) -> Self {
         Self::build_with_mode(api_nodes, api_edges, LayoutMode::default())
     }
 
@@ -202,7 +207,10 @@ impl GraphLayout {
     ///   toward each other across the 3-D space of their layers.
     /// * Cross-layer repulsion decays with Y distance so nodes primarily
     ///   push away neighbours on the same or adjacent layers.
-    fn xz_force_refinement(&mut self, steps: usize) {
+    fn xz_force_refinement(
+        &mut self,
+        steps: usize,
+    ) {
         let n = self.nodes.len();
         if n <= 1 {
             return;
@@ -305,8 +313,10 @@ impl GraphLayout {
         if self.nodes.is_empty() {
             return (0.0, 0.0);
         }
-        let cx = self.nodes.iter().map(|n| n.x).sum::<f64>() / self.nodes.len() as f64;
-        let cy = self.nodes.iter().map(|n| n.y).sum::<f64>() / self.nodes.len() as f64;
+        let cx = self.nodes.iter().map(|n| n.x).sum::<f64>()
+            / self.nodes.len() as f64;
+        let cy = self.nodes.iter().map(|n| n.y).sum::<f64>()
+            / self.nodes.len() as f64;
         (cx, cy)
     }
 
@@ -316,14 +326,18 @@ impl GraphLayout {
         if self.nodes.is_empty() {
             return;
         }
-        let cy = self.nodes.iter().map(|n| n.y).sum::<f64>() / self.nodes.len() as f64;
+        let cy = self.nodes.iter().map(|n| n.y).sum::<f64>()
+            / self.nodes.len() as f64;
         for n in &mut self.nodes {
             n.y -= cy;
         }
     }
 
     /// Run `steps` force-simulation iterations (kept for the 3-D GPU path).
-    pub fn simulate(&mut self, steps: usize) {
+    pub fn simulate(
+        &mut self,
+        steps: usize,
+    ) {
         for _ in 0..steps {
             self.step();
         }

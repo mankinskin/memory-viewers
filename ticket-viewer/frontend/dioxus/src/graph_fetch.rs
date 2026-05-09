@@ -17,17 +17,28 @@
 //! `Graph3D` (due to fast ticket switching) cannot saturate the browser
 //! connection pool.
 
-use std::cell::RefCell;
-use std::collections::{HashMap, HashSet, VecDeque};
-use std::rc::Rc;
+use std::{
+    cell::RefCell,
+    collections::{
+        HashMap,
+        HashSet,
+        VecDeque,
+    },
+    rc::Rc,
+};
 
 use dioxus::prelude::*;
 use futures_util::pin_mut;
 use gloo_timers::future::TimeoutFuture;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::layout::GraphLayout;
-use crate::GraphCache;
+use crate::{
+    api::{
+        HttpTicketBackend,
+        TicketBackend,
+    },
+    layout::GraphLayout,
+    GraphCache,
+};
 
 const T: &str = "ticket_viewer::graph_fetch";
 const REQUEST_TIMEOUT_MS: u32 = 8_000;
@@ -40,12 +51,12 @@ const MAX_RETRIES: u8 = 1;
 struct FetchJob {
     cache_key: String,
     workspace: String,
-    root_id:   String,
+    root_id: String,
 }
 
 #[derive(Clone)]
 struct FetchFailure {
-    message:  String,
+    message: String,
     attempts: u8,
 }
 
@@ -74,8 +85,8 @@ pub enum GraphFetchState {
 /// Cloning shares the same `Rc<RefCell<Inner>>` and the same Dioxus signals.
 #[derive(Clone)]
 pub struct GraphFetchService {
-    inner:   Rc<RefCell<Inner>>,
-    cache:   GraphCache,
+    inner: Rc<RefCell<Inner>>,
+    cache: GraphCache,
     /// Bumped (incremented) every time a fetch completes and a new layout is
     /// inserted into the cache.  Components that call `version()` subscribe to
     /// this signal and are automatically scheduled for re-render.
@@ -86,7 +97,7 @@ impl GraphFetchService {
     /// Create a new service.  Call once from `use_context_provider` in `App`.
     pub fn new(cache: GraphCache) -> Self {
         Self {
-            inner:   Rc::new(RefCell::new(Inner {
+            inner: Rc::new(RefCell::new(Inner {
                 in_flight: HashSet::new(),
                 queue: VecDeque::new(),
                 active_fetches: 0,
@@ -106,7 +117,11 @@ impl GraphFetchService {
         *self.version.read()
     }
 
-    pub fn state_for(&self, workspace: &str, root_id: &str) -> GraphFetchState {
+    pub fn state_for(
+        &self,
+        workspace: &str,
+        root_id: &str,
+    ) -> GraphFetchState {
         let cache_key = format!("{workspace}:{root_id}");
         if self.cache.get(&cache_key).is_some() {
             return GraphFetchState::Ready;
@@ -124,7 +139,11 @@ impl GraphFetchService {
         GraphFetchState::Idle
     }
 
-    pub fn retry(&self, workspace: &str, root_id: &str) {
+    pub fn retry(
+        &self,
+        workspace: &str,
+        root_id: &str,
+    ) {
         let cache_key = format!("{workspace}:{root_id}");
         self.inner.borrow_mut().errors.remove(&cache_key);
         self.ensure_fetched(workspace, root_id);
@@ -138,7 +157,11 @@ impl GraphFetchService {
     /// * Cold       → spawns a fetch task that writes to the cache on success.
     ///
     /// Safe to call from any component render or effect body.
-    pub fn ensure_fetched(&self, workspace: &str, root_id: &str) {
+    pub fn ensure_fetched(
+        &self,
+        workspace: &str,
+        root_id: &str,
+    ) {
         let cache_key = format!("{workspace}:{root_id}");
 
         // Fast paths — no spawn needed.
@@ -168,7 +191,9 @@ impl GraphFetchService {
         }
 
         #[cfg(target_arch = "wasm32")]
-        web_sys::console::log_1(&format!("[graph_fetch] enqueue key={cache_key}").into());
+        web_sys::console::log_1(
+            &format!("[graph_fetch] enqueue key={cache_key}").into(),
+        );
 
         tracing::debug!(target: T, key = %cache_key, "ensure_fetched: queued fetch");
         self.pump_queue();
@@ -181,7 +206,9 @@ impl GraphFetchService {
             };
 
             #[cfg(target_arch = "wasm32")]
-            web_sys::console::log_1(&format!("[graph_fetch] spawn key={}", job.cache_key).into());
+            web_sys::console::log_1(
+                &format!("[graph_fetch] spawn key={}", job.cache_key).into(),
+            );
             tracing::debug!(target: T, key = %job.cache_key, "spawn_fetch");
 
             let mut svc = self.clone();
@@ -194,22 +221,27 @@ impl GraphFetchService {
                         {
                             let mut inner = svc.inner.borrow_mut();
                             inner.in_flight.remove(&key);
-                            inner.active_fetches = inner.active_fetches.saturating_sub(1);
+                            inner.active_fetches =
+                                inner.active_fetches.saturating_sub(1);
                             inner.errors.remove(&key);
                         }
                         #[cfg(target_arch = "wasm32")]
                         web_sys::console::log_1(
-                            &format!("[graph_fetch] fetch_ok key={key} nodes={n}").into(),
+                            &format!(
+                                "[graph_fetch] fetch_ok key={key} nodes={n}"
+                            )
+                            .into(),
                         );
                         tracing::debug!(target: T, key = %key, nodes = n, "fetch_ok");
                         // Bump version — wakes every Graph3D that subscribed.
                         svc.version += 1;
-                    }
+                    },
                     Err((message, attempts)) => {
                         {
                             let mut inner = svc.inner.borrow_mut();
                             inner.in_flight.remove(&key);
-                            inner.active_fetches = inner.active_fetches.saturating_sub(1);
+                            inner.active_fetches =
+                                inner.active_fetches.saturating_sub(1);
                             inner.errors.insert(
                                 key.clone(),
                                 FetchFailure {
@@ -234,7 +266,7 @@ impl GraphFetchService {
                         );
                         // Bump version so UI can transition from spinner to an error message.
                         svc.version += 1;
-                    }
+                    },
                 }
 
                 // Continue draining queued requests after each completion.
@@ -274,30 +306,32 @@ impl GraphFetchService {
                             "retrying fetch after failure"
                         );
                     }
-                }
+                },
             }
         }
 
         Err((last_error, MAX_RETRIES + 1))
     }
 
-    async fn fetch_once_with_timeout(workspace: &str, root_id: &str) -> Result<GraphLayout, String> {
+    async fn fetch_once_with_timeout(
+        workspace: &str,
+        root_id: &str,
+    ) -> Result<GraphLayout, String> {
         let backend = HttpTicketBackend::new(None);
-        let fetch_fut = async move { backend.get_subgraph(workspace, root_id, 4).await };
+        let fetch_fut =
+            async move { backend.get_subgraph(workspace, root_id, 4).await };
         let timeout_fut = TimeoutFuture::new(REQUEST_TIMEOUT_MS);
         pin_mut!(fetch_fut);
         pin_mut!(timeout_fut);
 
         match futures_util::future::select(fetch_fut, timeout_fut).await {
-            futures_util::future::Either::Left((fetch_result, _)) => {
+            futures_util::future::Either::Left((fetch_result, _)) =>
                 match fetch_result {
                     Ok(resp) => Ok(GraphLayout::build(resp.nodes, resp.edges)),
                     Err(e) => Err(format!("request failed: {e}")),
-                }
-            }
-            futures_util::future::Either::Right((_elapsed, _)) => {
-                Err(format!("request timed out after {}ms", REQUEST_TIMEOUT_MS))
-            }
+                },
+            futures_util::future::Either::Right((_elapsed, _)) =>
+                Err(format!("request timed out after {}ms", REQUEST_TIMEOUT_MS)),
         }
     }
 }

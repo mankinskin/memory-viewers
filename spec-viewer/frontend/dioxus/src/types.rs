@@ -127,20 +127,22 @@ pub struct SpecGraphMetrics {
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct SpecGraphNode {
-    pub id:        String,
-    pub slug:      Option<String>,
-    pub title:     Option<String>,
-    pub state:     Option<String>,
+    pub id: String,
+    pub slug: Option<String>,
+    pub title: Option<String>,
+    pub state: Option<String>,
     pub component: Option<String>,
-    pub scope:     Option<String>,
-    pub summary:   Option<String>,
-    pub metrics:   SpecGraphMetrics,
+    pub scope: Option<String>,
+    pub summary: Option<String>,
+    #[serde(default)]
+    pub summary_markdown: Option<String>,
+    pub metrics: SpecGraphMetrics,
 }
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct SpecGraphEdge {
     pub from: String,
-    pub to:   String,
+    pub to: String,
     pub kind: String,
 }
 
@@ -166,23 +168,23 @@ pub struct SseSpec {
 /// Returns `(background, foreground)` CSS colour pair for a state badge.
 pub fn state_colors(state: &str) -> (&'static str, &'static str) {
     match state {
-        "draft"    => ("#4b5563", "#d1d5db"),
-        "ready"    => ("#1e40af", "#bfdbfe"),
+        "draft" => ("#4b5563", "#d1d5db"),
+        "ready" => ("#1e40af", "#bfdbfe"),
         "reviewed" => ("#15803d", "#bbf7d0"),
         "approved" => ("#065f46", "#6ee7b7"),
         "archived" => ("#374151", "#9ca3af"),
-        _          => ("#374151", "#9ca3af"),
+        _ => ("#374151", "#9ca3af"),
     }
 }
 
 /// Returns a CSS accent colour for a state (used for left-border / ring).
 pub fn state_accent(state: Option<&str>) -> &'static str {
     match state.unwrap_or("") {
-        "draft"    => "#6b7280",
-        "ready"    => "#3b82f6",
+        "draft" => "#6b7280",
+        "ready" => "#3b82f6",
         "reviewed" => "#22c55e",
         "approved" => "#10b981",
         "archived" => "#6b7280",
-        _          => "#6b7280",
+        _ => "#6b7280",
     }
 }

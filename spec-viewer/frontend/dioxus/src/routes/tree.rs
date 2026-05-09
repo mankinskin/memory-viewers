@@ -2,11 +2,17 @@ use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
-use viewer_api_dioxus::{Card, CardGrid, CardSection};
+use viewer_api_dioxus::{
+    Card,
+    CardGrid,
+    CardSection,
+};
 use wasm_bindgen_futures::spawn_local;
 
-use crate::api;
-use crate::types::SpecSummary;
+use crate::{
+    api,
+    types::SpecSummary,
+};
 
 use super::Route;
 
@@ -47,7 +53,10 @@ pub fn SpecTreePage() -> Element {
     }
 }
 
-fn render_tree_sections(specs: Vec<SpecSummary>, nav: Navigator) -> Element {
+fn render_tree_sections(
+    specs: Vec<SpecSummary>,
+    nav: Navigator,
+) -> Element {
     let mut grouped: BTreeMap<String, Vec<SpecSummary>> = BTreeMap::new();
     for spec in specs {
         let category = spec

@@ -3,7 +3,10 @@ use dioxus::prelude::*;
 use crate::routes::Route;
 
 #[component]
-pub fn TicketDetailPage(workspace: String, id: String) -> Element {
+pub fn TicketDetailPage(
+    workspace: String,
+    id: String,
+) -> Element {
     let nav = use_navigator();
     let workspace = workspace.clone();
     let ticket_id = id.clone();

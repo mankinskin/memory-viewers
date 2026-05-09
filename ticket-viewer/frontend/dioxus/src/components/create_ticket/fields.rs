@@ -1,8 +1,16 @@
 use dioxus::prelude::*;
 
-use crate::types::{FieldDef, SchemaListResponse, TypeSchema};
+use crate::types::{
+    FieldDef,
+    SchemaListResponse,
+    TypeSchema,
+};
 
-use super::draft::{save_draft, DraftState, PRIORITY_OPTIONS};
+use super::draft::{
+    save_draft,
+    DraftState,
+    PRIORITY_OPTIONS,
+};
 
 pub(crate) fn render_type_selector(
     schema_list: Signal<Option<SchemaListResponse>>,
@@ -263,7 +271,10 @@ fn render_required_label(label: &str) -> Element {
     render_field_label(label, Some("*"))
 }
 
-fn render_field_label(label: &str, suffix: Option<&str>) -> Element {
+fn render_field_label(
+    label: &str,
+    suffix: Option<&str>,
+) -> Element {
     rsx! {
         label {
             style: label_style(),
@@ -276,11 +287,16 @@ fn render_field_label(label: &str, suffix: Option<&str>) -> Element {
     }
 }
 
-fn collect_fields(type_schema: &TypeSchema, required: bool) -> Vec<(String, FieldDef)> {
+fn collect_fields(
+    type_schema: &TypeSchema,
+    required: bool,
+) -> Vec<(String, FieldDef)> {
     type_schema
         .fields
         .iter()
-        .filter(|(key, field_def)| field_def.required == required && !is_reserved_field(key))
+        .filter(|(key, field_def)| {
+            field_def.required == required && !is_reserved_field(key)
+        })
         .map(|(key, field_def)| (key.clone(), field_def.clone()))
         .collect()
 }

@@ -1,5 +1,10 @@
 use dioxus::prelude::*;
-use viewer_api_dioxus::{BreadcrumbItem, Breadcrumbs, Header, Layout};
+use viewer_api_dioxus::{
+    BreadcrumbItem,
+    Breadcrumbs,
+    Header,
+    Layout,
+};
 
 use crate::components::spec_detail::SpecDetail;
 

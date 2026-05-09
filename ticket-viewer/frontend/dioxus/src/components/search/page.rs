@@ -2,12 +2,27 @@ use dioxus::prelude::*;
 use gloo_events::EventListener;
 use wasm_bindgen::JsCast as _;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::types::TicketSummary;
+use crate::{
+    api::{
+        HttpTicketBackend,
+        TicketBackend,
+    },
+    types::TicketSummary,
+};
 
-use super::facets::{render_facet_chips, ticket_state, ticket_type, unique_values};
-use super::recent::load_recent;
-use super::results::{render_empty_state, render_search_results};
+use super::{
+    facets::{
+        render_facet_chips,
+        ticket_state,
+        ticket_type,
+        unique_values,
+    },
+    recent::load_recent,
+    results::{
+        render_empty_state,
+        render_search_results,
+    },
+};
 
 const MAX_RESULTS: usize = 8;
 
@@ -26,10 +41,12 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
     let mut search_err: Signal<Option<String>> = use_signal(|| None);
     let mut state_filter: Signal<Option<String>> = use_signal(|| None);
     let mut type_filter: Signal<Option<String>> = use_signal(|| None);
-    let mut recents: Signal<Vec<String>> = use_signal(|| load_recent(&workspace));
+    let mut recents: Signal<Vec<String>> =
+        use_signal(|| load_recent(&workspace));
     let mut hovered_recent: Signal<Option<usize>> = use_signal(|| None);
     let mut hovered_result: Signal<Option<usize>> = use_signal(|| None);
-    let mut keydown_listener: Signal<Option<EventListener>> = use_signal(|| None);
+    let mut keydown_listener: Signal<Option<EventListener>> =
+        use_signal(|| None);
     let nav = use_navigator();
 
     use_open_shortcut_listener(
@@ -208,31 +225,35 @@ fn use_open_shortcut_listener(
         };
 
         let workspace = workspace.clone();
-        let listener = gloo_events::EventListener::new(&window, "keydown", move |event| {
-            let Some(keyboard_event) = event.dyn_ref::<web_sys::KeyboardEvent>() else {
-                return;
-            };
+        let listener =
+            gloo_events::EventListener::new(&window, "keydown", move |event| {
+                let Some(keyboard_event) =
+                    event.dyn_ref::<web_sys::KeyboardEvent>()
+                else {
+                    return;
+                };
 
-            if slash_inside_input(keyboard_event) {
-                return;
-            }
+                if slash_inside_input(keyboard_event) {
+                    return;
+                }
 
-            let ctrl_or_cmd = keyboard_event.ctrl_key() || keyboard_event.meta_key();
-            let key = keyboard_event.key();
-            let should_open = (ctrl_or_cmd && key == "k") || key == "/";
+                let ctrl_or_cmd =
+                    keyboard_event.ctrl_key() || keyboard_event.meta_key();
+                let key = keyboard_event.key();
+                let should_open = (ctrl_or_cmd && key == "k") || key == "/";
 
-            if should_open && !open() {
-                keyboard_event.prevent_default();
-                recents.set(load_recent(&workspace));
-                state_filter.set(None);
-                type_filter.set(None);
-                results.set(vec![]);
-                query.set(String::new());
-                open.set(true);
-            } else if key == "Escape" && open() {
-                open.set(false);
-            }
-        });
+                if should_open && !open() {
+                    keyboard_event.prevent_default();
+                    recents.set(load_recent(&workspace));
+                    state_filter.set(None);
+                    type_filter.set(None);
+                    results.set(vec![]);
+                    query.set(String::new());
+                    open.set(true);
+                } else if key == "Escape" && open() {
+                    open.set(false);
+                }
+            });
 
         keydown_listener.set(Some(listener));
     });
@@ -260,17 +281,22 @@ fn use_search_results(
         spawn(async move {
             let backend = HttpTicketBackend::new(None);
             match backend
-                .list_tickets(&workspace, None, Some(query.trim()), Some(MAX_RESULTS as u32))
+                .list_tickets(
+                    &workspace,
+                    None,
+                    Some(query.trim()),
+                    Some(MAX_RESULTS as u32),
+                )
                 .await
             {
                 Ok(response) => {
                     results.set(response.items);
                     loading.set(false);
-                }
+                },
                 Err(error) => {
                     search_err.set(Some(error));
                     loading.set(false);
-                }
+                },
             }
         });
     });
@@ -294,7 +320,10 @@ fn filtered_results(
         .collect()
 }
 
-fn matches_filter(value: &str, active: Option<&str>) -> bool {
+fn matches_filter(
+    value: &str,
+    active: Option<&str>,
+) -> bool {
     active.is_none_or(|active| value == active)
 }
 
@@ -307,7 +336,8 @@ fn slash_inside_input(keyboard_event: &web_sys::KeyboardEvent) -> bool {
     };
 
     let tag = target.tag_name().to_lowercase();
-    matches!(tag.as_str(), "input" | "textarea" | "select") && keyboard_event.key() == "/"
+    matches!(tag.as_str(), "input" | "textarea" | "select")
+        && keyboard_event.key() == "/"
 }
 
 fn render_recent_searches(

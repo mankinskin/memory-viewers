@@ -1,9 +1,20 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{
+    HashMap,
+    HashSet,
+};
 
 use dioxus::prelude::*;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::types::{TicketFileEntry, TicketSummary};
+use crate::{
+    api::{
+        HttpTicketBackend,
+        TicketBackend,
+    },
+    types::{
+        TicketFileEntry,
+        TicketSummary,
+    },
+};
 
 use super::TicketTreeProps;
 
@@ -278,14 +289,18 @@ fn toggle_ticket_expansion(
     }
 
     expanded_ids.write().insert(ticket_id.clone());
-    if file_cache.read().contains_key(&ticket_id) || loading_files.read().contains(&ticket_id) {
+    if file_cache.read().contains_key(&ticket_id)
+        || loading_files.read().contains(&ticket_id)
+    {
         return;
     }
 
     loading_files.write().insert(ticket_id.clone());
     spawn(async move {
         let backend = HttpTicketBackend::new(None);
-        if let Ok(response) = backend.list_ticket_files(&workspace, &ticket_id).await {
+        if let Ok(response) =
+            backend.list_ticket_files(&workspace, &ticket_id).await
+        {
             file_cache.write().insert(ticket_id.clone(), response.files);
         }
         loading_files.write().remove(&ticket_id);

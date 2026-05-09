@@ -10,8 +10,13 @@
 
 use dioxus::prelude::*;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::types::HistoryEntry;
+use crate::{
+    api::{
+        HttpTicketBackend,
+        TicketBackend,
+    },
+    types::HistoryEntry,
+};
 
 // ── Field-diff helpers ────────────────────────────────────────────────────────
 
@@ -38,7 +43,10 @@ fn json_display(v: &serde_json::Value) -> String {
     }
 }
 
-fn compute_diff(prev: &serde_json::Value, curr: &serde_json::Value) -> Vec<FieldDiff> {
+fn compute_diff(
+    prev: &serde_json::Value,
+    curr: &serde_json::Value,
+) -> Vec<FieldDiff> {
     let empty = serde_json::Map::new();
     let prev_map = prev.as_object().unwrap_or(&empty);
     let curr_map = curr.as_object().unwrap_or(&empty);
@@ -58,7 +66,7 @@ fn compute_diff(prev: &serde_json::Value, curr: &serde_json::Value) -> Vec<Field
                 old_val: Some(json_display(old_val)),
                 new_val: Some(json_display(new_val)),
             }),
-            _ => {}
+            _ => {},
         }
     }
     for (key, old_val) in prev_map {
@@ -77,7 +85,11 @@ fn compute_diff(prev: &serde_json::Value, curr: &serde_json::Value) -> Vec<Field
 
 fn format_ts(ts: &str) -> String {
     let s = ts.trim_end_matches('Z');
-    let s = if let Some(dot) = s.find('.') { &s[..dot] } else { s };
+    let s = if let Some(dot) = s.find('.') {
+        &s[..dot]
+    } else {
+        s
+    };
     format!("{} UTC", s.replace('T', " "))
 }
 
@@ -132,7 +144,11 @@ pub fn HistoryPanel(
             let field_rows = entry
                 .fields
                 .as_object()
-                .map(|m| m.iter().map(|(k, v)| (k.clone(), json_display(v))).collect())
+                .map(|m| {
+                    m.iter()
+                        .map(|(k, v)| (k.clone(), json_display(v)))
+                        .collect()
+                })
                 .unwrap_or_default();
             EntryView {
                 rev: entry.rev,
@@ -151,8 +167,10 @@ pub fn HistoryPanel(
 
     // Snapshot drawer metadata (avoids repeated clones inside rsx!).
     let drawer_rev = drawer_view.as_ref().map(|ev| ev.rev);
-    let drawer_field_rows: Vec<(String, String)> =
-        drawer_view.as_ref().map(|ev| ev.field_rows.clone()).unwrap_or_default();
+    let drawer_field_rows: Vec<(String, String)> = drawer_view
+        .as_ref()
+        .map(|ev| ev.field_rows.clone())
+        .unwrap_or_default();
 
     rsx! {
         div {

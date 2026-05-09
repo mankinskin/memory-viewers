@@ -1,15 +1,30 @@
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::layout::GraphLayout;
+use crate::{
+    api::{
+        HttpTicketBackend,
+        TicketBackend,
+    },
+    layout::GraphLayout,
+};
 
-use super::edge_list::{EdgeListSidebar, RemoveEdgeDialog};
-use super::interactions::select_node_or_navigate;
-use super::picker::EdgePickerOverlay;
-use super::state::{subscribe_sse, DepSseHandle, DragState, RemoveEdge};
-use super::viewport::GraphViewport;
-use super::DepGraphProps;
+use super::{
+    edge_list::{
+        EdgeListSidebar,
+        RemoveEdgeDialog,
+    },
+    interactions::select_node_or_navigate,
+    picker::EdgePickerOverlay,
+    state::{
+        subscribe_sse,
+        DepSseHandle,
+        DragState,
+        RemoveEdge,
+    },
+    viewport::GraphViewport,
+    DepGraphProps,
+};
 
 #[component]
 pub fn DepGraph(props: DepGraphProps) -> Element {
@@ -21,7 +36,14 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
 
     #[cfg(target_arch = "wasm32")]
     if crate::graph3d::can_use_webgpu() {
-        return render_webgpu_graph(nav, props, workspace, root_id, on_select, selected_node_id);
+        return render_webgpu_graph(
+            nav,
+            props,
+            workspace,
+            root_id,
+            on_select,
+            selected_node_id,
+        );
     }
 
     let mut layout: Signal<Option<GraphLayout>> = use_signal(|| None);
@@ -48,9 +70,12 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                 let backend = HttpTicketBackend::new(None);
                 match backend.get_subgraph(&workspace, &root_id, 4).await {
                     Ok(response) => {
-                        layout.set(Some(GraphLayout::build(response.nodes, response.edges)));
+                        layout.set(Some(GraphLayout::build(
+                            response.nodes,
+                            response.edges,
+                        )));
                         load_error.set(None);
-                    }
+                    },
                     Err(error) => load_error.set(Some(error)),
                 }
             });

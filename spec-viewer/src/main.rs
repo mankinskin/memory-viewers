@@ -18,10 +18,21 @@
 //! - `PORT`       — HTTP listen port (default: 4002)
 //! - `STATIC_DIR` — Path to pre-built SPA static files
 
-use std::{env, io::Write, path::PathBuf};
+use std::{
+    env,
+    io::Write,
+    path::PathBuf,
+};
 use tracing::info;
-use viewer_api::{display_host, init_tracing, with_static_files};
-use viewer_api::client_log::{client_log_router, ClientLogState};
+use viewer_api::{
+    client_log::{
+        client_log_router,
+        ClientLogState,
+    },
+    display_host,
+    init_tracing,
+    with_static_files,
+};
 
 use spec_api::SpecStore;
 use spec_http::state::SpecAppState;
@@ -55,22 +66,20 @@ fn parse_cli_options() -> CliOptions {
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--port" => {
+            "--port" =>
                 if let Some(value) = args.next() {
                     if let Ok(parsed) = value.parse::<u16>() {
                         port = parsed;
                     }
-                }
-            }
-            "--static-dir" => {
+                },
+            "--static-dir" =>
                 if let Some(value) = args.next() {
                     static_dir = PathBuf::from(value);
-                }
-            }
+                },
             "--index-root" => {
                 index_root = args.next().map(PathBuf::from);
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
@@ -86,9 +95,10 @@ async fn shutdown_signal() {
 
     #[cfg(unix)]
     {
-        let mut sigterm =
-            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                .expect("failed to register SIGTERM handler");
+        let mut sigterm = tokio::signal::unix::signal(
+            tokio::signal::unix::SignalKind::terminate(),
+        )
+        .expect("failed to register SIGTERM handler");
         tokio::select! {
             _ = ctrl_c => {}
             _ = sigterm.recv() => {}
@@ -122,7 +132,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!(index_root = %index_root.display(), "Using spec index root");
 
-    let store = SpecStore::open(&index_root).expect("failed to open spec store");
+    let store =
+        SpecStore::open(&index_root).expect("failed to open spec store");
     let state = SpecAppState::new(store);
 
     // Pre-scan so slugs are available immediately.
@@ -132,7 +143,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     let api_router = spec_http::build_router(state);
-    let api_router = api_router.merge(client_log_router(ClientLogState::default()));
+    let api_router =
+        api_router.merge(client_log_router(ClientLogState::default()));
     let app = with_static_files(api_router, Some(options.static_dir.clone()));
 
     let addr = format!("0.0.0.0:{}", options.port);

@@ -15,7 +15,6 @@ pub use new_ticket::NewTicketPage;
 #[derive(Clone, Routable, Debug, PartialEq)]
 pub enum Route {
     #[redirect("/", || Route::TicketListPage { workspace: "default".into() })]
-
     #[route("/workspace/:workspace")]
     TicketListPage { workspace: String },
 
@@ -25,4 +24,3 @@ pub enum Route {
     #[route("/workspace/:workspace/ticket/:id")]
     TicketDetailPage { workspace: String, id: String },
 }
-

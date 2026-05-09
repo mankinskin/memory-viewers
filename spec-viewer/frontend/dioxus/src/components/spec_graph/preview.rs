@@ -1,9 +1,10 @@
 use dioxus::prelude::*;
+use viewer_api_dioxus::MarkdownContent;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::api;
 
-use super::view::{preview_excerpt, state_color};
+use super::view::state_color;
 
 #[component]
 pub(super) fn SpecPreviewSidebar(
@@ -11,7 +12,8 @@ pub(super) fn SpecPreviewSidebar(
     on_close: EventHandler<()>,
     on_view_details: EventHandler<String>,
 ) -> Element {
-    let mut full: Signal<Option<crate::types::SpecFullResponse>> = use_signal(|| None);
+    let mut full: Signal<Option<crate::types::SpecFullResponse>> =
+        use_signal(|| None);
     let mut load_err: Signal<Option<String>> = use_signal(|| None);
 
     let spec_id_load = spec_id.clone();
@@ -58,7 +60,6 @@ pub(super) fn SpecPreviewSidebar(
                             .unwrap_or("draft")
                             .to_string();
                         let color = state_color(Some(state.as_str()));
-                        let excerpt = preview_excerpt(&full_spec.body);
                         rsx! {
                             div { class: "spec-preview__meta",
                                 span {
@@ -67,7 +68,10 @@ pub(super) fn SpecPreviewSidebar(
                                     "{state}"
                                 }
                             }
-                            pre { class: "spec-preview__excerpt", "{excerpt}" }
+                            MarkdownContent {
+                                content: full_spec.body.clone(),
+                                class: "spec-preview__markdown".to_string(),
+                            }
                         }
                     }
                 } else {

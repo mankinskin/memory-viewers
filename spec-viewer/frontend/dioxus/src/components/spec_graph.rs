@@ -12,5 +12,8 @@ mod settings;
 mod view;
 
 pub use layouts::build_layout;
-pub use model::{LayoutAlgorithm, LayoutParams};
+pub use model::{
+    LayoutAlgorithm,
+    LayoutParams,
+};
 pub use page::SpecGraphPage;

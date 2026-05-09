@@ -1,10 +1,16 @@
 use dioxus::prelude::*;
 use viewer_api_dioxus::FileContentViewer;
 
-use crate::components::history::HistoryPanel;
-use crate::types::HistoryEntry;
+use crate::{
+    components::history::HistoryPanel,
+    types::HistoryEntry,
+};
 
-use super::{Tab, TAB_ACTIVE_STYLE, TAB_BASE_STYLE};
+use super::{
+    Tab,
+    TAB_ACTIVE_STYLE,
+    TAB_BASE_STYLE,
+};
 
 pub(super) fn render_tab_bar(
     mut active_tab: Signal<Tab>,

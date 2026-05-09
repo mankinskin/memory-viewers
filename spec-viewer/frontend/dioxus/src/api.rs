@@ -2,7 +2,10 @@
 //!
 //! Calls `spec-http` endpoints using the browser Fetch API via `gloo-net`.
 
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use percent_encoding::{
+    utf8_percent_encode,
+    NON_ALPHANUMERIC,
+};
 
 use crate::types::*;
 
@@ -24,7 +27,9 @@ fn api_base() -> String {
 
 // ── Helper ────────────────────────────────────────────────────────────────────
 
-async fn get_json<T: serde::de::DeserializeOwned>(url: &str) -> Result<T, String> {
+async fn get_json<T: serde::de::DeserializeOwned>(
+    url: &str
+) -> Result<T, String> {
     let resp = gloo_net::http::Request::get(url)
         .send()
         .await
@@ -73,12 +78,13 @@ pub async fn list_specs(
 
 // ── Spec search ───────────────────────────────────────────────────────────────
 
-pub async fn search_specs(q: &str, limit: Option<u32>) -> Result<SearchResponse, String> {
+pub async fn search_specs(
+    q: &str,
+    limit: Option<u32>,
+) -> Result<SearchResponse, String> {
     let base = api_base();
     let q_enc = utf8_percent_encode(q, NON_ALPHANUMERIC);
-    let limit_part = limit
-        .map(|l| format!("&limit={l}"))
-        .unwrap_or_default();
+    let limit_part = limit.map(|l| format!("&limit={l}")).unwrap_or_default();
     get_json(&format!("{base}/api/specs/search?q={q_enc}{limit_part}")).await
 }
 
@@ -112,7 +118,10 @@ pub async fn list_sections(id: &str) -> Result<SectionsResponse, String> {
     get_json(&format!("{base}/api/specs/{id_enc}/sections")).await
 }
 
-pub async fn get_section(id: &str, name: &str) -> Result<SectionResponse, String> {
+pub async fn get_section(
+    id: &str,
+    name: &str,
+) -> Result<SectionResponse, String> {
     let base = api_base();
     let id_enc = utf8_percent_encode(id, NON_ALPHANUMERIC);
     let name_enc = utf8_percent_encode(name, NON_ALPHANUMERIC);
@@ -127,7 +136,7 @@ pub async fn health_check(id: Option<&str>) -> Result<HealthResponse, String> {
         Some(i) => {
             let enc = utf8_percent_encode(i, NON_ALPHANUMERIC);
             format!("?id={enc}")
-        }
+        },
         None => "?all=true".to_string(),
     };
     get_json(&format!("{base}/api/specs/health{qs}")).await

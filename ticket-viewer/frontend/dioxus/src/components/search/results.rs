@@ -2,11 +2,15 @@ use dioxus::prelude::*;
 use dioxus_router::Navigator;
 use viewer_api_dioxus::set_hash_param;
 
-use crate::routes::Route;
-use crate::types::TicketSummary;
+use crate::{
+    routes::Route,
+    types::TicketSummary,
+};
 
-use super::facets::ticket_type;
-use super::recent::save_recent;
+use super::{
+    facets::ticket_type,
+    recent::save_recent,
+};
 
 pub(super) fn render_search_results(
     filtered: &[TicketSummary],
@@ -52,11 +56,7 @@ fn render_result_row(
     mut hovered_result: Signal<Option<usize>>,
 ) -> Element {
     let id = ticket.id.clone();
-    let title = ticket
-        .title
-        .as_deref()
-        .unwrap_or("(untitled)")
-        .to_string();
+    let title = ticket.title.as_deref().unwrap_or("(untitled)").to_string();
     let state = ticket.state.as_deref().unwrap_or("").to_string();
     let ticket_type = ticket_type(&ticket).to_string();
     let (state_bg, state_fg) = crate::types::state_colors(&state);

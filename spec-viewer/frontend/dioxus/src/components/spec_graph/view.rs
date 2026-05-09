@@ -28,22 +28,11 @@ pub(super) fn node_summary(node: &SpecGraphNode) -> String {
         .unwrap_or_else(|| "No body summary yet.".to_string())
 }
 
-pub(super) fn metric_text(count: usize, singular: &str, plural: &str) -> String {
+pub(super) fn metric_text(
+    count: usize,
+    singular: &str,
+    plural: &str,
+) -> String {
     let noun = if count == 1 { singular } else { plural };
     format!("{count} {noun}")
-}
-
-pub(super) fn preview_excerpt(body: &str) -> String {
-    let body = body.trim();
-    let body = body
-        .lines()
-        .skip_while(|line| line.starts_with('#') || line.trim().is_empty())
-        .collect::<Vec<_>>()
-        .join("\n");
-    let trimmed: String = body.chars().take(420).collect();
-    if body.chars().count() > 420 {
-        format!("{trimmed}\u{2026}")
-    } else {
-        trimmed
-    }
 }

@@ -1,8 +1,16 @@
-use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
+use std::collections::{
+    BTreeMap,
+    HashMap,
+    HashSet,
+    VecDeque,
+};
 
 use viewer_api_dioxus::Node3D;
 
-use crate::types::{SpecGraphEdge, SpecGraphNode};
+use crate::types::{
+    SpecGraphEdge,
+    SpecGraphNode,
+};
 
 use super::super::model::LayoutParams;
 
@@ -38,7 +46,9 @@ fn collect_parent_edges(
             continue;
         }
 
-        let (Some(&from), Some(&to)) = (index.get(edge.from.as_str()), index.get(edge.to.as_str())) else {
+        let (Some(&from), Some(&to)) =
+            (index.get(edge.from.as_str()), index.get(edge.to.as_str()))
+        else {
             continue;
         };
         children.entry(from).or_insert_with(Vec::new).push(to);
@@ -95,7 +105,14 @@ fn build_ring_nodes(
     params: LayoutParams,
 ) -> Vec<Node3D> {
     let mut out = vec![
-        Node3D { id: String::new(), label: None, state: None, x: 0.0, y: 0.0, z: 0.0 };
+        Node3D {
+            id: String::new(),
+            label: None,
+            state: None,
+            x: 0.0,
+            y: 0.0,
+            z: 0.0
+        };
         nodes.len()
     ];
 

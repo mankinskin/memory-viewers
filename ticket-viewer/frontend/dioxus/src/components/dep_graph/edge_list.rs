@@ -1,8 +1,13 @@
 use dioxus::prelude::*;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::layout::GraphLayout;
-use crate::types::EdgeMutationBody;
+use crate::{
+    api::{
+        HttpTicketBackend,
+        TicketBackend,
+    },
+    layout::GraphLayout,
+    types::EdgeMutationBody,
+};
 
 use super::state::RemoveEdge;
 

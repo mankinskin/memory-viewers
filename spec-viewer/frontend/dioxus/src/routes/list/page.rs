@@ -1,19 +1,35 @@
 use dioxus::prelude::*;
-use viewer_api_dioxus::{Layout, Overlay, TabsStore, ThemeSettings};
-
-use crate::sse::use_sse;
-use crate::store::SpecListStore;
-use crate::types::SpecSummary;
-
-use super::effects::{
-    persist_store, use_initial_selected_tab, use_prefetch_neighbors, use_refresh_tab_labels,
-    use_selected_id_from_tabs, use_spec_list, use_tabs_from_selected_id,
+use viewer_api_dioxus::{
+    Layout,
+    Overlay,
+    TabsStore,
+    ThemeSettings,
 };
-use super::helpers::sidebar_button_state;
-use super::render::{
-    render_spec_list_content, render_spec_list_header, render_spec_list_sidebar,
+
+use crate::{
+    sse::use_sse,
+    store::SpecListStore,
+    types::SpecSummary,
 };
-use super::super::Route;
+
+use super::{
+    super::Route,
+    effects::{
+        persist_store,
+        use_initial_selected_tab,
+        use_prefetch_neighbors,
+        use_refresh_tab_labels,
+        use_selected_id_from_tabs,
+        use_spec_list,
+        use_tabs_from_selected_id,
+    },
+    helpers::sidebar_button_state,
+    render::{
+        render_spec_list_content,
+        render_spec_list_header,
+        render_spec_list_sidebar,
+    },
+};
 
 #[component]
 pub fn SpecListPage() -> Element {

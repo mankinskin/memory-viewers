@@ -1,7 +1,10 @@
 use dioxus::prelude::*;
 use viewer_api_dioxus::FileContentViewer;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
+use crate::api::{
+    HttpTicketBackend,
+    TicketBackend,
+};
 
 pub(super) fn render_edit_panel(
     workspace: String,
@@ -190,12 +193,12 @@ fn save_description(
                 desc_text.set(if text.is_empty() { None } else { Some(text) });
                 edit_pending.set(false);
                 edit_success.set(true);
-            }
+            },
             Err(error) => {
                 edit_draft.set(desc_text().unwrap_or_default());
                 edit_pending.set(false);
                 edit_error.set(Some(error));
-            }
+            },
         }
     });
 }

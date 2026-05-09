@@ -1,7 +1,7 @@
 //! `CodeRefList` — table displaying CodeRef entries for a spec.
 
-use dioxus::prelude::*;
 use crate::types::CodeRefEntry;
+use dioxus::prelude::*;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct CodeRefListProps {

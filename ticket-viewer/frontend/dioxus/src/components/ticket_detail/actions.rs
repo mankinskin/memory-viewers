@@ -1,12 +1,27 @@
 use dioxus::prelude::*;
 use gloo_events::EventListener;
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use percent_encoding::{
+    utf8_percent_encode,
+    NON_ALPHANUMERIC,
+};
 use wasm_bindgen::JsCast as _;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::types::{TicketPatch, TypeSchema};
+use crate::{
+    api::{
+        HttpTicketBackend,
+        TicketBackend,
+    },
+    types::{
+        TicketPatch,
+        TypeSchema,
+    },
+};
 
-use super::model::{collect_visited_states, field_str, ConflictState};
+use super::model::{
+    collect_visited_states,
+    field_str,
+    ConflictState,
+};
 
 pub(super) struct SseClose(pub web_sys::EventSource);
 
@@ -19,7 +34,8 @@ impl Drop for SseClose {
 pub(super) type SseHandle = Option<(SseClose, EventListener)>;
 
 fn sse_url(workspace: &str) -> String {
-    let encoded_workspace = utf8_percent_encode(workspace, NON_ALPHANUMERIC).to_string();
+    let encoded_workspace =
+        utf8_percent_encode(workspace, NON_ALPHANUMERIC).to_string();
     format!("/api/stream?workspace={encoded_workspace}")
 }
 
@@ -29,8 +45,14 @@ fn parse_upsert_event(event: &web_sys::Event) -> Option<serde_json::Value> {
     serde_json::from_str(&data).ok()
 }
 
-fn matches_ticket(parsed: &serde_json::Value, ticket_id: &str) -> bool {
-    let event_id = parsed.get("id").and_then(|value| value.as_str()).unwrap_or("");
+fn matches_ticket(
+    parsed: &serde_json::Value,
+    ticket_id: &str,
+) -> bool {
+    let event_id = parsed
+        .get("id")
+        .and_then(|value| value.as_str())
+        .unwrap_or("");
     event_id.starts_with(&ticket_id[..8]) || ticket_id.starts_with(event_id)
 }
 
@@ -75,20 +97,22 @@ pub(super) fn use_ticket_detail_data(
 
                     ticket_fields.set(fields);
                     if !type_id.is_empty() {
-                        if let Ok(schema_response) =
-                            backend.get_schema_by_type(&workspace, &type_id).await
+                        if let Ok(schema_response) = backend
+                            .get_schema_by_type(&workspace, &type_id)
+                            .await
                         {
                             schema.set(Some(schema_response.schema));
                         }
                     }
-                }
+                },
                 Err(message) => load_error.set(Some(message)),
             }
 
             if let Ok(history_response) =
                 backend.get_ticket_history(&workspace, &ticket_id).await
             {
-                visited_states.set(collect_visited_states(&history_response.entries));
+                visited_states
+                    .set(collect_visited_states(&history_response.entries));
             }
         });
     });
@@ -108,29 +132,35 @@ pub(super) fn use_conflict_sse(
 
         if let Ok(event_source) = web_sys::EventSource::new(&url) {
             let ticket_id = ticket_id.clone();
-            let listener = EventListener::new(&event_source, "ticket.upsert", move |event| {
-                let Some(parsed) = parse_upsert_event(event) else {
-                    return;
-                };
-                if !matches_ticket(&parsed, &ticket_id) {
-                    return;
-                }
+            let listener = EventListener::new(
+                &event_source,
+                "ticket.upsert",
+                move |event| {
+                    let Some(parsed) = parse_upsert_event(event) else {
+                        return;
+                    };
+                    if !matches_ticket(&parsed, &ticket_id) {
+                        return;
+                    }
 
-                let server_fields = parsed
-                    .get("fields")
-                    .cloned()
-                    .unwrap_or(serde_json::Value::Null);
-                if let Some(conflict_state) =
-                    conflict_from_server(editing_field, draft_value, &server_fields)
-                {
-                    conflict.set(Some(conflict_state));
-                    return;
-                }
+                    let server_fields = parsed
+                        .get("fields")
+                        .cloned()
+                        .unwrap_or(serde_json::Value::Null);
+                    if let Some(conflict_state) = conflict_from_server(
+                        editing_field,
+                        draft_value,
+                        &server_fields,
+                    ) {
+                        conflict.set(Some(conflict_state));
+                        return;
+                    }
 
-                if editing_field().is_none() {
-                    ticket_fields.set(server_fields);
-                }
-            });
+                    if editing_field().is_none() {
+                        ticket_fields.set(server_fields);
+                    }
+                },
+            );
 
             sse_handle.set(Some((SseClose(event_source), listener)));
         }
@@ -150,7 +180,10 @@ pub(super) fn save_field(
 ) {
     ticket_fields.with_mut(|fields| {
         if let serde_json::Value::Object(ref mut map) = fields {
-            map.insert(field_key.clone(), serde_json::Value::String(new_value.clone()));
+            map.insert(
+                field_key.clone(),
+                serde_json::Value::String(new_value.clone()),
+            );
         }
     });
     editing_field.set(None);
@@ -179,14 +212,16 @@ pub(super) fn save_field(
             Ok(response) => {
                 ticket_fields.set(response.ticket.fields);
                 save_pending.set(false);
-            }
+            },
             Err(message) => {
                 save_pending.set(false);
                 save_error.set(Some(message));
-                if let Ok(response) = backend.get_ticket(&workspace, &ticket_id).await {
+                if let Ok(response) =
+                    backend.get_ticket(&workspace, &ticket_id).await
+                {
                     ticket_fields.set(response.ticket.fields);
                 }
-            }
+            },
         }
     });
 }
@@ -223,14 +258,16 @@ pub(super) fn save_bool_field(
             Ok(response) => {
                 ticket_fields.set(response.ticket.fields);
                 save_pending.set(false);
-            }
+            },
             Err(message) => {
                 save_pending.set(false);
                 save_error.set(Some(message));
-                if let Ok(response) = backend.get_ticket(&workspace, &ticket_id).await {
+                if let Ok(response) =
+                    backend.get_ticket(&workspace, &ticket_id).await
+                {
                     ticket_fields.set(response.ticket.fields);
                 }
-            }
+            },
         }
     });
 }
@@ -253,7 +290,10 @@ pub(super) fn transition_state(
 
     ticket_fields.with_mut(|fields| {
         if let serde_json::Value::Object(ref mut map) = fields {
-            map.insert("state".to_string(), serde_json::Value::String(new_state.clone()));
+            map.insert(
+                "state".to_string(),
+                serde_json::Value::String(new_state.clone()),
+            );
         }
     });
     transition_pending.set(true);
@@ -284,7 +324,7 @@ pub(super) fn transition_state(
                         }
                     });
                 }
-            }
+            },
             Err(message) => {
                 ticket_fields.with_mut(|fields| {
                     if let serde_json::Value::Object(ref mut map) = fields {
@@ -296,7 +336,7 @@ pub(super) fn transition_state(
                 });
                 transition_pending.set(false);
                 transition_error.set(Some(message));
-            }
+            },
         }
     });
 }
@@ -318,14 +358,17 @@ pub(super) fn undo_transition(
             Ok(response) => {
                 ticket_fields.set(response.ticket.fields);
                 transition_pending.set(false);
-                if let Ok(history_response) = backend.get_ticket_history(&workspace, &ticket_id).await {
-                    visited_states.set(collect_visited_states(&history_response.entries));
+                if let Ok(history_response) =
+                    backend.get_ticket_history(&workspace, &ticket_id).await
+                {
+                    visited_states
+                        .set(collect_visited_states(&history_response.entries));
                 }
-            }
+            },
             Err(message) => {
                 transition_pending.set(false);
                 transition_error.set(Some(message));
-            }
+            },
         }
     });
 }

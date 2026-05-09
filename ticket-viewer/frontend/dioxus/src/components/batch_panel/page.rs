@@ -1,8 +1,18 @@
 use dioxus::prelude::*;
 
-use super::actions::{apply_batch_operation, toggle_pending_op};
-use super::model::{BulkOp, CommandResult, PRIORITY_OPS, STATE_OPS};
-use super::results::render_results_panel;
+use super::{
+    actions::{
+        apply_batch_operation,
+        toggle_pending_op,
+    },
+    model::{
+        BulkOp,
+        CommandResult,
+        PRIORITY_OPS,
+        STATE_OPS,
+    },
+    results::render_results_panel,
+};
 
 #[derive(Props, Clone, PartialEq)]
 pub struct BatchPanelProps {

@@ -2,18 +2,33 @@
 //! identically to the CLI — via `ticket_api::workspace` — and that the
 //! HTTP API reflects the resolved store contents.
 
-use std::{collections::BTreeMap, sync::Arc};
+use std::{
+    collections::BTreeMap,
+    sync::Arc,
+};
 
-use axum::body::to_bytes;
-use axum::http::{Request, StatusCode};
+use axum::{
+    body::to_bytes,
+    http::{
+        Request,
+        StatusCode,
+    },
+};
 use tower::ServiceExt; // for `oneshot`
 
 use ticket_api::{
     model::filesystem::ScanRoot,
     storage::store::TicketStore,
-    workspace::{find_local_workspace_file_from, LOCAL_WORKSPACE_FILE},
+    workspace::{
+        find_local_workspace_file_from,
+        LOCAL_WORKSPACE_FILE,
+    },
 };
-use ticket_http::serve::{AppState, StreamBroker, WorkspaceRegistry};
+use ticket_http::serve::{
+    AppState,
+    StreamBroker,
+    WorkspaceRegistry,
+};
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -48,7 +63,8 @@ async fn get_ticket_count(app: axum::Router) -> (StatusCode, usize) {
     let bytes = to_bytes(resp.into_body(), 4 * 1024 * 1024)
         .await
         .expect("read body");
-    let payload: serde_json::Value = serde_json::from_slice(&bytes).expect("parse json");
+    let payload: serde_json::Value =
+        serde_json::from_slice(&bytes).expect("parse json");
     let count = payload["items"].as_array().map(|a| a.len()).unwrap_or(0);
     (status, count)
 }
@@ -62,15 +78,13 @@ fn local_workspace_file_is_found_walking_up() {
     std::fs::create_dir_all(&nested).expect("mkdir");
 
     // Place .ticket-workspace at root
-    std::fs::write(root.path().join(LOCAL_WORKSPACE_FILE), ".ticket\n").expect("write");
+    std::fs::write(root.path().join(LOCAL_WORKSPACE_FILE), ".ticket\n")
+        .expect("write");
 
     // Walking up from nested dir should find the file at root
     let found = find_local_workspace_file_from(&nested);
     assert!(found.is_some(), "should find .ticket-workspace walking up");
-    assert_eq!(
-        found.unwrap(),
-        root.path().join(LOCAL_WORKSPACE_FILE),
-    );
+    assert_eq!(found.unwrap(), root.path().join(LOCAL_WORKSPACE_FILE),);
 }
 
 #[test]
@@ -95,10 +109,12 @@ fn workspace_file_relative_path_resolves_from_file_parent() {
     std::fs::create_dir_all(&ticket_dir).expect("mkdir .ticket");
 
     // Write a relative path in .ticket-workspace
-    std::fs::write(root.path().join(LOCAL_WORKSPACE_FILE), ".ticket").expect("write");
+    std::fs::write(root.path().join(LOCAL_WORKSPACE_FILE), ".ticket")
+        .expect("write");
 
     // Simulate what resolve_workspace does for a local file:
-    let local_file = find_local_workspace_file_from(root.path()).expect("should find file");
+    let local_file =
+        find_local_workspace_file_from(root.path()).expect("should find file");
     let content = std::fs::read_to_string(&local_file).expect("read");
     let value = content.trim();
     let resolved = local_file.parent().unwrap().join(value);
@@ -158,10 +174,12 @@ async fn resolved_workspace_serves_correct_store() {
     std::fs::create_dir_all(&ticket_dir).expect("mkdir");
 
     // Write workspace file (relative path, same as context-engine)
-    std::fs::write(root.path().join(LOCAL_WORKSPACE_FILE), ".ticket").expect("write");
+    std::fs::write(root.path().join(LOCAL_WORKSPACE_FILE), ".ticket")
+        .expect("write");
 
     // Resolve the workspace path the same way main.rs does
-    let local_file = find_local_workspace_file_from(root.path()).expect("find workspace file");
+    let local_file = find_local_workspace_file_from(root.path())
+        .expect("find workspace file");
     let content = std::fs::read_to_string(&local_file).expect("read");
     let value = content.trim();
     let index_root = local_file.parent().unwrap().join(value);

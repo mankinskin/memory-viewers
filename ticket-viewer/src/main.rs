@@ -17,14 +17,29 @@
 //! # Environment variables
 //! - `PORT`       — HTTP listen port (default: 3002)
 /// - `STATIC_DIR` — Path to pre-built SPA static files (default: trunk build output)
-
-use std::{env, io::Write, path::PathBuf, sync::Arc};
+use std::{
+    env,
+    io::Write,
+    path::PathBuf,
+    sync::Arc,
+};
 use tracing::info;
-use viewer_api::{display_host, init_tracing, with_static_files};
-use viewer_api::client_log::{client_log_router, ClientLogState};
+use viewer_api::{
+    client_log::{
+        client_log_router,
+        ClientLogState,
+    },
+    display_host,
+    init_tracing,
+    with_static_files,
+};
 
 use ticket_api::storage::store::TicketStore;
-use ticket_http::serve::{WorkspaceRegistry, StreamBroker, AppState};
+use ticket_http::serve::{
+    AppState,
+    StreamBroker,
+    WorkspaceRegistry,
+};
 
 struct CliOptions {
     port: u16,
@@ -59,25 +74,23 @@ fn parse_cli_options() -> CliOptions {
     let mut args = env::args().skip(1);
     while let Some(arg) = args.next() {
         match arg.as_str() {
-            "--port" => {
+            "--port" =>
                 if let Some(value) = args.next() {
                     if let Ok(parsed) = value.parse::<u16>() {
                         port = parsed;
                     }
-                }
-            }
-            "--static-dir" => {
+                },
+            "--static-dir" =>
                 if let Some(value) = args.next() {
                     static_dir = PathBuf::from(value);
-                }
-            }
+                },
             "--workspace" => {
                 workspace = args.next();
-            }
+            },
             "--index-root" => {
                 index_root = args.next().map(PathBuf::from);
-            }
-            _ => {}
+            },
+            _ => {},
         }
     }
 
@@ -94,9 +107,10 @@ async fn shutdown_signal() {
 
     #[cfg(unix)]
     {
-        let mut sigterm =
-            tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
-                .expect("failed to register SIGTERM handler");
+        let mut sigterm = tokio::signal::unix::signal(
+            tokio::signal::unix::SignalKind::terminate(),
+        )
+        .expect("failed to register SIGTERM handler");
         tokio::select! {
             _ = ctrl_c => {}
             _ = sigterm.recv() => {}
@@ -132,14 +146,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // We deliberately do NOT load WorkspaceRegistry::from_config() — the
     // global ~/.ticket-workspaces.toml belongs to the CLI, not to this
     // server, which must serve whatever workspace is local to its cwd.
-    let store = TicketStore::open(&index_root).expect("failed to open ticket store");
+    let store =
+        TicketStore::open(&index_root).expect("failed to open ticket store");
     let registry = WorkspaceRegistry::single_opened(Arc::new(store));
 
     // Build the ticket-http AppState and wire up streaming.
-    let state = AppState::new(
-        Arc::new(registry),
-        Arc::new(StreamBroker::new()),
-    );
+    let state =
+        AppState::new(Arc::new(registry), Arc::new(StreamBroker::new()));
 
     // Pre-initialize all known workspaces at startup.
     let workspace_names = state.registry.workspace_names();
@@ -151,12 +164,17 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let app = ticket_http::build_router(state);
     let app = app.merge(client_log_router(ClientLogState::default()));
 
-    let app = with_static_files(app, Some(options.static_dir).filter(|p| p.exists()));
+    let app =
+        with_static_files(app, Some(options.static_dir).filter(|p| p.exists()));
 
     let addr = format!("0.0.0.0:{}", options.port);
     let listener = tokio::net::TcpListener::bind(&addr).await?;
     let actual_port = listener.local_addr()?.port();
-    info!("Listening on http://{}:{}", display_host("0.0.0.0"), actual_port);
+    info!(
+        "Listening on http://{}:{}",
+        display_host("0.0.0.0"),
+        actual_port
+    );
     // Print the actual port on stdout so callers (e.g. the VS Code extension)
     // can discover it when the server was started with --port 0.
     // Explicit flush is required because Rust uses full buffering (not line

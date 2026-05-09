@@ -1,19 +1,35 @@
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
-    BreadcrumbItem, Breadcrumbs, HamburgerIcon, Header, HeaderActions, Sidebar, TabBar,
-    TabItem, TabsStore,
+    BreadcrumbItem,
+    Breadcrumbs,
+    HamburgerIcon,
+    Header,
+    HeaderActions,
+    Sidebar,
+    TabBar,
+    TabItem,
+    TabsStore,
 };
 use wasm_bindgen_futures::spawn_local;
 
-use crate::api;
-use crate::components::spec_detail::SpecDetail;
-use crate::components::spec_tree::SpecTree;
-use crate::types::SpecSummary;
-
-use super::helpers::{
-    close_or_toggle_sidebar, initial_expanded_for, label_for, toggle_sidebar,
+use crate::{
+    api,
+    components::{
+        spec_detail::SpecDetail,
+        spec_tree::SpecTree,
+    },
+    types::SpecSummary,
 };
-use super::super::Route;
+
+use super::{
+    super::Route,
+    helpers::{
+        close_or_toggle_sidebar,
+        initial_expanded_for,
+        label_for,
+        toggle_sidebar,
+    },
+};
 
 pub(super) fn render_spec_list_header(
     sidebar_button_active: bool,
@@ -155,7 +171,13 @@ fn render_selected_spec(
     state_filter: Signal<String>,
     mut active_tab: Signal<String>,
 ) -> Element {
-    let crumbs = build_detail_breadcrumbs(&specs.read(), &id, specs, filter, state_filter);
+    let crumbs = build_detail_breadcrumbs(
+        &specs.read(),
+        &id,
+        specs,
+        filter,
+        state_filter,
+    );
 
     rsx! {
         Breadcrumbs {
@@ -191,7 +213,9 @@ fn build_detail_breadcrumbs(
             let query = filter.peek().clone();
             let query = if query.is_empty() { None } else { Some(query) };
             spawn_local(async move {
-                if let Ok(response) = api::list_specs(None, query.as_deref(), None).await {
+                if let Ok(response) =
+                    api::list_specs(None, query.as_deref(), None).await
+                {
                     specs.set(response.items);
                 }
             });
@@ -206,7 +230,9 @@ fn build_detail_breadcrumbs(
                 filter.set(component.clone());
                 let query = component.clone();
                 spawn_local(async move {
-                    if let Ok(response) = api::search_specs(&query, Some(50)).await {
+                    if let Ok(response) =
+                        api::search_specs(&query, Some(50)).await
+                    {
                         specs.set(response.items);
                     }
                 });

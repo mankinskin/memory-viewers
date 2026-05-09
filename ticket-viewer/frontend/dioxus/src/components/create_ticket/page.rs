@@ -1,13 +1,32 @@
 use dioxus::prelude::*;
 
-use crate::api::HttpTicketBackend;
-use crate::types::{SchemaListResponse, TicketSummary};
-
-use super::actions::{
-    build_request, load_schemas, selected_type_schema, spawn_create_ticket, validate_draft,
+use crate::{
+    api::HttpTicketBackend,
+    types::{
+        SchemaListResponse,
+        TicketSummary,
+    },
 };
-use super::draft::{clear_draft, load_draft, DraftState};
-use super::fields::{render_schema_fields, render_static_fields, render_type_selector};
+
+use super::{
+    actions::{
+        build_request,
+        load_schemas,
+        selected_type_schema,
+        spawn_create_ticket,
+        validate_draft,
+    },
+    draft::{
+        clear_draft,
+        load_draft,
+        DraftState,
+    },
+    fields::{
+        render_schema_fields,
+        render_static_fields,
+        render_type_selector,
+    },
+};
 
 #[derive(Props, Clone, PartialEq)]
 pub struct CreateTicketModalProps {
@@ -23,9 +42,11 @@ pub fn CreateTicketModal(props: CreateTicketModalProps) -> Element {
     let nav = use_navigator();
     let backend = HttpTicketBackend::new(None);
 
-    let mut schema_list: Signal<Option<SchemaListResponse>> = use_signal(|| None);
+    let mut schema_list: Signal<Option<SchemaListResponse>> =
+        use_signal(|| None);
     let mut schema_err: Signal<Option<String>> = use_signal(|| None);
-    let mut draft: Signal<DraftState> = use_signal(|| initial_draft(&props.prefill));
+    let mut draft: Signal<DraftState> =
+        use_signal(|| initial_draft(&props.prefill));
     let show_optional: Signal<bool> = use_signal(|| false);
     let mut submitting: Signal<bool> = use_signal(|| false);
     let mut submit_err: Signal<Option<String>> = use_signal(|| None);
@@ -33,7 +54,8 @@ pub fn CreateTicketModal(props: CreateTicketModalProps) -> Element {
     load_schemas(backend.clone(), workspace.clone(), schema_list, schema_err);
 
     let current_type_id = draft.read().type_id.clone();
-    let maybe_type_schema = selected_type_schema(schema_list.read().as_ref(), &current_type_id);
+    let maybe_type_schema =
+        selected_type_schema(schema_list.read().as_ref(), &current_type_id);
 
     let on_submit = EventHandler::new({
         let backend = backend.clone();

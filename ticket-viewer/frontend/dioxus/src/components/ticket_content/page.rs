@@ -1,14 +1,27 @@
 use dioxus::prelude::*;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::types::HistoryEntry;
-
-use super::edit::render_edit_panel;
-use super::helpers::{content_tab_label, fields_to_toml};
-use super::render::{
-    render_description_panel, render_history_panel, render_tab_bar, render_toml_panel,
+use crate::{
+    api::{
+        HttpTicketBackend,
+        TicketBackend,
+    },
+    types::HistoryEntry,
 };
-use super::Tab;
+
+use super::{
+    edit::render_edit_panel,
+    helpers::{
+        content_tab_label,
+        fields_to_toml,
+    },
+    render::{
+        render_description_panel,
+        render_history_panel,
+        render_tab_bar,
+        render_toml_panel,
+    },
+    Tab,
+};
 
 #[component]
 pub fn TicketContent(
@@ -32,7 +45,8 @@ pub fn TicketContent(
         .as_deref()
         .map(|path| path == "description.md")
         .unwrap_or(true);
-    let content_tab_label = content_tab_label(asset_path.as_deref(), is_description);
+    let content_tab_label =
+        content_tab_label(asset_path.as_deref(), is_description);
     let show_edit_tab = is_description && HttpTicketBackend::has_auth_token();
 
     {
@@ -54,30 +68,45 @@ pub fn TicketContent(
             spawn(async move {
                 let backend = HttpTicketBackend::new(None);
                 if is_description {
-                    match backend.get_ticket_description(&workspace, &ticket_id).await {
+                    match backend
+                        .get_ticket_description(&workspace, &ticket_id)
+                        .await
+                    {
                         Ok(response) => {
-                            let content = response.description.unwrap_or_default();
+                            let content =
+                                response.description.unwrap_or_default();
                             edit_draft.set(content.clone());
-                            desc_text.set(if content.is_empty() { None } else { Some(content) });
+                            desc_text.set(if content.is_empty() {
+                                None
+                            } else {
+                                Some(content)
+                            });
                             desc_loading.set(false);
-                        }
+                        },
                         Err(error) => {
                             desc_loading.set(false);
                             desc_error.set(Some(error));
-                        }
+                        },
                     }
                 } else {
                     let path = asset_path.unwrap_or_default();
-                    match backend.get_ticket_asset(&workspace, &ticket_id, &path).await {
+                    match backend
+                        .get_ticket_asset(&workspace, &ticket_id, &path)
+                        .await
+                    {
                         Ok(response) => {
                             let content = response.content;
-                            desc_text.set(if content.is_empty() { None } else { Some(content) });
+                            desc_text.set(if content.is_empty() {
+                                None
+                            } else {
+                                Some(content)
+                            });
                             desc_loading.set(false);
-                        }
+                        },
                         Err(error) => {
                             desc_loading.set(false);
                             desc_error.set(Some(error));
-                        }
+                        },
                     }
                 }
             });
@@ -94,7 +123,9 @@ pub fn TicketContent(
             history_entries.set(vec![]);
             spawn(async move {
                 let backend = HttpTicketBackend::new(None);
-                if let Ok(response) = backend.get_ticket_history(&workspace, &ticket_id).await {
+                if let Ok(response) =
+                    backend.get_ticket_history(&workspace, &ticket_id).await
+                {
                     history_entries.set(response.entries);
                 }
             });

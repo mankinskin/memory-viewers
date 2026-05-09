@@ -1,8 +1,8 @@
 //! `SpecCard` — compact row in the spec list / tree sidebar.
 
-use dioxus::prelude::*;
-use crate::types::SpecSummary;
 use super::state_badge::StateBadge;
+use crate::types::SpecSummary;
+use dioxus::prelude::*;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct SpecCardProps {

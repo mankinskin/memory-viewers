@@ -4,7 +4,10 @@
 //! `ticket-http`. The HTTP implementation calls those endpoints using the
 //! browser Fetch API via `gloo-net`.
 
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use percent_encoding::{
+    utf8_percent_encode,
+    NON_ALPHANUMERIC,
+};
 use serde::Deserialize;
 
 mod backend;
@@ -62,8 +65,12 @@ impl HttpTicketBackend {
         }
     }
 
-    async fn fetch<T: for<'de> Deserialize<'de>>(&self, url: &str) -> Result<T, String> {
-        let mut req = gloo_net::http::Request::get(url).header("Accept", "application/json");
+    async fn fetch<T: for<'de> Deserialize<'de>>(
+        &self,
+        url: &str,
+    ) -> Result<T, String> {
+        let mut req = gloo_net::http::Request::get(url)
+            .header("Accept", "application/json");
         if let Some(ref t) = self.token {
             req = req.header("Authorization", &format!("Bearer {t}"));
         }
@@ -144,7 +151,8 @@ impl TicketBackend for HttpTicketBackend {
         workspace: &str,
         id: &str,
     ) -> Result<TicketDetailResponse, String> {
-        self.fetch(&format!("/api/tickets/{id}?workspace={}", enc(workspace))).await
+        self.fetch(&format!("/api/tickets/{id}?workspace={}", enc(workspace)))
+            .await
     }
 
     async fn get_ticket_description(
@@ -152,7 +160,11 @@ impl TicketBackend for HttpTicketBackend {
         workspace: &str,
         id: &str,
     ) -> Result<TicketDescriptionResponse, String> {
-        self.fetch(&format!("/api/tickets/{id}/description?workspace={}", enc(workspace))).await
+        self.fetch(&format!(
+            "/api/tickets/{id}/description?workspace={}",
+            enc(workspace)
+        ))
+        .await
     }
 
     async fn get_subgraph(
@@ -163,8 +175,11 @@ impl TicketBackend for HttpTicketBackend {
     ) -> Result<GraphSubgraphResponse, String> {
         self.fetch(&format!(
             "/api/graph/subgraph?workspace={}&root={}&depth={}",
-            enc(workspace), enc(root), depth,
-        )).await
+            enc(workspace),
+            enc(root),
+            depth,
+        ))
+        .await
     }
 
     async fn patch_ticket(
@@ -178,13 +193,22 @@ impl TicketBackend for HttpTicketBackend {
         self.send_json("PATCH", &url, &body).await
     }
 
-    async fn list_schemas(&self, workspace: &str) -> Result<SchemaListResponse, String> {
-        self.fetch(&format!("/api/schema?workspace={}", enc(workspace))).await
+    async fn list_schemas(
+        &self,
+        workspace: &str,
+    ) -> Result<SchemaListResponse, String> {
+        self.fetch(&format!("/api/schema?workspace={}", enc(workspace)))
+            .await
     }
 
-    async fn create_edge(&self, workspace: &str, body: &EdgeMutationBody) -> Result<(), String> {
+    async fn create_edge(
+        &self,
+        workspace: &str,
+        body: &EdgeMutationBody,
+    ) -> Result<(), String> {
         let url = format!("/api/edges?workspace={}", enc(workspace));
-        let json_body = serde_json::to_string(body).map_err(|e| e.to_string())?;
+        let json_body =
+            serde_json::to_string(body).map_err(|e| e.to_string())?;
         let mut req = gloo_net::http::Request::post(&url)
             .header("Accept", "application/json")
             .header("Content-Type", "application/json");
@@ -208,9 +232,14 @@ impl TicketBackend for HttpTicketBackend {
         Ok(())
     }
 
-    async fn delete_edge(&self, workspace: &str, body: &EdgeMutationBody) -> Result<(), String> {
+    async fn delete_edge(
+        &self,
+        workspace: &str,
+        body: &EdgeMutationBody,
+    ) -> Result<(), String> {
         let url = format!("/api/edges?workspace={}", enc(workspace));
-        let json_body = serde_json::to_string(body).map_err(|e| e.to_string())?;
+        let json_body =
+            serde_json::to_string(body).map_err(|e| e.to_string())?;
         let mut req = gloo_net::http::Request::delete(&url)
             .header("Accept", "application/json")
             .header("Content-Type", "application/json");
@@ -237,7 +266,8 @@ impl TicketBackend for HttpTicketBackend {
         body: &CreateTicketRequest,
     ) -> Result<CreateTicketResponse, String> {
         let url = format!("/api/tickets?workspace={}", enc(workspace));
-        let json_body = serde_json::to_string(body).map_err(|e| e.to_string())?;
+        let json_body =
+            serde_json::to_string(body).map_err(|e| e.to_string())?;
         self.send_json("POST", &url, &json_body).await
     }
 
@@ -246,7 +276,12 @@ impl TicketBackend for HttpTicketBackend {
         workspace: &str,
         type_id: &str,
     ) -> Result<SchemaDetailResponse, String> {
-        self.fetch(&format!("/api/schema/{}?workspace={}", enc(type_id), enc(workspace))).await
+        self.fetch(&format!(
+            "/api/schema/{}?workspace={}",
+            enc(type_id),
+            enc(workspace)
+        ))
+        .await
     }
 
     async fn get_ticket_history(
@@ -254,7 +289,11 @@ impl TicketBackend for HttpTicketBackend {
         workspace: &str,
         id: &str,
     ) -> Result<TicketHistoryResponse, String> {
-        self.fetch(&format!("/api/tickets/{id}/history?workspace={}", enc(workspace))).await
+        self.fetch(&format!(
+            "/api/tickets/{id}/history?workspace={}",
+            enc(workspace)
+        ))
+        .await
     }
 
     async fn revert_ticket(
@@ -263,7 +302,8 @@ impl TicketBackend for HttpTicketBackend {
         id: &str,
         revision: u64,
     ) -> Result<TicketDetailResponse, String> {
-        let url = format!("/api/tickets/{id}/revert?workspace={}", enc(workspace));
+        let url =
+            format!("/api/tickets/{id}/revert?workspace={}", enc(workspace));
         let body = serde_json::json!({ "revision": revision }).to_string();
         self.send_json("POST", &url, &body).await
     }
@@ -273,7 +313,8 @@ impl TicketBackend for HttpTicketBackend {
         workspace: &str,
         id: &str,
     ) -> Result<TicketDetailResponse, String> {
-        let url = format!("/api/tickets/{id}/undo?workspace={}", enc(workspace));
+        let url =
+            format!("/api/tickets/{id}/undo?workspace={}", enc(workspace));
         let mut req = gloo_net::http::Request::post(&url)
             .header("Accept", "application/json");
         if let Some(ref t) = self.token {
@@ -285,7 +326,9 @@ impl TicketBackend for HttpTicketBackend {
             let body = resp.text().await.unwrap_or_default();
             return Err(format!("{status} POST {url}: {body}"));
         }
-        resp.json::<TicketDetailResponse>().await.map_err(|e| e.to_string())
+        resp.json::<TicketDetailResponse>()
+            .await
+            .map_err(|e| e.to_string())
     }
 
     async fn update_ticket_description(
@@ -296,7 +339,8 @@ impl TicketBackend for HttpTicketBackend {
     ) -> Result<(), String> {
         let url = format!("/api/tickets/{id}?workspace={}", enc(workspace));
         let body = serde_json::json!({ "description": text });
-        let body_str = serde_json::to_string(&body).map_err(|e| e.to_string())?;
+        let body_str =
+            serde_json::to_string(&body).map_err(|e| e.to_string())?;
         self.send_json::<serde_json::Value>("PATCH", &url, &body_str)
             .await
             .map(|_| ())
@@ -307,7 +351,11 @@ impl TicketBackend for HttpTicketBackend {
         workspace: &str,
         id: &str,
     ) -> Result<crate::types::TicketFilesResponse, String> {
-        self.fetch(&format!("/api/tickets/{id}/files?workspace={}", enc(workspace))).await
+        self.fetch(&format!(
+            "/api/tickets/{id}/files?workspace={}",
+            enc(workspace)
+        ))
+        .await
     }
 
     async fn get_ticket_asset(
@@ -320,14 +368,16 @@ impl TicketBackend for HttpTicketBackend {
             "/api/tickets/{id}/asset?workspace={}&path={}",
             enc(workspace),
             enc(path),
-        )).await
+        ))
+        .await
     }
 
     async fn batch_tickets(
         &self,
         body: &crate::types::BatchRequest,
     ) -> Result<crate::types::BatchResponse, String> {
-        let body_str = serde_json::to_string(body).map_err(|e| e.to_string())?;
+        let body_str =
+            serde_json::to_string(body).map_err(|e| e.to_string())?;
         self.send_json("POST", "/api/batch", &body_str).await
     }
 }

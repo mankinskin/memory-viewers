@@ -3,7 +3,10 @@
 //! Kept separate from the HTTP client so components can import types without
 //! pulling in the transport layer.
 
-use serde::{Deserialize, Serialize};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 
 // ── Workspace ─────────────────────────────────────────────────────────────────
 
@@ -240,7 +243,10 @@ pub enum BatchCommand {
         state: Option<String>,
         #[serde(skip_serializing_if = "Option::is_none")]
         from_state: Option<String>,
-        #[serde(default, skip_serializing_if = "std::collections::BTreeMap::is_empty")]
+        #[serde(
+            default,
+            skip_serializing_if = "std::collections::BTreeMap::is_empty"
+        )]
         fields: std::collections::BTreeMap<String, serde_json::Value>,
     },
     Close {

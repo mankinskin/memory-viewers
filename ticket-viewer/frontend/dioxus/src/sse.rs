@@ -85,7 +85,9 @@ async fn sleep_ms(ms: u32) {
     let promise = js_sys::Promise::new(&mut |resolve, _reject| {
         web_sys::window()
             .expect("no window")
-            .set_timeout_with_callback_and_timeout_and_arguments_0(&resolve, ms as i32)
+            .set_timeout_with_callback_and_timeout_and_arguments_0(
+                &resolve, ms as i32,
+            )
             .expect("setTimeout failed");
     });
     let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
@@ -106,7 +108,10 @@ async fn sleep_ms(ms: u32) {
 ///   string parameter).
 /// * `tickets` — signal that holds the displayed ticket list; the hook mutates
 ///   it in response to `ticket.upsert` and `ticket.delete` events.
-pub fn use_sse(workspace: String, tickets: Signal<Vec<TicketSummary>>) {
+pub fn use_sse(
+    workspace: String,
+    tickets: Signal<Vec<TicketSummary>>,
+) {
     // Monotonic counter — incrementing this value re-runs the effect, which
     // drops the old `SseHandle` (closing the EventSource) and opens a fresh one.
     let mut reconnect_gen: Signal<u32> = use_signal(|| 0_u32);
@@ -132,9 +137,12 @@ pub fn use_sse(workspace: String, tickets: Signal<Vec<TicketSummary>>) {
         let es = match web_sys::EventSource::new(&url) {
             Ok(es) => es,
             Err(e) => {
-                tracing::error!("EventSource::new failed for {workspace}: {:?}", e);
+                tracing::error!(
+                    "EventSource::new failed for {workspace}: {:?}",
+                    e
+                );
                 return;
-            }
+            },
         };
 
         // ── ticket.upsert ──────────────────────────────────────────────────
@@ -145,7 +153,9 @@ pub fn use_sse(workspace: String, tickets: Signal<Vec<TicketSummary>>) {
             let data = msg_data(event);
             match serde_json::from_str::<UpsertPayload>(&data) {
                 Ok(p) => tix_up.with_mut(|v| {
-                    if let Some(existing) = v.iter_mut().find(|t| t.id == p.ticket.id) {
+                    if let Some(existing) =
+                        v.iter_mut().find(|t| t.id == p.ticket.id)
+                    {
                         existing.state = p.ticket.state;
                         if p.ticket.title.is_some() {
                             existing.title = p.ticket.title;

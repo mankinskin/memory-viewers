@@ -1,24 +1,32 @@
-use std::collections::{HashMap, HashSet};
+use std::collections::{
+    HashMap,
+    HashSet,
+};
 
 use dioxus::prelude::*;
 
 use crate::types::TicketFileEntry;
 
-use super::header::render_filter_controls;
-use super::rows::render_ticket_rows;
-use super::TicketTreeProps;
+use super::{
+    header::render_filter_controls,
+    rows::render_ticket_rows,
+    TicketTreeProps,
+};
 
 #[component]
 pub fn TicketTree(props: TicketTreeProps) -> Element {
     let filter = props.filter.clone();
     let state_filter_val = props.state_filter.clone();
     let expanded_ids: Signal<HashSet<String>> = use_signal(HashSet::new);
-    let file_cache: Signal<HashMap<String, Vec<TicketFileEntry>>> = use_signal(HashMap::new);
+    let file_cache: Signal<HashMap<String, Vec<TicketFileEntry>>> =
+        use_signal(HashMap::new);
     let loading_files: Signal<HashSet<String>> = use_signal(HashSet::new);
     let sorted = sorted_tickets(props.tickets.clone(), &props.sort_key);
     let all_checked = props.show_checkboxes
         && !sorted.is_empty()
-        && sorted.iter().all(|ticket| props.selected_ids.contains(&ticket.id));
+        && sorted
+            .iter()
+            .all(|ticket| props.selected_ids.contains(&ticket.id));
     let is_empty = props.tickets.is_empty();
 
     rsx! {
@@ -47,7 +55,10 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
     }
 }
 
-fn sorted_tickets(mut tickets: Vec<crate::types::TicketSummary>, sort_key: &str) -> Vec<crate::types::TicketSummary> {
+fn sorted_tickets(
+    mut tickets: Vec<crate::types::TicketSummary>,
+    sort_key: &str,
+) -> Vec<crate::types::TicketSummary> {
     match sort_key {
         "title" => tickets.sort_by(|a, b| a.title.cmp(&b.title)),
         "state" => tickets.sort_by(|a, b| a.state.cmp(&b.state)),

@@ -1,6 +1,9 @@
 use dioxus::prelude::*;
 
-use super::{TicketTreeProps, STATE_CHIPS};
+use super::{
+    TicketTreeProps,
+    STATE_CHIPS,
+};
 
 pub(super) fn render_filter_controls(
     props: TicketTreeProps,

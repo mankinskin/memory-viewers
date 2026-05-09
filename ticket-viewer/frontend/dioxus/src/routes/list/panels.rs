@@ -1,13 +1,24 @@
 use dioxus::prelude::*;
 
-use viewer_api_dioxus::{LayoutMode, PanelResizer, Projection};
+use viewer_api_dioxus::{
+    LayoutMode,
+    PanelResizer,
+    Projection,
+};
 
-use crate::components::dep_graph::DepGraph;
-use crate::components::ticket_content::TicketContent;
-use crate::components::ticket_detail::TicketDetail;
-use crate::types::TicketSummary;
+use crate::{
+    components::{
+        dep_graph::DepGraph,
+        ticket_content::TicketContent,
+        ticket_detail::TicketDetail,
+    },
+    types::TicketSummary,
+};
 
-use super::{DETAIL_COLLAPSE_PX, GRAPH_COLLAPSE_PX};
+use super::{
+    DETAIL_COLLAPSE_PX,
+    GRAPH_COLLAPSE_PX,
+};
 
 pub(super) fn render_selected_main_panel(
     workspace: String,
@@ -156,7 +167,11 @@ fn render_view_mode_bar(
              border: 1px solid var(--border-subtle); \
              border-radius: 4px; cursor: pointer; \
              background: {}; color: {};",
-            if active { "var(--accent-blue)" } else { "var(--bg-secondary)" },
+            if active {
+                "var(--accent-blue)"
+            } else {
+                "var(--bg-secondary)"
+            },
             if active { "#fff" } else { "var(--text-muted)" },
         )
     };
@@ -171,7 +186,11 @@ fn render_view_mode_bar(
             } else {
                 "var(--bg-secondary)"
             },
-            if collapsed { "var(--accent-blue)" } else { "var(--text-muted)" },
+            if collapsed {
+                "var(--accent-blue)"
+            } else {
+                "var(--text-muted)"
+            },
         )
     };
 

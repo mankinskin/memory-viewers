@@ -1,7 +1,7 @@
 //! `HealthPanel` — displays health-check issues for a spec.
 
-use dioxus::prelude::*;
 use crate::types::HealthResponse;
+use dioxus::prelude::*;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct HealthPanelProps {
@@ -28,8 +28,16 @@ pub fn HealthPanel(props: HealthPanelProps) -> Element {
         return rsx! { div {} };
     };
 
-    let status_color = if h.issues_count == 0 { "#22c55e" } else { "#f59e0b" };
-    let status_label = if h.issues_count == 0 { "Healthy" } else { "Issues found" };
+    let status_color = if h.issues_count == 0 {
+        "#22c55e"
+    } else {
+        "#f59e0b"
+    };
+    let status_label = if h.issues_count == 0 {
+        "Healthy"
+    } else {
+        "Issues found"
+    };
 
     rsx! {
         div {

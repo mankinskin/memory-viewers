@@ -3,11 +3,23 @@ use std::collections::BTreeMap;
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
 
-use crate::api::{HttpTicketBackend, TicketBackend};
-use crate::routes::Route;
-use crate::types::{CreateTicketRequest, SchemaListResponse, TypeSchema};
+use crate::{
+    api::{
+        HttpTicketBackend,
+        TicketBackend,
+    },
+    routes::Route,
+    types::{
+        CreateTicketRequest,
+        SchemaListResponse,
+        TypeSchema,
+    },
+};
 
-use super::draft::{clear_draft, DraftState};
+use super::draft::{
+    clear_draft,
+    DraftState,
+};
 
 pub(crate) fn load_schemas(
     backend: HttpTicketBackend,
@@ -66,14 +78,16 @@ pub(crate) fn build_request(draft: &DraftState) -> CreateTicketRequest {
     }
     for (key, value) in &draft.extra {
         if !value.is_empty() {
-            fields.insert(key.clone(), serde_json::Value::String(value.clone()));
+            fields
+                .insert(key.clone(), serde_json::Value::String(value.clone()));
         }
     }
 
     CreateTicketRequest {
         type_id: draft.type_id.clone(),
         title: (!draft.title.is_empty()).then(|| draft.title.clone()),
-        description: (!draft.description.is_empty()).then(|| draft.description.clone()),
+        description: (!draft.description.is_empty())
+            .then(|| draft.description.clone()),
         fields: (!fields.is_empty()).then_some(fields),
     }
 }
@@ -94,11 +108,11 @@ pub(crate) fn spawn_create_ticket(
                     workspace: workspace.clone(),
                     id: response.ticket.id,
                 });
-            }
+            },
             Err(error) => {
                 submit_err.set(Some(error));
                 submitting.set(false);
-            }
+            },
         }
     });
 }

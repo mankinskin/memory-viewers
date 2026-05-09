@@ -6,14 +6,30 @@
 
 use dioxus::prelude::*;
 use gloo_events::EventListener;
-use serde::{Deserialize, Serialize};
-use viewer_api_dioxus::{Camera, Layout3D};
+use serde::{
+    Deserialize,
+    Serialize,
+};
 use viewer_api_dioxus::{
-    get_hash_param, remove_hash_param, set_hash_param, ColonSegmented, PathCodec,
+    get_hash_param,
+    remove_hash_param,
+    set_hash_param,
+    Camera,
+    ColonSegmented,
+    Layout3D,
+    PathCodec,
 };
 
-use crate::components::spec_graph::{LayoutAlgorithm, LayoutParams};
-use crate::types::{SpecGraphEdge, SpecGraphNode};
+use crate::{
+    components::spec_graph::{
+        LayoutAlgorithm,
+        LayoutParams,
+    },
+    types::{
+        SpecGraphEdge,
+        SpecGraphNode,
+    },
+};
 
 // ── localStorage key ──────────────────────────────────────────────────────────
 
@@ -76,7 +92,8 @@ impl SpecListStore {
 
         let filter = use_signal(|| saved.filter.clone());
         let state_filter = use_signal(|| saved.state_filter.clone());
-        let mut open_spec_id: Signal<Option<String>> = use_signal(|| hash_id.or(saved.open_spec_id.clone()));
+        let mut open_spec_id: Signal<Option<String>> =
+            use_signal(|| hash_id.or(saved.open_spec_id.clone()));
         let active_tab = use_signal(|| saved.active_tab.clone());
 
         // Store the listener in a Signal so it is dropped when the component
@@ -166,6 +183,10 @@ pub struct SpecGraphStore {
     pub draft_algo: Signal<LayoutAlgorithm>,
     pub draft_params: Signal<LayoutParams>,
     pub draft_show_edges: Signal<bool>,
+    pub center_camera_on_selected_node: Signal<bool>,
+    pub zoom_to_selected_node: Signal<bool>,
+    pub selected_node_zoom_factor: Signal<f32>,
+    pub auto_layout_selected_node: Signal<bool>,
     pub committed_algo: Signal<LayoutAlgorithm>,
     pub committed_params: Signal<LayoutParams>,
     pub committed_show_edges: Signal<bool>,
@@ -185,6 +206,10 @@ impl SpecGraphStore {
             draft_algo: use_signal(|| LayoutAlgorithm::ForceDirected),
             draft_params: use_signal(LayoutParams::default),
             draft_show_edges: use_signal(|| true),
+            center_camera_on_selected_node: use_signal(|| false),
+            zoom_to_selected_node: use_signal(|| false),
+            selected_node_zoom_factor: use_signal(|| 4.0),
+            auto_layout_selected_node: use_signal(|| false),
             committed_algo: use_signal(|| LayoutAlgorithm::ForceDirected),
             committed_params: use_signal(LayoutParams::default),
             committed_show_edges: use_signal(|| true),

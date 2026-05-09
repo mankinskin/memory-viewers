@@ -1,8 +1,16 @@
 use dioxus::prelude::*;
 
-use super::widgets::{ConflictDialog, FieldRow, StateBadge};
+use super::widgets::{
+    ConflictDialog,
+    FieldRow,
+    StateBadge,
+};
 use crate::components::ticket_detail::model::{
-    field_bool, field_str, static_options, ConflictState, STRING_FIELDS,
+    field_bool,
+    field_str,
+    static_options,
+    ConflictState,
+    STRING_FIELDS,
 };
 
 #[derive(Clone)]
@@ -84,7 +92,10 @@ fn render_conflict_dialog(
     }
 }
 
-fn render_error_banner(error: Option<&String>, prefix: &str) -> Element {
+fn render_error_banner(
+    error: Option<&String>,
+    prefix: &str,
+) -> Element {
     let Some(error) = error else {
         return rsx! { Fragment {} };
     };

@@ -1,10 +1,19 @@
 use std::collections::HashMap;
 
-use viewer_api_dioxus::{EdgeRef3D, Layout3D};
+use viewer_api_dioxus::{
+    EdgeRef3D,
+    Layout3D,
+};
 
-use crate::types::{SpecGraphEdge, SpecGraphNode};
+use crate::types::{
+    SpecGraphEdge,
+    SpecGraphNode,
+};
 
-use super::model::{LayoutAlgorithm, LayoutParams};
+use super::model::{
+    LayoutAlgorithm,
+    LayoutParams,
+};
 
 mod force;
 mod rings;
@@ -13,7 +22,10 @@ mod tree;
 
 use force::layout_force;
 use rings::layout_rings;
-use simple::{layout_grid, layout_sphere};
+use simple::{
+    layout_grid,
+    layout_sphere,
+};
 use tree::layout_tree_2d;
 
 pub fn build_layout(

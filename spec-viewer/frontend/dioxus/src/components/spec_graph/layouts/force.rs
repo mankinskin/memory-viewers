@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use viewer_api_dioxus::Node3D;
 
-use crate::types::{SpecGraphEdge, SpecGraphNode};
+use crate::types::{
+    SpecGraphEdge,
+    SpecGraphNode,
+};
 
 use super::super::model::LayoutParams;
 
@@ -48,11 +51,15 @@ fn node_index(nodes: &[SpecGraphNode]) -> HashMap<&str, usize> {
         .collect()
 }
 
-fn initial_positions(node_count: usize, spread: f32) -> Vec<[f32; 3]> {
+fn initial_positions(
+    node_count: usize,
+    spread: f32,
+) -> Vec<[f32; 3]> {
     (0..node_count)
         .map(|i| {
             let phi = (1.0 - 2.0 * (i as f32 + 0.5) / node_count as f32).acos();
-            let theta = std::f32::consts::PI * (1.0 + 5.0_f32.sqrt()) * i as f32;
+            let theta =
+                std::f32::consts::PI * (1.0 + 5.0_f32.sqrt()) * i as f32;
             let radius = 4.0 * spread;
             [
                 radius * phi.sin() * theta.cos(),
@@ -63,7 +70,10 @@ fn initial_positions(node_count: usize, spread: f32) -> Vec<[f32; 3]> {
         .collect()
 }
 
-fn indexed_edges(edges: &[SpecGraphEdge], index: &HashMap<&str, usize>) -> Vec<(usize, usize)> {
+fn indexed_edges(
+    edges: &[SpecGraphEdge],
+    index: &HashMap<&str, usize>,
+) -> Vec<(usize, usize)> {
     edges
         .iter()
         .filter_map(|edge| {
@@ -87,7 +97,10 @@ fn apply_repulsion(
                 positions[i][1] - positions[j][1],
                 positions[i][2] - positions[j][2],
             ];
-            let dist2 = (delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2]).max(0.01);
+            let dist2 = (delta[0] * delta[0]
+                + delta[1] * delta[1]
+                + delta[2] * delta[2])
+                .max(0.01);
             let dist = dist2.sqrt();
             let force = repulsion * k * k / dist2;
             let unit = [delta[0] / dist, delta[1] / dist, delta[2] / dist];
@@ -114,7 +127,10 @@ fn apply_attraction(
             positions[from][1] - positions[to][1],
             positions[from][2] - positions[to][2],
         ];
-        let dist = (delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2]).sqrt().max(0.01);
+        let dist =
+            (delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2])
+                .sqrt()
+                .max(0.01);
         let force = dist * dist / k;
         let unit = [delta[0] / dist, delta[1] / dist, delta[2] / dist];
         for axis in 0..3 {
@@ -124,9 +140,16 @@ fn apply_attraction(
     }
 }
 
-fn step_positions(positions: &mut [[f32; 3]], displacement: &[[f32; 3]], temperature: f32) {
+fn step_positions(
+    positions: &mut [[f32; 3]],
+    displacement: &[[f32; 3]],
+    temperature: f32,
+) {
     for (position, delta) in positions.iter_mut().zip(displacement.iter()) {
-        let magnitude = (delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2]).sqrt().max(0.001);
+        let magnitude =
+            (delta[0] * delta[0] + delta[1] * delta[1] + delta[2] * delta[2])
+                .sqrt()
+                .max(0.001);
         let step = magnitude.min(temperature);
         for axis in 0..3 {
             position[axis] += delta[axis] / magnitude * step;

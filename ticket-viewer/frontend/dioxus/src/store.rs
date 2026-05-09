@@ -28,11 +28,19 @@
 
 use dioxus::prelude::*;
 use gloo_events::EventListener;
-use serde::{Deserialize, Serialize};
-use viewer_api_dioxus::{get_hash_param, remove_hash_param, set_hash_param};
+use serde::{
+    Deserialize,
+    Serialize,
+};
+use viewer_api_dioxus::{
+    get_hash_param,
+    remove_hash_param,
+    set_hash_param,
+};
 
 // ── localStorage key ──────────────────────────────────────────────────────────
-#[cfg(target_arch = "wasm32")]fn ls_key(workspace: &str) -> String {
+#[cfg(target_arch = "wasm32")]
+fn ls_key(workspace: &str) -> String {
     format!("ticket-viewer:{workspace}:ui")
 }
 
@@ -110,13 +118,16 @@ pub fn load_from_local_storage(workspace: &str) -> WorkspaceUiState {
 /// `ticket-viewer:{workspace}:ui`.
 ///
 /// Ignores quota errors silently.
-pub fn save_to_local_storage(workspace: &str, state: &WorkspaceUiState) {
+pub fn save_to_local_storage(
+    workspace: &str,
+    state: &WorkspaceUiState,
+) {
     #[cfg(target_arch = "wasm32")]
     {
         let key = ls_key(workspace);
         if let Ok(json) = serde_json::to_string(state) {
-            if let Some(storage) = web_sys::window()
-                .and_then(|w| w.local_storage().ok().flatten())
+            if let Some(storage) =
+                web_sys::window().and_then(|w| w.local_storage().ok().flatten())
             {
                 let _ = storage.set_item(&key, &json);
             }
@@ -180,7 +191,8 @@ impl TicketListStore {
         let filter = use_signal(|| saved.filter);
         let state_filter = use_signal(|| saved.state_filter);
         let sort_key = use_signal(|| saved.sort_key);
-        let mut open_ticket_id: Signal<Option<String>> = use_signal(|| initial_id);
+        let mut open_ticket_id: Signal<Option<String>> =
+            use_signal(|| initial_id);
         let active_tab = use_signal(|| saved.active_tab);
 
         // ── hashchange listener ───────────────────────────────────────────────
@@ -223,7 +235,10 @@ impl TicketListStore {
     ///
     /// Call this inside a `use_effect` — Dioxus will re-run the effect
     /// automatically whenever any of the signals read by this method change.
-    pub fn persist(&self, workspace: &str) {
+    pub fn persist(
+        &self,
+        workspace: &str,
+    ) {
         let state = WorkspaceUiState {
             filter: self.filter.read().clone(),
             state_filter: self.state_filter.read().clone(),

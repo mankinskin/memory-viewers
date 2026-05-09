@@ -98,7 +98,11 @@ pub(super) fn apply_select_all(
     mut selected_ids: Signal<Vec<String>>,
 ) {
     if checked {
-        let ids: Vec<String> = tickets.read().iter().map(|ticket| ticket.id.clone()).collect();
+        let ids: Vec<String> = tickets
+            .read()
+            .iter()
+            .map(|ticket| ticket.id.clone())
+            .collect();
         selected_ids.set(ids);
     } else {
         selected_ids.set(Vec::new());

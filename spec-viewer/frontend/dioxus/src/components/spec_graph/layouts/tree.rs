@@ -2,7 +2,10 @@ use std::collections::HashMap;
 
 use viewer_api_dioxus::Node3D;
 
-use crate::types::{SpecGraphEdge, SpecGraphNode};
+use crate::types::{
+    SpecGraphEdge,
+    SpecGraphNode,
+};
 
 use super::super::model::LayoutParams;
 
@@ -41,7 +44,9 @@ fn build_tree(
             continue;
         }
 
-        let (Some(&from), Some(&to)) = (index.get(edge.from.as_str()), index.get(edge.to.as_str())) else {
+        let (Some(&from), Some(&to)) =
+            (index.get(edge.from.as_str()), index.get(edge.to.as_str()))
+        else {
             continue;
         };
         if from == to {
@@ -109,7 +114,10 @@ fn measure_node(
     }
 }
 
-fn append_cycle_members(roots: &mut Vec<usize>, visited: &mut [bool]) {
+fn append_cycle_members(
+    roots: &mut Vec<usize>,
+    visited: &mut [bool],
+) {
     for (index, seen) in visited.iter_mut().enumerate() {
         if *seen {
             continue;
@@ -119,7 +127,11 @@ fn append_cycle_members(roots: &mut Vec<usize>, visited: &mut [bool]) {
     }
 }
 
-fn assign_forest(roots: &[usize], children: &[Vec<usize>], width: &[f32]) -> Vec<f32> {
+fn assign_forest(
+    roots: &[usize],
+    children: &[Vec<usize>],
+    width: &[f32],
+) -> Vec<f32> {
     let mut x_pos = vec![0.0_f32; children.len()];
     let mut cursor = 0.0_f32;
     for &root in roots {

@@ -9,7 +9,13 @@
 use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
-use viewer_api_dioxus::{FileTree, FilterDef, NodeIcon, SortKey, TreeNode};
+use viewer_api_dioxus::{
+    FileTree,
+    FilterDef,
+    NodeIcon,
+    SortKey,
+    TreeNode,
+};
 
 use crate::types::SpecSummary;
 
@@ -38,9 +44,13 @@ pub struct SpecTreeProps {
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
-const ALL_STATES: &[&str] = &["draft", "ready", "reviewed", "approved", "archived"];
+const ALL_STATES: &[&str] =
+    &["draft", "ready", "reviewed", "approved", "archived"];
 
-fn count_state(specs: &[SpecSummary], state: &str) -> usize {
+fn count_state(
+    specs: &[SpecSummary],
+    state: &str,
+) -> usize {
     specs
         .iter()
         .filter(|s| s.state.as_deref() == Some(state))
@@ -49,12 +59,12 @@ fn count_state(specs: &[SpecSummary], state: &str) -> usize {
 
 fn badge_color(state: &str) -> Option<String> {
     match state {
-        "draft"    => Some("var(--text-muted)".to_string()),
-        "ready"    => Some("var(--accent-blue)".to_string()),
+        "draft" => Some("var(--text-muted)".to_string()),
+        "ready" => Some("var(--accent-blue)".to_string()),
         "reviewed" => Some("var(--accent-green)".to_string()),
         "approved" => Some("var(--accent-green)".to_string()),
         "archived" => Some("var(--text-muted)".to_string()),
-        _          => None,
+        _ => None,
     }
 }
 
@@ -70,7 +80,11 @@ fn spec_leaf(s: &SpecSummary) -> TreeNode {
     TreeNode {
         id: s.id.clone(),
         label,
-        badge: if state.is_empty() { None } else { Some(state.clone()) },
+        badge: if state.is_empty() {
+            None
+        } else {
+            Some(state.clone())
+        },
         badge_color: badge_color(&state),
         tooltip: s.slug.clone(),
         tooltip_render: None,
@@ -100,7 +114,9 @@ fn build_nodes(specs: &[SpecSummary]) -> Vec<TreeNode> {
     // Build folder nodes sorted by component name.
     let mut nodes: Vec<TreeNode> = folders
         .into_iter()
-        .map(|(comp, children)| TreeNode::dir(format!("__folder__{comp}"), comp, children))
+        .map(|(comp, children)| {
+            TreeNode::dir(format!("__folder__{comp}"), comp, children)
+        })
         .collect();
 
     // Append root-level specs after folders.
@@ -146,9 +162,7 @@ pub fn SpecTree(props: SpecTreeProps) -> Element {
         })
         .collect();
 
-    let nodes = build_nodes(
-        &filtered.into_iter().cloned().collect::<Vec<_>>(),
-    );
+    let nodes = build_nodes(&filtered.into_iter().cloned().collect::<Vec<_>>());
 
     let sort_keys = vec![SortKey::new("title", "Title")];
 

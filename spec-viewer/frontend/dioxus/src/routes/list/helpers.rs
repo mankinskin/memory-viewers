@@ -1,7 +1,10 @@
 use std::collections::HashSet;
 
 use dioxus::prelude::*;
-use viewer_api_dioxus::{expand_path_to, is_mobile_sidebar_viewport};
+use viewer_api_dioxus::{
+    expand_path_to,
+    is_mobile_sidebar_viewport,
+};
 
 use crate::types::SpecSummary;
 
@@ -56,7 +59,10 @@ pub(super) fn close_or_toggle_sidebar(
     }
 }
 
-pub(super) fn compute_prefetch_targets(specs: &[SpecSummary], active: &str) -> Vec<String> {
+pub(super) fn compute_prefetch_targets(
+    specs: &[SpecSummary],
+    active: &str,
+) -> Vec<String> {
     let active_pos = specs.iter().position(|spec| spec.id == active);
     let active_component = active_pos
         .and_then(|index| specs.get(index))
@@ -90,7 +96,10 @@ pub(super) fn compute_prefetch_targets(specs: &[SpecSummary], active: &str) -> V
     targets
 }
 
-pub(super) fn label_for(specs: &[SpecSummary], id: &str) -> String {
+pub(super) fn label_for(
+    specs: &[SpecSummary],
+    id: &str,
+) -> String {
     specs
         .iter()
         .find(|spec| spec.id == id)
@@ -98,7 +107,10 @@ pub(super) fn label_for(specs: &[SpecSummary], id: &str) -> String {
         .unwrap_or_else(|| id.to_string())
 }
 
-pub(super) fn initial_expanded_for(specs: &[SpecSummary], active_id: Option<&str>) -> Vec<String> {
+pub(super) fn initial_expanded_for(
+    specs: &[SpecSummary],
+    active_id: Option<&str>,
+) -> Vec<String> {
     let Some(id) = active_id else {
         return Vec::new();
     };
