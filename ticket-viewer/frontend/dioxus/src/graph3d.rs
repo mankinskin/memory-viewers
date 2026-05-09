@@ -20,35 +20,52 @@ use std::collections::HashMap;
 
 use dioxus::prelude::*;
 
-use viewer_api_dioxus::{can_use_webgpu_graph3d, CameraCommand, EdgeRef3D, Layout3D, Node3D, NodeCardProfile, Projection};
+use viewer_api_dioxus::{
+    can_use_webgpu_graph3d,
+    CameraCommand,
+    EdgeRef3D,
+    Layout3D,
+    Node3D,
+    NodeCardProfile,
+    Projection,
+};
 
-use crate::components::ticket_card;
-use crate::layout::{GraphLayout, LayoutMode};
+use crate::{
+    components::ticket_card,
+    layout::{
+        GraphLayout,
+        LayoutMode,
+    },
+};
 
 /// Tracing target used by all events in this module.
 const T: &str = "ticket_viewer::graph3d";
 
-
 /// Re-export so existing call sites (`crate::graph3d::can_use_webgpu`) keep
 /// working unchanged.
-pub fn can_use_webgpu() -> bool { can_use_webgpu_graph3d() }
+pub fn can_use_webgpu() -> bool {
+    can_use_webgpu_graph3d()
+}
 
 /// Build a shared [`Layout3D`] from the 2-D force-directed layout.
-pub fn lift_2d(gl: GraphLayout, mode: LayoutMode) -> Layout3D {
+pub fn lift_2d(
+    gl: GraphLayout,
+    mode: LayoutMode,
+) -> Layout3D {
     let scale = 1.0 / 100.0_f32;
 
     let nodes: Vec<Node3D> = gl
         .nodes
         .iter()
         .map(|gn| Node3D {
-            id:    gn.id.clone(),
+            id: gn.id.clone(),
             label: gn.title.clone(),
             state: gn.state.clone(),
-            x:     gn.x as f32 * scale,
-            y:    -(gn.y as f32 * scale),
-            z:     match mode {
+            x: gn.x as f32 * scale,
+            y: -(gn.y as f32 * scale),
+            z: match mode {
                 LayoutMode::Hierarchical3D => gn.z as f32 * scale,
-                LayoutMode::Flat2D         => 0.0,
+                LayoutMode::Flat2D => 0.0,
             },
         })
         .collect();
@@ -64,18 +81,23 @@ pub fn lift_2d(gl: GraphLayout, mode: LayoutMode) -> Layout3D {
         .iter()
         .filter_map(|e| {
             let &from_idx = idx.get(e.from.as_str())?;
-            let &to_idx   = idx.get(e.to.as_str())?;
-            Some(EdgeRef3D { from_idx, to_idx, kind: e.kind.clone() })
+            let &to_idx = idx.get(e.to.as_str())?;
+            Some(EdgeRef3D {
+                from_idx,
+                to_idx,
+                kind: e.kind.clone(),
+            })
         })
         .collect();
 
-    Layout3D::new(nodes, edges).with_node_card_profile(NodeCardProfile::TicketWide)
+    Layout3D::new(nodes, edges)
+        .with_node_card_profile(NodeCardProfile::TicketWide)
 }
 
 #[derive(Props, Clone, PartialEq)]
 pub struct Graph3DProps {
     pub workspace: String,
-    pub root_id:   String,
+    pub root_id: String,
     pub on_select: EventHandler<String>,
     /// Optional graph-preview selection — highlights this node with an ember
     /// border effect without changing the primary ticket-list selection.
@@ -97,14 +119,14 @@ pub struct Graph3DProps {
 
 #[component]
 pub fn Graph3D(props: Graph3DProps) -> Element {
-    let workspace    = props.workspace.clone();
-    let root_id      = props.root_id.clone();
-    let on_select    = props.on_select;
+    let workspace = props.workspace.clone();
+    let root_id = props.root_id.clone();
+    let on_select = props.on_select;
     let selected_node_id = props.selected_node_id.clone();
-    let layout_mode  = props.layout_mode;
-    let projection   = props.projection;
+    let layout_mode = props.layout_mode;
+    let projection = props.projection;
     let on_layout_mode_change = props.on_layout_mode_change.clone();
-    let on_projection_change  = props.on_projection_change.clone();
+    let on_projection_change = props.on_projection_change.clone();
 
     // ── Fetch service + cache ─────────────────────────────────────────────
     // Graph3D never issues its own HTTP requests.  It reads the shared cache
@@ -118,10 +140,13 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     // ── Camera command channel ────────────────────────────────────────────
     // Fire a one-time camera reset the first time a layout loads for each
     // root_id, and again whenever the layout mode changes.
-    let mut cam_cmd:        Signal<Option<CameraCommand>> = use_hook(|| Signal::new(None));
-    let mut cam_seq:        Signal<u64>                   = use_hook(|| Signal::new(0_u64));
-    let mut last_cam_root:  Signal<Option<String>>        = use_hook(|| Signal::new(None));
-    let mut last_cam_mode:  Signal<Option<LayoutMode>>    = use_hook(|| Signal::new(None));
+    let mut cam_cmd: Signal<Option<CameraCommand>> =
+        use_hook(|| Signal::new(None));
+    let mut cam_seq: Signal<u64> = use_hook(|| Signal::new(0_u64));
+    let mut last_cam_root: Signal<Option<String>> =
+        use_hook(|| Signal::new(None));
+    let mut last_cam_mode: Signal<Option<LayoutMode>> =
+        use_hook(|| Signal::new(None));
 
     // ── Lifecycle logging ─────────────────────────────────────────────────
     tracing::debug!(target: T, rid = %root_id, "mount");
@@ -138,7 +163,9 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let _ver = svc.version();
     let fetch_state = svc.state_for(&workspace, &root_id);
     #[cfg(target_arch = "wasm32")]
-    web_sys::console::log_1(&format!("[graph3d] render rid={root_id} ver={_ver}").into());
+    web_sys::console::log_1(
+        &format!("[graph3d] render rid={root_id} ver={_ver}").into(),
+    );
     tracing::debug!(target: T, rid = %root_id, ver = _ver, state = ?fetch_state, "render");
 
     // Try to get the layout from the cache.  If absent, show the spinner.
@@ -148,58 +175,64 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
         Some(layout) => {
             tracing::debug!(target: T, rid = %root_id, nodes = layout.nodes.len(), "cache_hit");
             lift_2d(layout, layout_mode)
-        }
-        None => {
-            match fetch_state {
-                crate::graph_fetch::GraphFetchState::Error { message, attempts } => {
-                    tracing::warn!(target: T, rid = %root_id, attempts, error = %message, "graph_fetch_failed");
-                    let svc_retry = svc.clone();
-                    let ws_retry = workspace.clone();
-                    let rid_retry = root_id.clone();
-                    return rsx! {
-                        div {
-                            style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 560px; color: #ddd; font-size: 13px; font-family: sans-serif; background: rgba(25, 28, 34, 0.92); border: 1px solid rgba(255, 120, 120, 0.35); border-radius: 8px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);",
-                            div { style: "font-weight: 600; color: #ff9d9d; margin-bottom: 6px;", "Failed to load graph" }
-                            div { style: "color: #f0c7c7; margin-bottom: 4px;", "{message}" }
-                            div { style: "color: #a8a8a8; font-size: 12px; margin-bottom: 10px;", "Attempts: {attempts}" }
-                            button {
-                                style: "padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #efefef; cursor: pointer;",
-                                onclick: move |_| {
-                                    svc_retry.retry(&ws_retry, &rid_retry);
-                                },
-                                "Retry"
-                            }
+        },
+        None => match fetch_state {
+            crate::graph_fetch::GraphFetchState::Error {
+                message,
+                attempts,
+            } => {
+                tracing::warn!(target: T, rid = %root_id, attempts, error = %message, "graph_fetch_failed");
+                let svc_retry = svc.clone();
+                let ws_retry = workspace.clone();
+                let rid_retry = root_id.clone();
+                return rsx! {
+                    div {
+                        style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); max-width: 560px; color: #ddd; font-size: 13px; font-family: sans-serif; background: rgba(25, 28, 34, 0.92); border: 1px solid rgba(255, 120, 120, 0.35); border-radius: 8px; padding: 12px 14px; box-shadow: 0 8px 24px rgba(0,0,0,0.4);",
+                        div { style: "font-weight: 600; color: #ff9d9d; margin-bottom: 6px;", "Failed to load graph" }
+                        div { style: "color: #f0c7c7; margin-bottom: 4px;", "{message}" }
+                        div { style: "color: #a8a8a8; font-size: 12px; margin-bottom: 10px;", "Attempts: {attempts}" }
+                        button {
+                            style: "padding: 6px 10px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #efefef; cursor: pointer;",
+                            onclick: move |_| {
+                                svc_retry.retry(&ws_retry, &rid_retry);
+                            },
+                            "Retry"
                         }
-                    };
-                }
-                _ => {
-                    tracing::debug!(target: T, rid = %root_id, state = ?fetch_state, "waiting_for_cache");
-                    return rsx! {
-                        div {
-                            style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 14px; font-family: sans-serif;",
-                            "Loading graph\u{2026}"
-                        }
-                    };
-                }
-            }
-        }
+                    }
+                };
+            },
+            _ => {
+                tracing::debug!(target: T, rid = %root_id, state = ?fetch_state, "waiting_for_cache");
+                return rsx! {
+                    div {
+                        style: "position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #aaa; font-size: 14px; font-family: sans-serif;",
+                        "Loading graph\u{2026}"
+                    }
+                };
+            },
+        },
     };
 
     let nodes = layout.nodes.clone();
     let node_count = nodes.len();
 
     // Issue a camera reset when root_id changes OR when layout_mode changes.
-    let root_changed = last_cam_root.read().as_deref() != Some(root_id.as_str());
+    let root_changed =
+        last_cam_root.read().as_deref() != Some(root_id.as_str());
     let mode_changed = *last_cam_mode.read() != Some(layout_mode);
     if root_changed || mode_changed {
-        if root_changed { last_cam_root.set(Some(root_id.clone())); }
-        if mode_changed { last_cam_mode.set(Some(layout_mode)); }
+        if root_changed {
+            last_cam_root.set(Some(root_id.clone()));
+        }
+        if mode_changed {
+            last_cam_mode.set(Some(layout_mode));
+        }
         // Camera angle depends on layout mode:
         // Hierarchical3D — angled view to show both Y depth and XZ spread.
         // Flat2D — top-down so the 2-D layout reads like a flat diagram.
         let (yaw, pitch) = match layout_mode {
             LayoutMode::Hierarchical3D => (0.3_f32, 0.4_f32),
-            LayoutMode::Flat2D         => (0.0_f32, 0.0_f32),
+            LayoutMode::Flat2D => (0.0_f32, 0.0_f32),
         };
         cam_cmd.set(Some(CameraCommand::ResetTo { yaw, pitch }));
         let next_seq = *cam_seq.peek() + 1;
@@ -209,6 +242,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     rsx! {
         viewer_api_dioxus::Graph3D {
             layout: layout,
+            selected_node_id: selected_node_id.clone(),
             camera_command: *cam_cmd.read(),
             camera_command_seq: *cam_seq.read(),
             projection: projection,
@@ -228,22 +262,22 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                         let node_id_click = node_id.clone();
                         let is_selected = selected_node_id.as_deref() == Some(node_id.as_str());
                         let card_class = if is_selected {
-                            "content node-card-selected"
+                            "graph-node-card content node-card-selected"
                         } else {
-                            "content"
+                            "graph-node-card content"
                         };
                         rsx! {
                             div {
                                 key: "{node_id}",
                                 class: "{card_class}",
                                 "data-node-idx": "{idx}",
-                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 260px; height: 56px; box-sizing: border-box; border: 1px solid rgba(200,200,200,0.35); border-left: 3px solid {color}; border-radius: 7px; background: rgba(30,30,40,0.92); backdrop-filter: blur(2px); padding: 9px 11px; cursor: pointer; overflow: hidden; font-family: sans-serif; box-shadow: 0 3px 12px rgba(0,0,0,0.6);",
+                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 260px; height: 56px; box-sizing: border-box; border: 1px solid var(--graph-node-border, rgba(200,200,200,0.35)); border-left: 3px solid {color}; border-radius: 7px; background: var(--graph-node-surface, rgba(30,30,40,0.92)); backdrop-filter: blur(2px); padding: 9px 11px; cursor: pointer; overflow: hidden; font-family: sans-serif; color: var(--graph-node-text, #e8e8f0); box-shadow: var(--graph-node-shadow, 0 3px 12px rgba(0,0,0,0.6));",
                                 onclick: move |evt: Event<MouseData>| {
                                     evt.stop_propagation();
                                     on_select.call(node_id_click.clone());
                                 },
                                 div {
-                                    style: "font-size: 13px; font-weight: 600; color: #e8e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                                    style: "font-size: 13px; font-weight: 600; color: var(--graph-node-text, #e8e8f0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
                                     "{title}"
                                 }
                                 div {
@@ -253,7 +287,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                         "{state_str}"
                                     }
                                     span {
-                                        style: "font-size: 10px; color: #888;",
+                                        style: "font-size: 10px; color: var(--graph-node-muted-text, #888);",
                                         "{short_id}"
                                     }
                                 }

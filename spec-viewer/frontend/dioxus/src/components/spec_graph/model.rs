@@ -72,11 +72,11 @@ pub struct LayoutParams {
 impl Default for LayoutParams {
     fn default() -> Self {
         Self {
-            spread: 1.35,
+            spread: 2.5,
             y_spacing: 1.0,
             iterations: 120,
-            link_dist: 3.8,
-            repulsion: 2.4,
+            link_dist: 6.0,
+            repulsion: 6.5,
         }
     }
 }

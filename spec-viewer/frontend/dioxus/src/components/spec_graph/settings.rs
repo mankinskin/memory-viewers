@@ -3,7 +3,10 @@ use viewer_api_dioxus::CameraCommand;
 
 use crate::store::SpecGraphStore;
 
-use super::model::{LayoutAlgorithm, LayoutParams};
+use super::model::{
+    LayoutAlgorithm,
+    LayoutParams,
+};
 
 pub(super) fn render_graph_settings_panel(
     mut store: SpecGraphStore,
@@ -13,8 +16,19 @@ pub(super) fn render_graph_settings_panel(
     let draft_algo = *store.draft_algo.read();
     let draft_params = *store.draft_params.read();
     let draft_show_edges = *store.draft_show_edges.read();
+    let center_camera_on_selected_node =
+        *store.center_camera_on_selected_node.read();
+    let zoom_to_selected_node = *store.zoom_to_selected_node.read();
+    let selected_node_zoom_factor = *store.selected_node_zoom_factor.read();
+    let auto_layout_selected_node = *store.auto_layout_selected_node.read();
     let auto_apply = *store.auto_apply.read();
-    let apply_disabled = auto_apply || !has_draft_changes(store, draft_algo, draft_params, draft_show_edges);
+    let apply_disabled = auto_apply
+        || !has_draft_changes(
+            store,
+            draft_algo,
+            draft_params,
+            draft_show_edges,
+        );
 
     rsx! {
         div {
@@ -63,7 +77,7 @@ pub(super) fn render_graph_settings_panel(
                 }
                 input {
                     r#type: "range",
-                    min: "0.2", max: "4.0", step: "0.05",
+                    min: "0.0", max: "6.0", step: "0.05",
                     value: "{draft_params.spread}",
                     oninput: move |event| {
                         if let Ok(value) = event.value().parse::<f32>() {
@@ -116,7 +130,7 @@ pub(super) fn render_graph_settings_panel(
                     }
                     input {
                         r#type: "range",
-                        min: "0.5", max: "6.0", step: "0.1",
+                        min: "1.0", max: "12.0", step: "0.1",
                         value: "{draft_params.link_dist}",
                         oninput: move |event| {
                             if let Ok(value) = event.value().parse::<f32>() {
@@ -132,7 +146,7 @@ pub(super) fn render_graph_settings_panel(
                     }
                     input {
                         r#type: "range",
-                        min: "0.5", max: "8.0", step: "0.1",
+                        min: "0.0", max: "12.0", step: "0.1",
                         value: "{draft_params.repulsion}",
                         oninput: move |event| {
                             if let Ok(value) = event.value().parse::<f32>() {
@@ -152,6 +166,61 @@ pub(super) fn render_graph_settings_panel(
                         onchange: move |event| set_draft_show_edges(store, event.checked()),
                     }
                     " Show edges"
+                }
+            }
+
+            div { class: "graph-settings-section",
+                label { class: "graph-settings-label graph-settings-label--inline",
+                    input {
+                        r#type: "checkbox",
+                        "data-testid": "graph-toggle-center-selected-node",
+                        checked: center_camera_on_selected_node,
+                        onchange: move |event| set_center_camera_on_selected_node(store, event.checked()),
+                    }
+                    " Center camera on selected node"
+                }
+            }
+
+            div { class: "graph-settings-section",
+                label { class: "graph-settings-label graph-settings-label--inline",
+                    input {
+                        r#type: "checkbox",
+                        "data-testid": "graph-toggle-zoom-selected-node",
+                        checked: zoom_to_selected_node,
+                        onchange: move |event| set_zoom_to_selected_node(store, event.checked()),
+                    }
+                    " Zoom to selected node"
+                }
+            }
+
+            div { class: "graph-settings-section",
+                label { class: "graph-settings-label",
+                    "Zoom factor "
+                    span { class: "graph-settings-value", "{selected_node_zoom_factor:.2}x" }
+                }
+                input {
+                    r#type: "range",
+                    "data-testid": "graph-range-selected-node-zoom-factor",
+                    min: "1.0", max: "8.0", step: "0.25",
+                    value: "{selected_node_zoom_factor}",
+                    disabled: !zoom_to_selected_node,
+                    oninput: move |event| {
+                        if let Ok(value) = event.value().parse::<f32>() {
+                            set_selected_node_zoom_factor(store, value);
+                        }
+                    },
+                }
+            }
+
+            div { class: "graph-settings-section",
+                label { class: "graph-settings-label graph-settings-label--inline",
+                    input {
+                        r#type: "checkbox",
+                        "data-testid": "graph-toggle-auto-layout-selected-node",
+                        checked: auto_layout_selected_node,
+                        onchange: move |event| set_auto_layout_selected_node(store, event.checked()),
+                    }
+                    " Auto-layout selected node"
                 }
             }
 
@@ -216,28 +285,68 @@ fn has_draft_changes(
         || draft_show_edges != *store.committed_show_edges.read()
 }
 
-fn set_auto_apply(mut store: SpecGraphStore, enabled: bool) {
+fn set_auto_apply(
+    mut store: SpecGraphStore,
+    enabled: bool,
+) {
     store.auto_apply.set(enabled);
     if enabled {
         commit_draft(store);
     }
 }
 
-fn set_draft_algorithm(mut store: SpecGraphStore, algo: LayoutAlgorithm) {
+fn set_draft_algorithm(
+    mut store: SpecGraphStore,
+    algo: LayoutAlgorithm,
+) {
     store.draft_algo.set(algo);
     if *store.auto_apply.read() {
         commit_draft(store);
     }
 }
 
-fn set_draft_show_edges(mut store: SpecGraphStore, enabled: bool) {
+fn set_draft_show_edges(
+    mut store: SpecGraphStore,
+    enabled: bool,
+) {
     store.draft_show_edges.set(enabled);
     if *store.auto_apply.read() {
         commit_draft(store);
     }
 }
 
-fn set_draft_params(mut store: SpecGraphStore, update: impl FnOnce(&mut LayoutParams)) {
+fn set_zoom_to_selected_node(
+    mut store: SpecGraphStore,
+    enabled: bool,
+) {
+    store.zoom_to_selected_node.set(enabled);
+}
+
+fn set_center_camera_on_selected_node(
+    mut store: SpecGraphStore,
+    enabled: bool,
+) {
+    store.center_camera_on_selected_node.set(enabled);
+}
+
+fn set_selected_node_zoom_factor(
+    mut store: SpecGraphStore,
+    value: f32,
+) {
+    store.selected_node_zoom_factor.set(value.clamp(1.0, 8.0));
+}
+
+fn set_auto_layout_selected_node(
+    mut store: SpecGraphStore,
+    enabled: bool,
+) {
+    store.auto_layout_selected_node.set(enabled);
+}
+
+fn set_draft_params(
+    mut store: SpecGraphStore,
+    update: impl FnOnce(&mut LayoutParams),
+) {
     let mut params = *store.draft_params.read();
     update(&mut params);
     store.draft_params.set(params);
@@ -249,6 +358,8 @@ fn set_draft_params(mut store: SpecGraphStore, update: impl FnOnce(&mut LayoutPa
 fn commit_draft(mut store: SpecGraphStore) {
     store.committed_algo.set(*store.draft_algo.read());
     store.committed_params.set(*store.draft_params.read());
-    store.committed_show_edges.set(*store.draft_show_edges.read());
+    store
+        .committed_show_edges
+        .set(*store.draft_show_edges.read());
     store.mark_layout_dirty();
 }
