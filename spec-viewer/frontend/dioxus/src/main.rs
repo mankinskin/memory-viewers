@@ -9,6 +9,7 @@ use dioxus::prelude::*;
 use viewer_api_dioxus::{Prefetcher, ThemeProvider, ViewerShell, WgpuOverlay};
 
 use routes::Route;
+use store::SpecGraphStore;
 use types::SpecFullResponse;
 
 /// Type alias for the spec-detail prefetch cache shared across all routes.
@@ -33,7 +34,9 @@ fn App() -> Element {
     // Provide a single shared Prefetcher cache (LRU, 32 entries) for the
     // entire app.  P5.7: SpecListPage warms it with siblings of the active
     // tab; SpecDetail consults it before falling back to the network.
+    let graph_store = SpecGraphStore::use_store();
     use_context_provider::<SpecCache>(|| Prefetcher::with_capacity(32));
+    use_context_provider(|| graph_store);
 
     rsx! {
         style { "html, body, #main {{ overflow: hidden; margin: 0; padding: 0; width: 100%; height: 100%; }}" }

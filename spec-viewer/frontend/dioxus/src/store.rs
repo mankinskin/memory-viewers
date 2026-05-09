@@ -7,9 +7,13 @@
 use dioxus::prelude::*;
 use gloo_events::EventListener;
 use serde::{Deserialize, Serialize};
+use viewer_api_dioxus::Layout3D;
 use viewer_api_dioxus::{
     get_hash_param, remove_hash_param, set_hash_param, ColonSegmented, PathCodec,
 };
+
+use crate::components::spec_graph::{LayoutAlgorithm, LayoutParams};
+use crate::types::{SpecGraphEdge, SpecGraphNode};
 
 // ── localStorage key ──────────────────────────────────────────────────────────
 
@@ -150,5 +154,50 @@ impl SpecListStore {
         get_hash_param("id")
             .filter(|s| !s.is_empty())
             .and_then(|s| ColonSegmented.decode(&s))
+    }
+}
+
+/// Shared graph-page state kept alive above the router so the global spec
+/// graph does not reset to defaults on every route transition.
+#[derive(Clone, Copy)]
+pub struct SpecGraphStore {
+    pub raw: Signal<Option<(Vec<SpecGraphNode>, Vec<SpecGraphEdge>)>>,
+    pub error: Signal<Option<String>>,
+    pub draft_algo: Signal<LayoutAlgorithm>,
+    pub draft_params: Signal<LayoutParams>,
+    pub draft_show_edges: Signal<bool>,
+    pub committed_algo: Signal<LayoutAlgorithm>,
+    pub committed_params: Signal<LayoutParams>,
+    pub committed_show_edges: Signal<bool>,
+    pub auto_apply: Signal<bool>,
+    pub panel_open: Signal<bool>,
+    pub current_layout: Signal<Option<Layout3D>>,
+    pub layout_generation: Signal<u64>,
+    pub applied_layout_generation: Signal<u64>,
+}
+
+impl SpecGraphStore {
+    pub fn use_store() -> Self {
+        Self {
+            raw: use_signal(|| None),
+            error: use_signal(|| None),
+            draft_algo: use_signal(|| LayoutAlgorithm::ForceDirected),
+            draft_params: use_signal(LayoutParams::default),
+            draft_show_edges: use_signal(|| true),
+            committed_algo: use_signal(|| LayoutAlgorithm::ForceDirected),
+            committed_params: use_signal(LayoutParams::default),
+            committed_show_edges: use_signal(|| true),
+            auto_apply: use_signal(|| true),
+            panel_open: use_signal(|| true),
+            current_layout: use_signal(|| None),
+            layout_generation: use_signal(|| 0),
+            applied_layout_generation: use_signal(|| 0),
+        }
+    }
+
+    pub fn mark_layout_dirty(self) {
+        let mut layout_generation = self.layout_generation;
+        let next = *layout_generation.peek() + 1;
+        layout_generation.set(next);
     }
 }

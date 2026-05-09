@@ -13,6 +13,7 @@ use viewer_api_dioxus::{CameraCommand, EdgeRef3D, Layout3D, Node3D};
 use wasm_bindgen_futures::spawn_local;
 
 use crate::api;
+use crate::store::SpecGraphStore;
 use crate::types::{SpecGraphEdge, SpecGraphNode};
 
 // ── Algorithm selection ──────────────────────────────────────────────────────
@@ -540,21 +541,20 @@ fn layout_tree_2d(
 
 #[component]
 pub fn SpecGraphPage() -> Element {
-    let mut raw:    Signal<Option<(Vec<SpecGraphNode>, Vec<SpecGraphEdge>)>> = use_signal(|| None);
-    let mut error:  Signal<Option<String>> = use_signal(|| None);
-
-    // Draft (edited) values — what the panel widgets bind to.
-    let mut draft_algo:   Signal<LayoutAlgorithm> = use_signal(|| LayoutAlgorithm::ForceDirected);
-    let mut draft_params: Signal<LayoutParams>    = use_signal(LayoutParams::default);
-    let mut draft_show_edges: Signal<bool>        = use_signal(|| true);
-
-    // Committed values — what is actually fed into build_layout.
-    let mut committed_algo:   Signal<LayoutAlgorithm> = use_signal(|| LayoutAlgorithm::ForceDirected);
-    let mut committed_params: Signal<LayoutParams>    = use_signal(LayoutParams::default);
-    let mut committed_show_edges: Signal<bool>        = use_signal(|| true);
-
-    let mut auto_apply: Signal<bool> = use_signal(|| true);
-    let mut panel_open: Signal<bool> = use_signal(|| true);
+    let store = use_context::<SpecGraphStore>();
+    let mut raw = store.raw;
+    let mut error = store.error;
+    let mut draft_algo = store.draft_algo;
+    let mut draft_params = store.draft_params;
+    let mut draft_show_edges = store.draft_show_edges;
+    let mut committed_algo = store.committed_algo;
+    let mut committed_params = store.committed_params;
+    let mut committed_show_edges = store.committed_show_edges;
+    let mut auto_apply = store.auto_apply;
+    let mut panel_open = store.panel_open;
+    let mut current_layout = store.current_layout;
+    let mut applied_layout_generation = store.applied_layout_generation;
+    let layout_generation = store.layout_generation;
 
     // Imperative camera-command channel.  `camera_seq` is bumped whenever
     // we want Graph3D to re-apply `camera_cmd`.  See `CameraCommand` docs.
@@ -574,12 +574,45 @@ pub fn SpecGraphPage() -> Element {
     let nav = use_navigator();
 
     use_effect(move || {
+        if raw.read().is_some() || error.read().is_some() {
+            return;
+        }
         spawn_local(async move {
             match api::get_graph().await {
-                Ok(resp) => raw.set(Some((resp.nodes, resp.edges))),
+                Ok(resp) => {
+                    error.set(None);
+                    raw.set(Some((resp.nodes, resp.edges)));
+                }
                 Err(e)   => error.set(Some(e)),
             }
         });
+    });
+
+    use_effect(move || {
+        let Some((nodes_raw, edges_raw)) = raw.read().clone() else {
+            return;
+        };
+
+        let generation = *layout_generation.read();
+        let applied_generation = *applied_layout_generation.read();
+        let has_layout = current_layout.read().is_some();
+        if has_layout && generation == applied_generation {
+            return;
+        }
+
+        let edges_for_layout = if *committed_show_edges.read() {
+            edges_raw.clone()
+        } else {
+            Vec::new()
+        };
+        let layout = build_layout(
+            *committed_algo.read(),
+            *committed_params.read(),
+            &nodes_raw,
+            &edges_for_layout,
+        );
+        current_layout.set(Some(layout));
+        applied_layout_generation.set(generation);
     });
 
     if let Some(msg) = error.read().clone() {
@@ -592,7 +625,7 @@ pub fn SpecGraphPage() -> Element {
         };
     }
 
-    let Some((nodes_raw, edges_raw)) = raw.read().clone() else {
+    let Some((nodes_raw, _edges_raw)) = raw.read().clone() else {
         return rsx! {
             div {
                 class: "empty-state",
@@ -614,12 +647,14 @@ pub fn SpecGraphPage() -> Element {
         camera_seq.set(next_seq);
     }
 
-    let edges_for_layout: Vec<SpecGraphEdge> = if *committed_show_edges.read() {
-        edges_raw.clone()
-    } else {
-        Vec::new()
+    let Some(l) = current_layout.read().clone() else {
+        return rsx! {
+            div {
+                class: "empty-state",
+                "Preparing graph layout\u{2026}"
+            }
+        };
     };
-    let l = build_layout(cur_algo, cur_params, &nodes_raw, &edges_for_layout);
     let nodes = l.nodes.clone();
     let node_count = nodes.len();
     let edge_count = l.edges.len();
@@ -637,11 +672,14 @@ pub fn SpecGraphPage() -> Element {
     rsx! {
         div { class: "graph-overlay",
             viewer_api_dioxus::Graph3D {
-                layout: l,
+                layout: l.clone(),
                 container_id: "spec-graph3d-container".to_string(),
                 container_style: "position: absolute; inset: 0; overflow: hidden; user-select: none; cursor: grab;".to_string(),
                 camera_command: cam_cmd_now,
                 camera_command_seq: cam_seq_now,
+                on_layout_change: Some(EventHandler::new(move |layout: Layout3D| {
+                    current_layout.set(Some(layout));
+                })),
                 div {
                     id: "spec-graph3d-nodes",
                     class: "graph-nodes-layer",
@@ -774,6 +812,7 @@ pub fn SpecGraphPage() -> Element {
                                             committed_algo.set(*draft_algo.read());
                                             committed_params.set(*draft_params.read());
                                             committed_show_edges.set(*draft_show_edges.read());
+                                            store.mark_layout_dirty();
                                         }
                                     },
                                 }
@@ -793,6 +832,7 @@ pub fn SpecGraphPage() -> Element {
                                         draft_algo.set(a);
                                         if *auto_apply.read() {
                                             committed_algo.set(a);
+                                            store.mark_layout_dirty();
                                         }
                                     }
                                 },
@@ -817,7 +857,10 @@ pub fn SpecGraphPage() -> Element {
                                         let mut p = *draft_params.read();
                                         p.spread = v;
                                         draft_params.set(p);
-                                        if *auto_apply.read() { committed_params.set(p); }
+                                        if *auto_apply.read() {
+                                            committed_params.set(p);
+                                            store.mark_layout_dirty();
+                                        }
                                     }
                                 },
                             }
@@ -838,7 +881,10 @@ pub fn SpecGraphPage() -> Element {
                                             let mut p = *draft_params.read();
                                             p.y_spacing = v;
                                             draft_params.set(p);
-                                            if *auto_apply.read() { committed_params.set(p); }
+                                            if *auto_apply.read() {
+                                                committed_params.set(p);
+                                                store.mark_layout_dirty();
+                                            }
                                         }
                                     },
                                 }
@@ -860,7 +906,10 @@ pub fn SpecGraphPage() -> Element {
                                             let mut p = *draft_params.read();
                                             p.iterations = v;
                                             draft_params.set(p);
-                                            if *auto_apply.read() { committed_params.set(p); }
+                                            if *auto_apply.read() {
+                                                committed_params.set(p);
+                                                store.mark_layout_dirty();
+                                            }
                                         }
                                     },
                                 }
@@ -879,7 +928,10 @@ pub fn SpecGraphPage() -> Element {
                                             let mut p = *draft_params.read();
                                             p.link_dist = v;
                                             draft_params.set(p);
-                                            if *auto_apply.read() { committed_params.set(p); }
+                                            if *auto_apply.read() {
+                                                committed_params.set(p);
+                                                store.mark_layout_dirty();
+                                            }
                                         }
                                     },
                                 }
@@ -898,7 +950,10 @@ pub fn SpecGraphPage() -> Element {
                                             let mut p = *draft_params.read();
                                             p.repulsion = v;
                                             draft_params.set(p);
-                                            if *auto_apply.read() { committed_params.set(p); }
+                                            if *auto_apply.read() {
+                                                committed_params.set(p);
+                                                store.mark_layout_dirty();
+                                            }
                                         }
                                     },
                                 }
@@ -915,7 +970,10 @@ pub fn SpecGraphPage() -> Element {
                                     onchange: move |evt| {
                                         let v = evt.checked();
                                         draft_show_edges.set(v);
-                                        if *auto_apply.read() { committed_show_edges.set(v); }
+                                        if *auto_apply.read() {
+                                            committed_show_edges.set(v);
+                                            store.mark_layout_dirty();
+                                        }
                                     },
                                 }
                                 " Show edges"
@@ -933,6 +991,7 @@ pub fn SpecGraphPage() -> Element {
                                     committed_algo.set(*draft_algo.read());
                                     committed_params.set(*draft_params.read());
                                     committed_show_edges.set(*draft_show_edges.read());
+                                    store.mark_layout_dirty();
                                 },
                                 "Apply"
                             }
@@ -943,7 +1002,10 @@ pub fn SpecGraphPage() -> Element {
                                     evt.stop_propagation();
                                     let p = LayoutParams::default();
                                     draft_params.set(p);
-                                    if *auto_apply.read() { committed_params.set(p); }
+                                    if *auto_apply.read() {
+                                        committed_params.set(p);
+                                        store.mark_layout_dirty();
+                                    }
                                 },
                                 "Reset"
                             }
