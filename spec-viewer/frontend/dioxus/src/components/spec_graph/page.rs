@@ -46,6 +46,7 @@ struct CameraFocusRequest {
 #[component]
 pub fn SpecGraphPage() -> Element {
     let mut store = use_context::<SpecGraphStore>();
+    let navigation_store = use_context::<crate::store::SpecNavigationStore>();
     let mut camera_cmd: Signal<Option<CameraCommand>> = use_signal(|| None);
     let mut camera_seq: Signal<u64> = use_signal(|| 0);
     let mut last_cam_algo: Signal<LayoutAlgorithm> =
@@ -144,7 +145,7 @@ pub fn SpecGraphPage() -> Element {
                     on_close: move |_| preview_id.set(None),
                     on_view_details: move |id: String| {
                         preview_id.set(None);
-                        nav.push(crate::routes::Route::spec_detail_path(&id, None));
+                        nav.push(navigation_store.resolve_spec_detail_path(&id));
                     },
                 }
             }

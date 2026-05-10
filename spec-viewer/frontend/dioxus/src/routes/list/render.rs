@@ -80,6 +80,7 @@ pub(super) fn render_spec_list_sidebar(
     mut filter: Signal<String>,
     mut state_filter: Signal<String>,
     nav: Navigator,
+    navigation_store: crate::store::SpecNavigationStore,
 ) -> Element {
     let nav_to_detail = nav.clone();
     rsx! {
@@ -100,7 +101,7 @@ pub(super) fn render_spec_list_sidebar(
                 selected_id: None,
                 initially_expanded: Vec::new(),
                 on_select: move |id: String| {
-                    nav_to_detail.push(Route::spec_detail_path(&id, None));
+                    nav_to_detail.push(navigation_store.resolve_spec_detail_path(&id));
                     mobile_sidebar_open.set(false);
                 },
             }
@@ -115,6 +116,7 @@ pub(super) fn render_spec_list_content(
     filter: Signal<String>,
     state_filter: Signal<String>,
     nav: Navigator,
+    navigation_store: crate::store::SpecNavigationStore,
 ) -> Element {
     rsx! {
         div {
@@ -148,7 +150,7 @@ pub(super) fn render_spec_list_content(
                             }
                         }
                     } else {
-                        {render_spec_sections(specs.read().clone(), nav)}
+                        {render_spec_sections(specs.read().clone(), nav, navigation_store)}
                     }
                 }
             }
@@ -159,6 +161,7 @@ pub(super) fn render_spec_list_content(
 fn render_spec_sections(
     specs: Vec<SpecSummary>,
     nav: Navigator,
+    navigation_store: crate::store::SpecNavigationStore,
 ) -> Element {
     let mut grouped: BTreeMap<String, Vec<SpecSummary>> = BTreeMap::new();
     for spec in specs {
@@ -191,7 +194,7 @@ fn render_spec_sections(
                                     title,
                                     description,
                                     on_click: EventHandler::new(move |_| {
-                                        nav_to_detail.push(Route::spec_detail_path(&id, None));
+                                        nav_to_detail.push(navigation_store.resolve_spec_detail_path(&id));
                                     }),
                                 }
                             }

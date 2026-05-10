@@ -19,6 +19,7 @@ pub fn SpecDetailPage(
     view: Option<String>,
 ) -> Element {
     let mut show_theme_settings = use_signal(|| false);
+    let navigation_store = use_context::<crate::store::SpecNavigationStore>();
     let nav = use_navigator();
     let title = id.clone();
     let active_tab = super::canonical_spec_view(view.as_deref()).to_string();
@@ -56,9 +57,19 @@ pub fn SpecDetailPage(
         }
     }));
 
+    let id_for_view_memory = id.clone();
+    let active_tab_for_view_memory = active_tab.clone();
+    use_effect(use_reactive!(|id_for_view_memory, active_tab_for_view_memory| {
+        navigation_store.remember_spec_view(
+            &id_for_view_memory,
+            &active_tab_for_view_memory,
+        );
+    }));
+
     let nav_tabs = nav;
     let id_for_tabs = id.clone();
     let active_tab_for_tabs = active_tab.clone();
+    let navigation_store_for_tabs = navigation_store;
     rsx! {
         Layout {
             header: rsx! {
@@ -105,6 +116,10 @@ pub fn SpecDetailPage(
                         if tab == active_tab_for_tabs {
                             return;
                         }
+                        navigation_store_for_tabs.remember_spec_view(
+                            &id_for_tabs,
+                            &tab,
+                        );
                         nav_tabs.push(Route::spec_detail_path(
                             &id_for_tabs,
                             Some(tab.as_str()),

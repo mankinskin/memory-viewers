@@ -8,6 +8,7 @@ use serde::{
     Deserialize,
     Serialize,
 };
+use std::collections::HashMap;
 use viewer_api_dioxus::{Camera, Layout3D};
 
 use crate::{
@@ -102,6 +103,75 @@ impl SpecListStore {
         {
             SpecUiState::default()
         }
+    }
+}
+
+#[derive(Clone, Copy)]
+pub struct SpecNavigationStore {
+    pub global_spec_view: Signal<String>,
+    pub last_view_by_spec: Signal<HashMap<String, String>>,
+}
+
+impl SpecNavigationStore {
+    pub fn use_store() -> Self {
+        Self {
+            global_spec_view: use_signal(|| {
+                crate::routes::DEFAULT_SPEC_VIEW.to_string()
+            }),
+            last_view_by_spec: use_signal(HashMap::new),
+        }
+    }
+
+    pub fn remember_spec_view(
+        mut self,
+        spec_id: &str,
+        view: &str,
+    ) {
+        let view = crate::routes::canonical_spec_view(Some(view)).to_string();
+
+        if *self.global_spec_view.peek() != view {
+            self.global_spec_view.set(view.clone());
+        }
+
+        let mut last_view_by_spec = self.last_view_by_spec.peek().clone();
+        if last_view_by_spec.get(spec_id) != Some(&view) {
+            last_view_by_spec.insert(spec_id.to_string(), view);
+            self.last_view_by_spec.set(last_view_by_spec);
+        }
+    }
+
+    pub fn resolve_spec_view(
+        self,
+        spec_id: &str,
+    ) -> String {
+        let global_view = crate::routes::canonical_spec_view(Some(
+            self.global_spec_view.read().as_str(),
+        ));
+        if crate::routes::is_spec_detail_view_available(spec_id, global_view) {
+            return global_view.to_string();
+        }
+
+        let remembered_view = self
+            .last_view_by_spec
+            .read()
+            .get(spec_id)
+            .map(String::as_str)
+            .map(|view| crate::routes::canonical_spec_view(Some(view)));
+        if let Some(view) = remembered_view {
+            if crate::routes::is_spec_detail_view_available(spec_id, view) {
+                return view.to_string();
+            }
+        }
+
+        crate::routes::DEFAULT_SPEC_VIEW.to_string()
+    }
+
+    pub fn resolve_spec_detail_path(
+        self,
+        spec_id: &str,
+    ) -> String {
+        let view = self.resolve_spec_view(spec_id);
+        crate::routes::Route::spec_detail_path(spec_id, Some(view.as_str()))
     }
 }
 

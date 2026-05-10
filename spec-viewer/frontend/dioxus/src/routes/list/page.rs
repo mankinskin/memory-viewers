@@ -37,6 +37,7 @@ pub fn SpecListPage() -> Element {
     let list_error: Signal<Option<String>> = use_signal(|| None);
     let filter = store.filter;
     let state_filter = store.state_filter;
+    let navigation_store = use_context::<crate::store::SpecNavigationStore>();
     let nav = use_navigator();
 
     persist_store(store);
@@ -74,8 +75,17 @@ pub fn SpecListPage() -> Element {
                 filter,
                 state_filter,
                 nav,
+                navigation_store,
             )}
-            {render_spec_list_content(specs, loading, list_error, filter, state_filter, nav)}
+            {render_spec_list_content(
+                specs,
+                loading,
+                list_error,
+                filter,
+                state_filter,
+                nav,
+                navigation_store,
+            )}
         }
         Overlay {
             open: *show_theme_settings.read(),

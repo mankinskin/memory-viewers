@@ -57,6 +57,13 @@ pub fn is_canonical_spec_detail_view(view: Option<&str>) -> bool {
     matches!(view, None | Some("sections") | Some("coderefs") | Some("health"))
 }
 
+pub fn is_spec_detail_view_available(
+    _spec_id: &str,
+    view: &str,
+) -> bool {
+    matches!(canonical_spec_view(Some(view)), "body" | "sections" | "coderefs" | "health")
+}
+
 #[derive(Clone, Routable, Debug, PartialEq)]
 pub enum Route {
     #[redirect("/", || Route::SpecListPage {})]
@@ -167,5 +174,12 @@ mod tests {
             Route::spec_detail_path("spec/alpha", Some("sections")),
             "/specs/spec%2Falpha?view=sections"
         );
+    }
+
+    #[test]
+    fn recognizes_current_spec_views_as_available() {
+        assert!(is_spec_detail_view_available("spec:alpha", "body"));
+        assert!(is_spec_detail_view_available("spec:alpha", "code-refs"));
+        assert!(!is_spec_detail_view_available("spec:alpha", "unknown"));
     }
 }

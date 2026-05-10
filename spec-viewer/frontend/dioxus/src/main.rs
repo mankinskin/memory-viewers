@@ -14,7 +14,10 @@ use viewer_api_dioxus::{
 };
 
 use routes::Route;
-use store::SpecGraphStore;
+use store::{
+    SpecGraphStore,
+    SpecNavigationStore,
+};
 use types::SpecFullResponse;
 
 /// Type alias for the spec-detail prefetch cache shared across all routes.
@@ -40,8 +43,10 @@ fn App() -> Element {
     // entire app.  P5.7: SpecListPage warms it with siblings of the active
     // tab; SpecDetail consults it before falling back to the network.
     let graph_store = SpecGraphStore::use_store();
+    let navigation_store = SpecNavigationStore::use_store();
     use_context_provider::<SpecCache>(|| Prefetcher::with_capacity(32));
     use_context_provider(|| graph_store);
+    use_context_provider(|| navigation_store);
 
     rsx! {
         style { "html, body, #main {{ overflow: hidden; margin: 0; padding: 0; width: 100%; height: 100%; }}" }
