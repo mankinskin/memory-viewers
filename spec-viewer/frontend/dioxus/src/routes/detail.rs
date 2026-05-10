@@ -3,7 +3,10 @@ use viewer_api_dioxus::{
     BreadcrumbItem,
     Breadcrumbs,
     Header,
+    HeaderActions,
     Layout,
+    Overlay,
+    ThemeSettings,
 };
 
 use crate::components::spec_detail::SpecDetail;
@@ -13,6 +16,7 @@ use super::Route;
 #[component]
 pub fn SpecDetailPage(id: String) -> Element {
     let mut active_tab = use_signal(|| "body".to_string());
+    let mut show_theme_settings = use_signal(|| false);
     let nav = use_navigator();
     let title = id.clone();
 
@@ -65,6 +69,12 @@ pub fn SpecDetailPage(id: String) -> Element {
                             class: "btn-nav-link",
                             "\u{1F310} Graph"
                         }
+                        HeaderActions {
+                            on_theme_toggle: Some(EventHandler::new(move |_| {
+                                let next = !*show_theme_settings.read();
+                                show_theme_settings.set(next);
+                            })),
+                        }
                     },
                 }
             },
@@ -75,6 +85,15 @@ pub fn SpecDetailPage(id: String) -> Element {
                     active_tab: active_tab.read().clone(),
                     on_tab_change: move |tab| active_tab.set(tab),
                 }
+            }
+        }
+        Overlay {
+            open: *show_theme_settings.read(),
+            on_close: move |_| show_theme_settings.set(false),
+            panel_class: "theme-settings-modal".to_string(),
+            aria_label: "Theme settings".to_string(),
+            ThemeSettings {
+                on_close: move |_| show_theme_settings.set(false),
             }
         }
     }
