@@ -67,7 +67,7 @@ impl Default for SpecUiState {
 }
 
 fn default_active_tab() -> String {
-    "body".to_string()
+    crate::routes::DEFAULT_SPEC_VIEW.to_string()
 }
 
 // ── Store ─────────────────────────────────────────────────────────────────────
@@ -94,7 +94,10 @@ impl SpecListStore {
         let state_filter = use_signal(|| saved.state_filter.clone());
         let mut open_spec_id: Signal<Option<String>> =
             use_signal(|| hash_id.or(saved.open_spec_id.clone()));
-        let active_tab = use_signal(|| saved.active_tab.clone());
+        let active_tab = use_signal(|| {
+            crate::routes::canonical_spec_view(Some(&saved.active_tab))
+                .to_string()
+        });
 
         // Store the listener in a Signal so it is dropped when the component
         // unmounts (RAII).  Signal<T> is Clone/Copy even when T is not.
@@ -131,7 +134,10 @@ impl SpecListStore {
             filter: self.filter.read().clone(),
             state_filter: self.state_filter.read().clone(),
             open_spec_id: self.open_spec_id.read().clone(),
-            active_tab: self.active_tab.read().clone(),
+            active_tab: crate::routes::canonical_spec_view(
+                Some(self.active_tab.read().as_str()),
+            )
+            .to_string(),
         };
         #[cfg(target_arch = "wasm32")]
         {

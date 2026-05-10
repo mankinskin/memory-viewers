@@ -137,7 +137,7 @@ fn render_tree_sections(
                                     title,
                                     description,
                                     on_click: EventHandler::new(move |_| {
-                                        nav_to_detail.push(Route::SpecDetailPage { id: id.clone() });
+                                        nav_to_detail.push(Route::spec_detail_path(&id, None));
                                     }),
                                 }
                             }

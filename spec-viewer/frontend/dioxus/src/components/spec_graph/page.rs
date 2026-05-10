@@ -144,7 +144,7 @@ pub fn SpecGraphPage() -> Element {
                     on_close: move |_| preview_id.set(None),
                     on_view_details: move |id: String| {
                         preview_id.set(None);
-                        nav.push(crate::routes::Route::SpecDetailPage { id });
+                        nav.push(crate::routes::Route::spec_detail_path(&id, None));
                     },
                 }
             }

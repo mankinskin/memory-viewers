@@ -14,11 +14,14 @@ use crate::components::spec_detail::SpecDetail;
 use super::Route;
 
 #[component]
-pub fn SpecDetailPage(id: String) -> Element {
-    let mut active_tab = use_signal(|| "body".to_string());
+pub fn SpecDetailPage(
+    id: String,
+    view: Option<String>,
+) -> Element {
     let mut show_theme_settings = use_signal(|| false);
     let nav = use_navigator();
     let title = id.clone();
+    let active_tab = super::canonical_spec_view(view.as_deref()).to_string();
 
     let nav_specs = nav.clone();
     let nav_graph = nav.clone();
@@ -40,7 +43,22 @@ pub fn SpecDetailPage(id: String) -> Element {
         BreadcrumbItem::current(title.clone()),
     ];
 
-    let nav_back = nav;
+    let nav_back = nav.clone();
+    let nav_normalize = nav.clone();
+    let id_for_normalize = id.clone();
+    let route_view = view.clone();
+    use_effect(use_reactive!(|id_for_normalize, route_view| {
+        if !super::is_canonical_spec_detail_view(route_view.as_deref()) {
+            nav_normalize.replace(Route::spec_detail_path(
+                &id_for_normalize,
+                route_view.as_deref(),
+            ));
+        }
+    }));
+
+    let nav_tabs = nav;
+    let id_for_tabs = id.clone();
+    let active_tab_for_tabs = active_tab.clone();
     rsx! {
         Layout {
             header: rsx! {
@@ -82,8 +100,16 @@ pub fn SpecDetailPage(id: String) -> Element {
                 class: "spec-detail-page",
                 SpecDetail {
                     spec_id: id,
-                    active_tab: active_tab.read().clone(),
-                    on_tab_change: move |tab| active_tab.set(tab),
+                    active_tab: active_tab.clone(),
+                    on_tab_change: move |tab: String| {
+                        if tab == active_tab_for_tabs {
+                            return;
+                        }
+                        nav_tabs.push(Route::spec_detail_path(
+                            &id_for_tabs,
+                            Some(tab.as_str()),
+                        ));
+                    },
                 }
             }
         }

@@ -1,6 +1,6 @@
 //! `SpecDetail` — right-side panel showing spec body, sections, CodeRefs, and health.
 //!
-//! Tabs: `body` | `sections` | `code-refs` | `health`
+//! Tabs: `body` | `sections` | `coderefs` | `health`
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::FileContentViewer;
@@ -30,7 +30,7 @@ const TAB_ACTIVE: &str = "spec-detail__tab spec-detail__tab--active";
 const TABS: &[(&str, &str)] = &[
     ("body", "Body"),
     ("sections", "Sections"),
-    ("code-refs", "CodeRefs"),
+    ("coderefs", "CodeRefs"),
     ("health", "Health"),
 ];
 
@@ -261,7 +261,7 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                                     }
                                 }
                             },
-                            "code-refs" => rsx! {
+                            "coderefs" => rsx! {
                                 CodeRefList { refs: data.spec.code_refs.clone() }
                             },
                             "health" => rsx! {
