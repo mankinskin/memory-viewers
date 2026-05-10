@@ -1,10 +1,10 @@
 use dioxus::prelude::*;
-use viewer_api_dioxus::MarkdownContent;
 use wasm_bindgen_futures::spawn_local;
 
 use crate::api;
 
 use super::view::state_color;
+use crate::components::spec_markdown_surface::SpecMarkdownSurface;
 
 #[component]
 pub(super) fn SpecPreviewSidebar(
@@ -68,9 +68,9 @@ pub(super) fn SpecPreviewSidebar(
                                     "{state}"
                                 }
                             }
-                            MarkdownContent {
+                            SpecMarkdownSurface {
                                 content: full_spec.body.clone(),
-                                class: "spec-preview__markdown".to_string(),
+                                class: "spec-preview__markdown-surface".to_string(),
                             }
                         }
                     }

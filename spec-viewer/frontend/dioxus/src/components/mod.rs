@@ -4,5 +4,6 @@ pub mod search_bar;
 pub mod spec_card;
 pub mod spec_detail;
 pub mod spec_graph;
+pub mod spec_markdown_surface;
 pub mod spec_tree;
 pub mod state_badge;

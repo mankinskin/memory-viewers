@@ -3,12 +3,12 @@
 //! Tabs: `body` | `sections` | `coderefs` | `health`
 
 use dioxus::prelude::*;
-use viewer_api_dioxus::FileContentViewer;
 use wasm_bindgen_futures::spawn_local;
 
 use super::{
     code_ref_list::CodeRefList,
     health_panel::HealthPanel,
+    spec_markdown_surface::SpecMarkdownSurface,
     state_badge::StateBadge,
 };
 use crate::{
@@ -181,9 +181,9 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                     {
                         match props.active_tab.as_str() {
                             "body" => rsx! {
-                                FileContentViewer {
+                                SpecMarkdownSurface {
                                     content: data.body.clone(),
-                                    filename: "body.md".to_string(),
+                                    class: "spec-detail__markdown-surface".to_string(),
                                 }
                             },
                             "sections" => {
@@ -246,9 +246,9 @@ pub fn SpecDetail(props: SpecDetailProps) -> Element {
                                                                     } else if let Some(err) = section_error.read().as_deref() {
                                                                         p { class: "spec-detail__error", "{err}" }
                                                                     } else if let Some(sb) = section_body.read().as_ref() {
-                                                                        FileContentViewer {
+                                                                        SpecMarkdownSurface {
                                                                             content: sb.content.clone(),
-                                                                            filename: "section.md".to_string(),
+                                                                            class: "spec-detail__markdown-surface".to_string(),
                                                                         }
                                                                     }
                                                                 }

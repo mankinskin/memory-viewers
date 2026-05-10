@@ -202,58 +202,66 @@
   letter-spacing: 0.04em;
 }
 
-.spec-preview__markdown.markdown-body {
+.spec-markdown-surface {
+  background: var(--panel-bg-strong, var(--bg-secondary));
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md, 8px);
+  padding: 12px;
+  color: var(--text-primary);
+}
+
+.spec-markdown-surface__body.markdown-body {
   padding: 0;
   font-size: 13px;
   line-height: 1.55;
+  color: inherit;
 }
 
-.spec-preview__markdown.markdown-body > :first-child {
+.spec-markdown-surface__body.markdown-body > :first-child {
   margin-top: 0;
 }
 
-.spec-preview__markdown.markdown-body > :last-child {
+.spec-markdown-surface__body.markdown-body > :last-child {
   margin-bottom: 0;
 }
 
-.graph-node-card__summary.markdown-body {
-  padding: 0;
-  font-size: 0.82rem;
-  line-height: 1.45;
-  color: rgba(226, 232, 240, 0.86);
+.graph-node-card__summary-slot {
+  min-height: 4.35rem;
+  max-height: 6.4rem;
+  overflow: hidden;
 }
 
-.graph-node-card__summary.markdown-body > :first-child {
-  margin-top: 0;
+.graph-node-card__summary-surface {
+  height: 100%;
 }
 
-.graph-node-card__summary.markdown-body > :last-child {
-  margin-bottom: 0;
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body {
+  display: block;
 }
 
-.graph-node-card__summary.markdown-body p {
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body p {
   margin: 0;
 }
 
-.graph-node-card__summary.markdown-body h1,
-.graph-node-card__summary.markdown-body h2,
-.graph-node-card__summary.markdown-body h3,
-.graph-node-card__summary.markdown-body h4,
-.graph-node-card__summary.markdown-body h5,
-.graph-node-card__summary.markdown-body h6 {
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body h1,
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body h2,
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body h3,
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body h4,
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body h5,
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body h6 {
   margin: 0;
   border: 0;
   padding: 0;
   font-size: 0.9rem;
 }
 
-.graph-node-card__summary.markdown-body ul,
-.graph-node-card__summary.markdown-body ol {
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body ul,
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body ol {
   margin: 0;
   padding-left: 1.1rem;
 }
 
-.graph-node-card__summary.markdown-body li {
+.graph-node-card__summary-surface .spec-markdown-surface__body.markdown-body li {
   margin: 0.1rem 0;
 }
 

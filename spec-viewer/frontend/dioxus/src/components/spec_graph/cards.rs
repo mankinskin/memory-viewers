@@ -1,9 +1,7 @@
 use dioxus::prelude::*;
-use viewer_api_dioxus::{
-    MarkdownContent,
-    Node3D,
-};
+use viewer_api_dioxus::Node3D;
 
+use crate::components::spec_markdown_surface::SpecMarkdownSurface;
 use crate::types::SpecGraphNode;
 
 use super::view::{
@@ -93,10 +91,10 @@ pub(super) fn render_graph_node_cards(
                                 "{title}"
                             }
                             div {
-                                style: "min-height: 3.35rem; max-height: 4.8rem; overflow: hidden;",
-                                MarkdownContent {
+                                class: "graph-node-card__summary-slot",
+                                SpecMarkdownSurface {
                                     content: summary,
-                                    class: "graph-node-card__summary".to_string(),
+                                    class: "graph-node-card__summary-surface".to_string(),
                                 }
                             }
                             div {
