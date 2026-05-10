@@ -1,32 +1,23 @@
+use std::collections::BTreeMap;
+
 use dioxus::prelude::*;
+use dioxus_router::Navigator;
 use viewer_api_dioxus::{
-    BreadcrumbItem,
-    Breadcrumbs,
+    Card,
+    CardGrid,
+    CardSection,
     HamburgerIcon,
     Header,
     HeaderActions,
     Sidebar,
-    TabBar,
-    TabItem,
-    TabsStore,
 };
-use wasm_bindgen_futures::spawn_local;
 
-use crate::{
-    api,
-    components::{
-        spec_detail::SpecDetail,
-        spec_tree::SpecTree,
-    },
-    types::SpecSummary,
-};
+use crate::{components::spec_tree::SpecTree, types::SpecSummary};
 
 use super::{
     super::Route,
     helpers::{
         close_or_toggle_sidebar,
-        initial_expanded_for,
-        label_for,
         toggle_sidebar,
     },
 };
@@ -88,9 +79,9 @@ pub(super) fn render_spec_list_sidebar(
     list_error: Signal<Option<String>>,
     mut filter: Signal<String>,
     mut state_filter: Signal<String>,
-    mut active_tab: Signal<String>,
-    mut tabs: TabsStore<String>,
+    nav: Navigator,
 ) -> Element {
+    let nav_to_detail = nav.clone();
     rsx! {
         Sidebar {
             title: "Specifications".to_string(),
@@ -106,12 +97,10 @@ pub(super) fn render_spec_list_sidebar(
                 on_filter_change: move |value: String| filter.set(value),
                 state_filter: state_filter.read().clone(),
                 on_state_filter_change: move |value: String| state_filter.set(value),
-                selected_id: tabs.active.read().clone(),
-                initially_expanded: initial_expanded_for(&specs.read(), tabs.active.read().as_deref()),
+                selected_id: None,
+                initially_expanded: Vec::new(),
                 on_select: move |id: String| {
-                    let label = label_for(&specs.peek(), &id);
-                    tabs.open(id, label);
-                    active_tab.set("body".to_string());
+                    nav_to_detail.push(Route::spec_detail_path(&id, None));
                     mobile_sidebar_open.set(false);
                 },
             }
@@ -121,125 +110,95 @@ pub(super) fn render_spec_list_sidebar(
 
 pub(super) fn render_spec_list_content(
     specs: Signal<Vec<SpecSummary>>,
+    loading: Signal<bool>,
+    list_error: Signal<Option<String>>,
     filter: Signal<String>,
     state_filter: Signal<String>,
-    mut active_tab: Signal<String>,
-    mut tabs: TabsStore<String>,
+    nav: Navigator,
 ) -> Element {
-    let tab_items: Vec<TabItem> = tabs
-        .tabs
-        .read()
-        .iter()
-        .map(|tab| {
-            let mut item = TabItem::new(tab.id.clone(), tab.payload.clone());
-            item.closeable = true;
-            item
-        })
-        .collect();
-    let active_tab_id = tabs.active.read().clone().unwrap_or_default();
-
     rsx! {
         div {
             class: "content",
-            if !tab_items.is_empty() {
-                TabBar {
-                    tabs: tab_items,
-                    active_id: active_tab_id,
-                    on_select: move |id: String| {
-                        tabs.activate(&id);
-                        active_tab.set("body".to_string());
-                    },
-                    on_close: move |id: String| tabs.close(&id),
-                }
-            }
-            if let Some(id) = tabs.active.read().clone() {
-                {render_selected_spec(id, specs, filter, state_filter, active_tab)}
-            } else {
+            div {
+                class: "spec-tree-page",
                 div {
-                    class: "empty-state",
-                    "Select a specification to view details."
+                    class: "spec-tree-page__header",
+                    h2 {
+                        class: "spec-tree-page__title",
+                        "Specifications"
+                    }
+                    p {
+                        class: "spec-tree-page__subtitle",
+                        "Browse by component or use the sidebar tree to open a specification."
+                    }
+                }
+                div {
+                    class: "spec-tree-page__list",
+                    if *loading.read() {
+                        p { class: "spec-detail__loading", "Loading…" }
+                    } else if let Some(err) = list_error.read().as_deref() {
+                        p { class: "spec-detail__error", "Failed to load specifications: {err}" }
+                    } else if specs.read().is_empty() {
+                        div {
+                            class: "empty-state",
+                            if filter.read().trim().is_empty() && state_filter.read().is_empty() {
+                                "No specifications are available yet."
+                            } else {
+                                "No specifications match the current search or state filter."
+                            }
+                        }
+                    } else {
+                        {render_spec_sections(specs.read().clone(), nav)}
+                    }
                 }
             }
         }
     }
 }
 
-fn render_selected_spec(
-    id: String,
-    specs: Signal<Vec<SpecSummary>>,
-    filter: Signal<String>,
-    state_filter: Signal<String>,
-    mut active_tab: Signal<String>,
+fn render_spec_sections(
+    specs: Vec<SpecSummary>,
+    nav: Navigator,
 ) -> Element {
-    let crumbs = build_detail_breadcrumbs(
-        &specs.read(),
-        &id,
-        specs,
-        filter,
-        state_filter,
-    );
+    let mut grouped: BTreeMap<String, Vec<SpecSummary>> = BTreeMap::new();
+    for spec in specs {
+        let category = spec
+            .component
+            .clone()
+            .unwrap_or_else(|| "Uncategorised".to_string());
+        grouped.entry(category).or_default().push(spec);
+    }
 
     rsx! {
-        Breadcrumbs {
-            items: crumbs,
-            class: "spec-detail__breadcrumbs".to_string(),
-        }
-        SpecDetail {
-            spec_id: id,
-            active_tab: active_tab.read().clone(),
-            on_tab_change: move |tab| active_tab.set(tab),
-        }
-    }
-}
-
-fn build_detail_breadcrumbs(
-    specs_list: &[SpecSummary],
-    id: &str,
-    mut specs: Signal<Vec<SpecSummary>>,
-    mut filter: Signal<String>,
-    mut state_filter: Signal<String>,
-) -> Vec<BreadcrumbItem> {
-    let summary = specs_list.iter().find(|spec| spec.id == id).cloned();
-    let component = summary.as_ref().and_then(|spec| spec.component.clone());
-    let title = summary
-        .as_ref()
-        .and_then(|spec| spec.title.clone())
-        .unwrap_or_else(|| id.to_string());
-
-    let mut crumbs = vec![BreadcrumbItem::link(
-        "All specs",
-        EventHandler::new(move |_| {
-            state_filter.set(String::new());
-            let query = filter.peek().clone();
-            let query = if query.is_empty() { None } else { Some(query) };
-            spawn_local(async move {
-                if let Ok(response) =
-                    api::list_specs(None, query.as_deref(), None).await
-                {
-                    specs.set(response.items);
-                }
-            });
-        }),
-    )];
-
-    if let Some(component) = component {
-        let label = component.clone();
-        crumbs.push(BreadcrumbItem::link(
-            label,
-            EventHandler::new(move |_| {
-                filter.set(component.clone());
-                let query = component.clone();
-                spawn_local(async move {
-                    if let Ok(response) =
-                        api::search_specs(&query, Some(50)).await
-                    {
-                        specs.set(response.items);
+        for (category, items) in grouped.into_iter() {
+            CardSection {
+                key: "{category}",
+                title: category.clone(),
+                count: Some(items.len()),
+                CardGrid {
+                    for spec in items {
+                        {
+                            let id = spec.id.clone();
+                            let title = spec
+                                .title
+                                .clone()
+                                .unwrap_or_else(|| "Untitled".to_string());
+                            let description = spec.state.clone();
+                            let nav_to_detail = nav.clone();
+                            rsx! {
+                                Card {
+                                    key: "{spec.id}",
+                                    title,
+                                    description,
+                                    on_click: EventHandler::new(move |_| {
+                                        nav_to_detail.push(Route::spec_detail_path(&id, None));
+                                    }),
+                                }
+                            }
+                        }
                     }
-                });
-            }),
-        ));
+                }
+            }
+        }
     }
-
-    crumbs.push(BreadcrumbItem::current(title));
-    crumbs
 }

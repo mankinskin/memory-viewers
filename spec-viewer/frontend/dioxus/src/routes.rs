@@ -3,8 +3,8 @@
 //! Route hierarchy:
 //!
 //!   /                → Redirect to /specs
-//!   /specs           → SpecListPage (flat list + detail panel)
-//!   /specs/tree      → SpecTreePage (hierarchical parent-child tree)
+//!   /specs           → SpecListPage (root browse surface)
+//!   /specs/tree      → Redirect to /specs (legacy compatibility)
 //!   /specs/graph     → SpecGraphPage (full-screen spec graph)
 //!   /specs/:id       → SpecDetailPage (detail page navigated directly)
 //!   /specs/:id?view=<tab> → SpecDetailPage with canonical detail view
