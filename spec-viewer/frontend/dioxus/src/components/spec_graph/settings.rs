@@ -155,6 +155,22 @@ pub(super) fn render_graph_settings_panel(
                         },
                     }
                 }
+                div { class: "graph-settings-section",
+                    label { class: "graph-settings-label",
+                        "Frustum gravity "
+                        span { class: "graph-settings-value", "{draft_params.frustum_gravity:.2}" }
+                    }
+                    input {
+                        r#type: "range",
+                        min: "0.0", max: "4.0", step: "0.05",
+                        value: "{draft_params.frustum_gravity}",
+                        oninput: move |event| {
+                            if let Ok(value) = event.value().parse::<f32>() {
+                                set_draft_params(store, |params| params.frustum_gravity = value);
+                            }
+                        },
+                    }
+                }
             }
 
             div { class: "graph-settings-section",

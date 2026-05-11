@@ -67,6 +67,7 @@ pub struct LayoutParams {
     pub iterations: u32,
     pub link_dist: f32,
     pub repulsion: f32,
+    pub frustum_gravity: f32,
 }
 
 impl Default for LayoutParams {
@@ -77,6 +78,7 @@ impl Default for LayoutParams {
             iterations: 120,
             link_dist: 6.0,
             repulsion: 6.5,
+            frustum_gravity: 1.15,
         }
     }
 }

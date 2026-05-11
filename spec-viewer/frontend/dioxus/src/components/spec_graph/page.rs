@@ -4,6 +4,7 @@ use viewer_api_dioxus::{
     Camera,
     CameraCommand,
     Layout3D,
+    NodeViewTransform,
 };
 use wasm_bindgen_futures::spawn_local;
 
@@ -56,6 +57,10 @@ pub fn SpecGraphPage() -> Element {
     let mut preview_id: Signal<Option<String>> = use_signal(|| None);
     let hovered_id: Signal<Option<String>> = use_signal(|| None);
     let nav = use_navigator();
+    let preview_open = preview_id.read().is_some();
+    let viewport_insets =
+        graph_viewport_insets(*store.panel_open.read(), preview_open);
+    let node_view_transform = current_node_view_transform(store);
 
     use_graph_fetch(store);
     use_layout_sync(store);
@@ -79,10 +84,7 @@ pub fn SpecGraphPage() -> Element {
     let camera_command = *camera_cmd.read();
     let camera_command_seq = *camera_seq.read();
     let selected_node_id = preview_id.read().clone();
-    let preview_open = selected_node_id.is_some();
     let selection_auto_layout = *store.auto_layout_selected_node.read();
-    let viewport_insets =
-        graph_viewport_insets(*store.panel_open.read(), preview_open);
     sync_camera_for_selected_node(
         store,
         &layout,
@@ -101,6 +103,7 @@ pub fn SpecGraphPage() -> Element {
                 selected_node_id,
                 hovered_node_id,
                 selection_auto_layout,
+                node_view_transform,
                 viewport_insets,
                 container_id: "spec-graph3d-container".to_string(),
                 container_style: "position: absolute; inset: 0; overflow: hidden; user-select: none; cursor: grab;".to_string(),
@@ -174,7 +177,9 @@ fn use_graph_fetch(store: SpecGraphStore) {
     });
 }
 
-fn use_layout_sync(store: SpecGraphStore) {
+fn use_layout_sync(
+    store: SpecGraphStore,
+) {
     let mut current_layout = store.current_layout;
     let mut applied_layout_generation = store.applied_layout_generation;
 
@@ -195,11 +200,14 @@ fn use_layout_sync(store: SpecGraphStore) {
         } else {
             Vec::new()
         };
+        let algo = *store.committed_algo.read();
+        let params = *store.committed_params.read();
         let layout = build_layout(
-            *store.committed_algo.read(),
-            *store.committed_params.read(),
+            algo,
+            params,
             &nodes_raw,
             &edges_for_layout,
+            None,
         );
         current_layout.set(Some(layout));
         applied_layout_generation.set(generation);
@@ -333,6 +341,30 @@ fn selection_camera_request(
         target: centre,
         distance: frame_distance(radius),
     })
+}
+
+
+fn current_node_view_transform(store: SpecGraphStore) -> NodeViewTransform {
+    let algo = *store.committed_algo.read();
+    let params = *store.committed_params.read();
+    if !matches!(algo, LayoutAlgorithm::ForceDirected)
+        || params.frustum_gravity <= 0.0
+    {
+        return NodeViewTransform::default();
+    }
+
+    let strength = frustum_gravity_transform_strength(params.frustum_gravity);
+    if strength <= 0.01 {
+        return NodeViewTransform::default();
+    }
+
+    let screen_fill = 0.58 + strength * 0.32;
+    NodeViewTransform::camera_plane_view_direction(screen_fill, strength)
+}
+
+fn frustum_gravity_transform_strength(frustum_gravity: f32) -> f32 {
+    let normalized = ((frustum_gravity - 0.95) / 1.4).clamp(0.0, 1.0);
+    normalized * normalized * (3.0 - 2.0 * normalized)
 }
 
 fn graph_viewport_insets(

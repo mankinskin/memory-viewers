@@ -209,7 +209,7 @@ impl SpecGraphStore {
             draft_show_edges: use_signal(|| true),
             center_camera_on_selected_node: use_signal(|| false),
             zoom_to_selected_node: use_signal(|| false),
-            selected_node_zoom_factor: use_signal(|| 4.0),
+            selected_node_zoom_factor: use_signal(|| 3.0),
             auto_layout_selected_node: use_signal(|| false),
             committed_algo: use_signal(|| LayoutAlgorithm::ForceDirected),
             committed_params: use_signal(LayoutParams::default),
