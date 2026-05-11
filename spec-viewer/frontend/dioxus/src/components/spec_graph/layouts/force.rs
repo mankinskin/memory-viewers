@@ -36,9 +36,10 @@ pub(super) fn layout_force(
     let indexed_edges = indexed_edges(edges, &index);
     let k = params.link_dist.max(0.1);
     let mut temperature = 0.6_f32 * params.spread;
-    let extra_frustum_iterations = if frustum_context.is_some()
-        && params.frustum_gravity > 0.0
-    {
+    let frustum_gravity_active = params.frustum_gravity_enabled
+        && frustum_context.is_some()
+        && params.frustum_gravity > 0.0;
+    let extra_frustum_iterations = if frustum_gravity_active {
         (params.frustum_gravity
             * params.frustum_settle.max(0.0)
             * 60.0)
@@ -51,7 +52,10 @@ pub(super) fn layout_force(
         let mut displacement = vec![[0.0_f32; 3]; node_count];
         apply_repulsion(&positions, &mut displacement, params.repulsion, k);
         apply_attraction(&positions, &mut displacement, &indexed_edges, k);
-        if let Some(context) = frustum_context {
+        if frustum_gravity_active {
+            let Some(context) = frustum_context else {
+                continue;
+            };
             apply_frustum_gravity(
                 &positions,
                 &mut displacement,

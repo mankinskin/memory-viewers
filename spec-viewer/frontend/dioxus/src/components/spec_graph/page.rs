@@ -234,6 +234,7 @@ fn current_frustum_layout_context(
     let algo = *store.committed_algo.read();
     let params = *store.committed_params.read();
     if !matches!(algo, LayoutAlgorithm::ForceDirected)
+        || !params.frustum_gravity_enabled
         || params.frustum_gravity <= 0.0
     {
         return None;
@@ -405,6 +406,7 @@ fn current_node_view_transform(store: SpecGraphStore) -> NodeViewTransform {
     let algo = *store.committed_algo.read();
     let params = *store.committed_params.read();
     if !matches!(algo, LayoutAlgorithm::ForceDirected)
+        || !params.frustum_gravity_enabled
         || params.frustum_gravity <= 0.0
     {
         return NodeViewTransform::default();

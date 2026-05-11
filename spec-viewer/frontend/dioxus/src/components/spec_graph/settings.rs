@@ -156,6 +156,21 @@ pub(super) fn render_graph_settings_panel(
                     }
                 }
                 div { class: "graph-settings-section",
+                    label { class: "graph-settings-label graph-settings-label--inline",
+                        input {
+                            r#type: "checkbox",
+                            "data-testid": "graph-toggle-frustum-gravity",
+                            checked: draft_params.frustum_gravity_enabled,
+                            onchange: move |event| {
+                                set_draft_params(store, |params| {
+                                    params.frustum_gravity_enabled = event.checked();
+                                });
+                            },
+                        }
+                        " Enable frustum gravity"
+                    }
+                }
+                div { class: "graph-settings-section",
                     label { class: "graph-settings-label",
                         "Frustum gravity "
                         span { class: "graph-settings-value", "{draft_params.frustum_gravity:.2}" }
