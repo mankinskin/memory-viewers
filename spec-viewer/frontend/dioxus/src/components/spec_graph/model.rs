@@ -81,10 +81,10 @@ impl Default for LayoutParams {
             iterations: 120,
             link_dist: 6.0,
             repulsion: 6.5,
-            frustum_gravity: 1.15,
-            frustum_overfill: 1.15,
-            frustum_settle: 1.0,
-            frustum_overlap_repulsion: 1.0,
+            frustum_gravity: 2.0,
+            frustum_overfill: 1.35,
+            frustum_settle: 2.0,
+            frustum_overlap_repulsion: 1.45,
         }
     }
 }
