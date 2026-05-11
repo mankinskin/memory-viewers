@@ -16,7 +16,10 @@ use crate::{
 
 use super::{
     cards::render_graph_node_cards,
-    layouts::build_layout,
+    layouts::{
+        build_layout,
+        FrustumLayoutContext,
+    },
     model::LayoutAlgorithm,
     preview::SpecPreviewSidebar,
     settings::{
@@ -54,6 +57,8 @@ pub fn SpecGraphPage() -> Element {
         use_hook(|| Signal::new(LayoutAlgorithm::ForceDirected));
     let mut last_focus_request: Signal<Option<CameraFocusRequest>> =
         use_hook(|| Signal::new(None));
+    let mut applied_frustum_context: Signal<Option<FrustumLayoutContext>> =
+        use_hook(|| Signal::new(None));
     let mut preview_id: Signal<Option<String>> = use_signal(|| None);
     let hovered_id: Signal<Option<String>> = use_signal(|| None);
     let nav = use_navigator();
@@ -63,7 +68,7 @@ pub fn SpecGraphPage() -> Element {
     let node_view_transform = current_node_view_transform(store);
 
     use_graph_fetch(store);
-    use_layout_sync(store);
+    use_layout_sync(store, viewport_insets, applied_frustum_context);
     sync_camera_for_algorithm(store, last_cam_algo, camera_cmd, camera_seq);
 
     let (nodes_raw, layout) = match graph_page_state(store) {
@@ -179,6 +184,8 @@ fn use_graph_fetch(store: SpecGraphStore) {
 
 fn use_layout_sync(
     store: SpecGraphStore,
+    viewport_insets: [f32; 4],
+    mut applied_frustum_context: Signal<Option<FrustumLayoutContext>>,
 ) {
     let mut current_layout = store.current_layout;
     let mut applied_layout_generation = store.applied_layout_generation;
@@ -188,10 +195,15 @@ fn use_layout_sync(
             return;
         };
 
+        let frustum_context = current_frustum_layout_context(
+            store,
+            viewport_insets,
+        );
         let generation = *store.layout_generation.read();
-        if current_layout.read().is_some()
-            && generation == *applied_layout_generation.read()
-        {
+        let needs_rebuild = current_layout.peek().is_none()
+            || generation != *applied_layout_generation.peek()
+            || frustum_context != *applied_frustum_context.peek();
+        if !needs_rebuild {
             return;
         }
 
@@ -207,11 +219,56 @@ fn use_layout_sync(
             params,
             &nodes_raw,
             &edges_for_layout,
-            None,
+            frustum_context.clone(),
         );
         current_layout.set(Some(layout));
         applied_layout_generation.set(generation);
+        applied_frustum_context.set(frustum_context);
     });
+}
+
+fn current_frustum_layout_context(
+    store: SpecGraphStore,
+    viewport_insets: [f32; 4],
+) -> Option<FrustumLayoutContext> {
+    let algo = *store.committed_algo.read();
+    let params = *store.committed_params.read();
+    if !matches!(algo, LayoutAlgorithm::ForceDirected)
+        || params.frustum_gravity <= 0.0
+    {
+        return None;
+    }
+
+    let (viewport_width, viewport_height) =
+        current_viewport_size(viewport_insets)?;
+
+    Some(FrustumLayoutContext {
+        camera: store.current_camera.read().clone().unwrap_or_default(),
+        aspect: (viewport_width / viewport_height).max(0.1),
+        viewport_width,
+        viewport_height,
+    })
+}
+
+#[cfg(target_arch = "wasm32")]
+fn current_viewport_size(
+    viewport_insets: [f32; 4],
+) -> Option<(f32, f32)> {
+    let window = web_sys::window()?;
+    let width = window.inner_width().ok()?.as_f64()? as f32
+        - viewport_insets[0]
+        - viewport_insets[2];
+    let height = window.inner_height().ok()?.as_f64()? as f32
+        - viewport_insets[1]
+        - viewport_insets[3];
+    Some((width.max(320.0), height.max(240.0)))
+}
+
+#[cfg(not(target_arch = "wasm32"))]
+fn current_viewport_size(
+    _viewport_insets: [f32; 4],
+) -> Option<(f32, f32)> {
+    None
 }
 
 fn sync_camera_for_algorithm(
@@ -358,13 +415,32 @@ fn current_node_view_transform(store: SpecGraphStore) -> NodeViewTransform {
         return NodeViewTransform::default();
     }
 
-    let screen_fill = 0.58 + strength * 0.32;
+    let node_count = store
+        .current_layout
+        .read()
+        .as_ref()
+        .map(|layout| layout.nodes.len())
+        .unwrap_or(0) as f32;
+    let screen_fill = frustum_gravity_screen_fill(
+        strength,
+        node_count,
+        params.frustum_overfill,
+    );
     NodeViewTransform::camera_plane_view_direction(screen_fill, strength)
 }
 
 fn frustum_gravity_transform_strength(frustum_gravity: f32) -> f32 {
     let normalized = ((frustum_gravity - 0.95) / 1.4).clamp(0.0, 1.0);
     normalized * normalized * (3.0 - 2.0 * normalized)
+}
+
+fn frustum_gravity_screen_fill(
+    strength: f32,
+    node_count: f32,
+    frustum_overfill: f32,
+) -> f32 {
+    let overfill = (node_count.max(12.0) / 12.0).sqrt().clamp(1.0, 3.5);
+    overfill * frustum_overfill.clamp(0.5, 2.0) * (0.72 + strength * 0.22)
 }
 
 fn graph_viewport_insets(

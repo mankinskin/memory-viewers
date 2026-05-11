@@ -171,6 +171,54 @@ pub(super) fn render_graph_settings_panel(
                         },
                     }
                 }
+                div { class: "graph-settings-section",
+                    label { class: "graph-settings-label",
+                        "Frustum spread "
+                        span { class: "graph-settings-value", "{draft_params.frustum_overfill:.2}x" }
+                    }
+                    input {
+                        r#type: "range",
+                        min: "0.50", max: "2.00", step: "0.05",
+                        value: "{draft_params.frustum_overfill}",
+                        oninput: move |event| {
+                            if let Ok(value) = event.value().parse::<f32>() {
+                                set_draft_params(store, |params| params.frustum_overfill = value);
+                            }
+                        },
+                    }
+                }
+                div { class: "graph-settings-section",
+                    label { class: "graph-settings-label",
+                        "Frustum settle "
+                        span { class: "graph-settings-value", "{draft_params.frustum_settle:.2}x" }
+                    }
+                    input {
+                        r#type: "range",
+                        min: "0.00", max: "3.00", step: "0.05",
+                        value: "{draft_params.frustum_settle}",
+                        oninput: move |event| {
+                            if let Ok(value) = event.value().parse::<f32>() {
+                                set_draft_params(store, |params| params.frustum_settle = value);
+                            }
+                        },
+                    }
+                }
+                div { class: "graph-settings-section",
+                    label { class: "graph-settings-label",
+                        "Frustum overlap repulsion "
+                        span { class: "graph-settings-value", "{draft_params.frustum_overlap_repulsion:.2}x" }
+                    }
+                    input {
+                        r#type: "range",
+                        min: "0.25", max: "4.00", step: "0.05",
+                        value: "{draft_params.frustum_overlap_repulsion}",
+                        oninput: move |event| {
+                            if let Ok(value) = event.value().parse::<f32>() {
+                                set_draft_params(store, |params| params.frustum_overlap_repulsion = value);
+                            }
+                        },
+                    }
+                }
             }
 
             div { class: "graph-settings-section",

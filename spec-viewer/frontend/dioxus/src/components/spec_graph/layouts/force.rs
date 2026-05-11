@@ -36,8 +36,18 @@ pub(super) fn layout_force(
     let indexed_edges = indexed_edges(edges, &index);
     let k = params.link_dist.max(0.1);
     let mut temperature = 0.6_f32 * params.spread;
+    let extra_frustum_iterations = if frustum_context.is_some()
+        && params.frustum_gravity > 0.0
+    {
+        (params.frustum_gravity
+            * params.frustum_settle.max(0.0)
+            * 60.0)
+            .round() as u32
+    } else {
+        0
+    };
 
-    for _ in 0..params.iterations.max(1) {
+    for _ in 0..(params.iterations.max(1) + extra_frustum_iterations) {
         let mut displacement = vec![[0.0_f32; 3]; node_count];
         apply_repulsion(&positions, &mut displacement, params.repulsion, k);
         apply_attraction(&positions, &mut displacement, &indexed_edges, k);
@@ -46,6 +56,7 @@ pub(super) fn layout_force(
                 &positions,
                 &mut displacement,
                 params.frustum_gravity,
+                params.frustum_overlap_repulsion,
                 k,
                 context,
             );
@@ -186,6 +197,7 @@ fn apply_frustum_gravity(
     positions: &[[f32; 3]],
     displacement: &mut [[f32; 3]],
     frustum_gravity: f32,
+    frustum_overlap_repulsion: f32,
     k: f32,
     context: &FrustumLayoutContext,
 ) {
@@ -254,7 +266,7 @@ fn apply_frustum_gravity(
     apply_projected_overlap_repulsion(
         positions,
         displacement,
-        frustum_gravity * 1.8,
+        frustum_gravity * 1.8 * frustum_overlap_repulsion.max(0.0),
         &basis,
         viewport_width,
         viewport_height,
@@ -756,6 +768,7 @@ mod tests {
             &positions,
             &mut displacement,
             1.0,
+            1.0,
             6.0,
             &context,
         );
@@ -790,6 +803,7 @@ mod tests {
         apply_frustum_gravity(
             &positions,
             &mut displacement,
+            1.0,
             1.0,
             6.0,
             &context,
@@ -826,6 +840,7 @@ mod tests {
             apply_frustum_gravity(
                 &positions,
                 &mut displacement,
+                1.0,
                 1.0,
                 6.0,
                 &context,
@@ -871,12 +886,14 @@ mod tests {
             &positions,
             &mut near_displacement,
             1.0,
+            1.0,
             6.0,
             &near_context,
         );
         apply_frustum_gravity(
             &positions,
             &mut far_displacement,
+            1.0,
             1.0,
             6.0,
             &far_context,
@@ -916,6 +933,7 @@ mod tests {
             &positions,
             &mut displacement,
             0.0,
+            1.0,
             6.0,
             &context,
         );

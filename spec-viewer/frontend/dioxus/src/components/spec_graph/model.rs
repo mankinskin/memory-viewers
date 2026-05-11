@@ -68,6 +68,9 @@ pub struct LayoutParams {
     pub link_dist: f32,
     pub repulsion: f32,
     pub frustum_gravity: f32,
+    pub frustum_overfill: f32,
+    pub frustum_settle: f32,
+    pub frustum_overlap_repulsion: f32,
 }
 
 impl Default for LayoutParams {
@@ -79,6 +82,9 @@ impl Default for LayoutParams {
             link_dist: 6.0,
             repulsion: 6.5,
             frustum_gravity: 1.15,
+            frustum_overfill: 1.15,
+            frustum_settle: 1.0,
+            frustum_overlap_repulsion: 1.0,
         }
     }
 }
