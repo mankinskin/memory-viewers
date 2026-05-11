@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
     graph3d::camera::frame_distance,
+    graph3d::CameraMode,
     Camera,
     CameraCommand,
     Layout3D,
@@ -20,7 +21,11 @@ use super::{
         build_layout,
         FrustumLayoutContext,
     },
-    model::LayoutAlgorithm,
+    model::{
+        LayoutAlgorithm,
+        SELECTED_NODE_ZOOM_FACTOR_MAX,
+        SELECTED_NODE_ZOOM_FACTOR_MIN,
+    },
     preview::SpecPreviewSidebar,
     settings::{
         queue_camera_command,
@@ -86,6 +91,7 @@ pub fn SpecGraphPage() -> Element {
     let nodes = layout.nodes.clone();
     let node_count = nodes.len();
     let edge_count = layout.edges.len();
+    let camera_mode = *store.camera_mode.read();
     let camera_command = *camera_cmd.read();
     let camera_command_seq = *camera_seq.read();
     let selected_node_id = preview_id.read().clone();
@@ -105,6 +111,7 @@ pub fn SpecGraphPage() -> Element {
             viewer_api_dioxus::Graph3D {
                 layout: layout.clone(),
                 initial_camera: store.current_camera.read().clone(),
+                camera_mode,
                 selected_node_id,
                 hovered_node_id,
                 selection_auto_layout,
@@ -123,7 +130,7 @@ pub fn SpecGraphPage() -> Element {
                 {render_graph_node_cards(&nodes, &nodes_raw, preview_id, hovered_id)}
                 div {
                     class: "graph-controls-hint",
-                    "Left-drag: orbit \u{00b7} Right-drag: pan \u{00b7} Scroll: zoom \u{00b7} Click card: open"
+                    "{graph_controls_hint(camera_mode)}"
                 }
                 if node_count > 0 {
                     div {
@@ -161,6 +168,17 @@ pub fn SpecGraphPage() -> Element {
     }
 }
 
+fn graph_controls_hint(camera_mode: CameraMode) -> &'static str {
+    match camera_mode {
+        CameraMode::Orbit => {
+            "Left-drag: orbit · Right-drag: pan · Scroll: zoom · Click card: open"
+        },
+        CameraMode::Free => {
+            "Left-drag: look · Right-drag: pan · Scroll: forward/back · Click card: open"
+        },
+    }
+}
+
 fn use_graph_fetch(store: SpecGraphStore) {
     let mut raw = store.raw;
     let mut error = store.error;
@@ -189,7 +207,6 @@ fn use_layout_sync(
 ) {
     let mut current_layout = store.current_layout;
     let mut applied_layout_generation = store.applied_layout_generation;
-
     use_effect(move || {
         let Some((nodes_raw, edges_raw)) = store.raw.read().clone() else {
             return;
@@ -242,13 +259,28 @@ fn current_frustum_layout_context(
 
     let (viewport_width, viewport_height) =
         current_viewport_size(viewport_insets)?;
+    let camera = canonical_frustum_layout_camera(
+        store.current_camera.read().clone().unwrap_or_default(),
+    );
 
     Some(FrustumLayoutContext {
-        camera: store.current_camera.read().clone().unwrap_or_default(),
+        camera,
         aspect: (viewport_width / viewport_height).max(0.1),
         viewport_width,
         viewport_height,
     })
+}
+
+fn canonical_frustum_layout_camera(camera: Camera) -> Camera {
+    // The force-side frustum pass only depends on view direction and viewport.
+    // Ignore live target translation and distance so focus/zoom camera updates do
+    // not retrigger the solver indefinitely.
+    Camera {
+        yaw: camera.yaw,
+        pitch: camera.pitch,
+        distance: 1.0,
+        target: [0.0, 0.0, 0.0],
+    }
 }
 
 #[cfg(target_arch = "wasm32")]
@@ -374,7 +406,12 @@ fn selection_camera_request(
             .iter()
             .find(|node| node.id == selected_node_id)?;
         let distance = if zoom_to_selected_node {
-            (framed_distance / selected_node_zoom_factor.max(1.0).powi(2))
+            (framed_distance
+                / selected_node_zoom_factor
+                    .clamp(
+                        SELECTED_NODE_ZOOM_FACTOR_MIN,
+                        SELECTED_NODE_ZOOM_FACTOR_MAX,
+                    ))
                 .clamp(6.0, 120.0)
         } else {
             current_camera
@@ -491,5 +528,96 @@ fn render_status(
             style: style.unwrap_or_default(),
             "{message}"
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{
+        canonical_frustum_layout_camera,
+        selection_camera_request,
+    };
+    use viewer_api_dioxus::{
+        graph3d::camera::frame_distance,
+        Camera,
+        Layout3D,
+        Node3D,
+    };
+
+    #[test]
+    fn canonical_frustum_layout_camera_ignores_focus_target_and_zoom() {
+        let near_focus = Camera {
+            yaw: 0.35,
+            pitch: -0.2,
+            distance: 9.0,
+            target: [14.0, -3.5, 8.0],
+        };
+        let far_focus = Camera {
+            distance: 38.0,
+            target: [-11.0, 6.0, -27.0],
+            ..near_focus
+        };
+
+        assert_eq!(
+            canonical_frustum_layout_camera(near_focus),
+            canonical_frustum_layout_camera(far_focus),
+        );
+    }
+
+    #[test]
+    fn canonical_frustum_layout_camera_preserves_view_direction() {
+        let base = Camera {
+            yaw: 0.35,
+            pitch: -0.2,
+            distance: 9.0,
+            target: [14.0, -3.5, 8.0],
+        };
+        let rotated = Camera {
+            yaw: base.yaw + 0.15,
+            ..base
+        };
+
+        assert_ne!(
+            canonical_frustum_layout_camera(base),
+            canonical_frustum_layout_camera(rotated),
+        );
+    }
+
+    #[test]
+    fn selection_camera_request_uses_linear_zoom_scaling() {
+        let layout = Layout3D::new(
+            vec![
+                Node3D {
+                    id: "selected".to_string(),
+                    label: Some("Selected".to_string()),
+                    state: Some("draft".to_string()),
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                Node3D {
+                    id: "other".to_string(),
+                    label: Some("Other".to_string()),
+                    state: Some("draft".to_string()),
+                    x: 12.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+            ],
+            Vec::new(),
+        );
+
+        let request = selection_camera_request(
+            &layout,
+            Some("selected"),
+            None,
+            true,
+            true,
+            3.0,
+        )
+        .expect("request");
+
+        let expected = frame_distance(layout.bounds().1) / 3.0;
+        assert!((request.distance - expected).abs() < 1e-4);
     }
 }

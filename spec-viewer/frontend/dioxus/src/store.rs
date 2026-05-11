@@ -9,12 +9,17 @@ use serde::{
     Serialize,
 };
 use std::collections::HashMap;
-use viewer_api_dioxus::{Camera, Layout3D};
+use viewer_api_dioxus::{
+    graph3d::CameraMode,
+    Camera,
+    Layout3D,
+};
 
 use crate::{
     components::spec_graph::{
         LayoutAlgorithm,
         LayoutParams,
+        SELECTED_NODE_ZOOM_FACTOR_DEFAULT,
     },
     types::{
         SpecGraphEdge,
@@ -184,6 +189,7 @@ pub struct SpecGraphStore {
     pub draft_algo: Signal<LayoutAlgorithm>,
     pub draft_params: Signal<LayoutParams>,
     pub draft_show_edges: Signal<bool>,
+    pub camera_mode: Signal<CameraMode>,
     pub center_camera_on_selected_node: Signal<bool>,
     pub zoom_to_selected_node: Signal<bool>,
     pub selected_node_zoom_factor: Signal<f32>,
@@ -207,9 +213,11 @@ impl SpecGraphStore {
             draft_algo: use_signal(|| LayoutAlgorithm::ForceDirected),
             draft_params: use_signal(LayoutParams::default),
             draft_show_edges: use_signal(|| true),
+            camera_mode: use_signal(CameraMode::default),
             center_camera_on_selected_node: use_signal(|| false),
             zoom_to_selected_node: use_signal(|| false),
-            selected_node_zoom_factor: use_signal(|| 3.0),
+            selected_node_zoom_factor:
+                use_signal(|| SELECTED_NODE_ZOOM_FACTOR_DEFAULT),
             auto_layout_selected_node: use_signal(|| false),
             committed_algo: use_signal(|| LayoutAlgorithm::ForceDirected),
             committed_params: use_signal(LayoutParams::default),

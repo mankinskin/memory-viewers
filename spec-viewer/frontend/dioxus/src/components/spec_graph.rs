@@ -15,5 +15,6 @@ pub use layouts::build_layout;
 pub use model::{
     LayoutAlgorithm,
     LayoutParams,
+    SELECTED_NODE_ZOOM_FACTOR_DEFAULT,
 };
 pub use page::SpecGraphPage;

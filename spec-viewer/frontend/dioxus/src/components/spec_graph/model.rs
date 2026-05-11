@@ -1,5 +1,9 @@
 use viewer_api_dioxus::CameraCommand;
 
+pub const SELECTED_NODE_ZOOM_FACTOR_MIN: f32 = 1.0;
+pub const SELECTED_NODE_ZOOM_FACTOR_MAX: f32 = 3.0;
+pub const SELECTED_NODE_ZOOM_FACTOR_DEFAULT: f32 = 1.5;
+
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum LayoutAlgorithm {
     RingsByDepth,

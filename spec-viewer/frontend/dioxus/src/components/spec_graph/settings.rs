@@ -1,11 +1,16 @@
 use dioxus::prelude::*;
-use viewer_api_dioxus::CameraCommand;
+use viewer_api_dioxus::{
+    graph3d::CameraMode,
+    CameraCommand,
+};
 
 use crate::store::SpecGraphStore;
 
 use super::model::{
     LayoutAlgorithm,
     LayoutParams,
+    SELECTED_NODE_ZOOM_FACTOR_MAX,
+    SELECTED_NODE_ZOOM_FACTOR_MIN,
 };
 
 pub(super) fn render_graph_settings_panel(
@@ -16,6 +21,7 @@ pub(super) fn render_graph_settings_panel(
     let draft_algo = *store.draft_algo.read();
     let draft_params = *store.draft_params.read();
     let draft_show_edges = *store.draft_show_edges.read();
+    let camera_mode = *store.camera_mode.read();
     let center_camera_on_selected_node =
         *store.center_camera_on_selected_node.read();
     let zoom_to_selected_node = *store.zoom_to_selected_node.read();
@@ -66,6 +72,23 @@ pub(super) fn render_graph_settings_panel(
                     },
                     for algo in LayoutAlgorithm::ALL.iter() {
                         option { value: algo.as_str(), "{algo.label()}" }
+                    }
+                }
+            }
+
+            div { class: "graph-settings-section",
+                label { class: "graph-settings-label", "Camera mode" }
+                select {
+                    class: "graph-settings-select",
+                    "data-testid": "graph-camera-mode-select",
+                    value: camera_mode.as_str(),
+                    onchange: move |event| {
+                        if let Some(mode) = CameraMode::from_str_opt(&event.value()) {
+                            set_camera_mode(store, mode);
+                        }
+                    },
+                    for &mode in CameraMode::ALL.iter() {
+                        option { value: mode.as_str(), "{mode.label()}" }
                     }
                 }
             }
@@ -280,7 +303,7 @@ pub(super) fn render_graph_settings_panel(
                 input {
                     r#type: "range",
                     "data-testid": "graph-range-selected-node-zoom-factor",
-                    min: "1.0", max: "8.0", step: "0.25",
+                    min: "1.0", max: "3.0", step: "0.25",
                     value: "{selected_node_zoom_factor}",
                     disabled: !zoom_to_selected_node,
                     oninput: move |event| {
@@ -401,6 +424,13 @@ fn set_zoom_to_selected_node(
     store.zoom_to_selected_node.set(enabled);
 }
 
+fn set_camera_mode(
+    mut store: SpecGraphStore,
+    mode: CameraMode,
+) {
+    store.camera_mode.set(mode);
+}
+
 fn set_center_camera_on_selected_node(
     mut store: SpecGraphStore,
     enabled: bool,
@@ -412,7 +442,10 @@ fn set_selected_node_zoom_factor(
     mut store: SpecGraphStore,
     value: f32,
 ) {
-    store.selected_node_zoom_factor.set(value.clamp(1.0, 8.0));
+    store.selected_node_zoom_factor.set(value.clamp(
+        SELECTED_NODE_ZOOM_FACTOR_MIN,
+        SELECTED_NODE_ZOOM_FACTOR_MAX,
+    ));
 }
 
 fn set_auto_layout_selected_node(
