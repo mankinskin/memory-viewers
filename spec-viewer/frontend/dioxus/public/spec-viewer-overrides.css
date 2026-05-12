@@ -3,6 +3,21 @@
    viewers; anything reusable belongs upstream in
    tools/viewer/viewer-api/frontend/dioxus/public/css/. */
 
+/* Keep the route header above the sidebar/content flex row so header controls
+  remain clickable while the spec list is open on detail and list screens. */
+.app > .header {
+  position: relative;
+  z-index: 20;
+}
+
+.app > .main-layout .sidebar {
+  z-index: 18;
+}
+
+.app > .main-layout .sidebar-overlay.visible {
+  z-index: 19;
+}
+
 
 /* ── SpecDetailPage wrapper ─────────────────────────────────────────────────── */
 

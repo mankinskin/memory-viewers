@@ -1,7 +1,7 @@
 use dioxus::prelude::*;
 use viewer_api_dioxus::is_mobile_sidebar_viewport;
 
-pub(super) fn sidebar_button_state(
+pub(crate) fn sidebar_button_state(
     sidebar_collapsed: Signal<bool>,
     mobile_sidebar_open: Signal<bool>,
 ) -> (bool, &'static str) {
@@ -28,7 +28,7 @@ pub(super) fn sidebar_button_state(
     )
 }
 
-pub(super) fn toggle_sidebar(
+pub(crate) fn toggle_sidebar(
     mut sidebar_collapsed: Signal<bool>,
     mut mobile_sidebar_open: Signal<bool>,
 ) {

@@ -76,6 +76,7 @@ pub fn SpecListPage() -> Element {
                 state_filter,
                 nav,
                 navigation_store,
+                None,
             )}
             {render_spec_list_content(
                 specs,

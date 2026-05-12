@@ -7,13 +7,13 @@ use crate::{
     types::SpecSummary,
 };
 
-pub(super) fn persist_store(store: SpecListStore) {
+pub(crate) fn persist_store(store: SpecListStore) {
     use_effect(move || {
         store.persist();
     });
 }
 
-pub(super) fn use_spec_list(
+pub(crate) fn use_spec_list(
     mut specs: Signal<Vec<SpecSummary>>,
     mut loading: Signal<bool>,
     mut list_error: Signal<Option<String>>,

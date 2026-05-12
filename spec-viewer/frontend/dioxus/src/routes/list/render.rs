@@ -71,7 +71,7 @@ pub(super) fn render_spec_list_header(
     }
 }
 
-pub(super) fn render_spec_list_sidebar(
+pub(crate) fn render_spec_list_sidebar(
     sidebar_collapsed: Signal<bool>,
     mut mobile_sidebar_open: Signal<bool>,
     specs: Signal<Vec<SpecSummary>>,
@@ -81,8 +81,23 @@ pub(super) fn render_spec_list_sidebar(
     mut state_filter: Signal<String>,
     nav: Navigator,
     navigation_store: crate::store::SpecNavigationStore,
+    selected_id: Option<String>,
 ) -> Element {
     let nav_to_detail = nav.clone();
+    let initially_expanded = {
+        let specs = specs.read();
+        selected_id
+            .as_ref()
+            .and_then(|selected_id| {
+                specs
+                    .iter()
+                    .find(|spec| spec.id == *selected_id)
+                    .and_then(|spec| spec.component.as_deref())
+                    .filter(|component| !component.is_empty())
+                    .map(|component| vec![format!("__folder__{component}")])
+            })
+            .unwrap_or_default()
+    };
     rsx! {
         Sidebar {
             title: "Specifications".to_string(),
@@ -98,8 +113,8 @@ pub(super) fn render_spec_list_sidebar(
                 on_filter_change: move |value: String| filter.set(value),
                 state_filter: state_filter.read().clone(),
                 on_state_filter_change: move |value: String| state_filter.set(value),
-                selected_id: None,
-                initially_expanded: Vec::new(),
+                selected_id: selected_id.clone(),
+                initially_expanded,
                 on_select: move |id: String| {
                     nav_to_detail.push(navigation_store.resolve_spec_detail_path(&id));
                     mobile_sidebar_open.set(false);

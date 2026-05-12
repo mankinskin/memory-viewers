@@ -47,6 +47,9 @@ serde_json = "1"
 # URL encoding for building query strings
 percent-encoding = "2"
 
+# Markdown rendering for spec bodies with internal spec link rewriting
+pulldown-cmark = { version = "0.12", default-features = false, features = ["html"] }
+
 # Logging in WASM
 tracing = "0.1"
 tracing-wasm = "0.2"

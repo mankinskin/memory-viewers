@@ -2,6 +2,7 @@ use dioxus::prelude::*;
 use viewer_api_dioxus::{
     BreadcrumbItem,
     Breadcrumbs,
+    HamburgerIcon,
     Header,
     HeaderActions,
     Layout,
@@ -9,20 +10,49 @@ use viewer_api_dioxus::{
     ThemeSettings,
 };
 
-use crate::components::spec_detail::SpecDetail;
+use crate::{
+    components::spec_detail::SpecDetail,
+    sse::use_sse,
+    store::SpecListStore,
+    types::SpecSummary,
+};
 
-use super::Route;
+use super::{
+    list::{
+        persist_store,
+        render_spec_list_sidebar,
+        sidebar_button_state,
+        toggle_sidebar,
+        use_spec_list,
+    },
+    Route,
+};
 
 #[component]
 pub fn SpecDetailPage(
     id: String,
     view: Option<String>,
 ) -> Element {
+    let store = SpecListStore::use_store();
+    let sidebar_collapsed = use_signal(|| false);
+    let mobile_sidebar_open = use_signal(|| false);
     let mut show_theme_settings = use_signal(|| false);
+    let specs: Signal<Vec<SpecSummary>> = use_signal(Vec::new);
+    let loading: Signal<bool> = use_signal(|| true);
+    let list_error: Signal<Option<String>> = use_signal(|| None);
+    let filter = store.filter;
+    let state_filter = store.state_filter;
     let navigation_store = use_context::<crate::store::SpecNavigationStore>();
     let nav = use_navigator();
     let title = id.clone();
     let active_tab = super::canonical_spec_view(view.as_deref()).to_string();
+
+    persist_store(store);
+    use_spec_list(specs, loading, list_error, filter, state_filter);
+    use_sse(specs);
+
+    let (sidebar_button_active, sidebar_button_label) =
+        sidebar_button_state(sidebar_collapsed, mobile_sidebar_open);
 
     let nav_specs = nav.clone();
     let nav_graph = nav.clone();
@@ -44,7 +74,6 @@ pub fn SpecDetailPage(
         BreadcrumbItem::current(title.clone()),
     ];
 
-    let nav_back = nav.clone();
     let nav_normalize = nav.clone();
     let id_for_normalize = id.clone();
     let route_view = view.clone();
@@ -76,11 +105,12 @@ pub fn SpecDetailPage(
                 Header {
                     left: rsx! {
                         button {
-                            class: "btn-back",
-                            "data-testid": "spec-detail-back",
-                            aria_label: "Back",
-                            onclick: move |_| nav_back.go_back(),
-                            "\u{2190} Back"
+                            class: if sidebar_button_active { "btn btn-icon btn-active" } else { "btn btn-icon" },
+                            "data-testid": "spec-detail-spec-list-toggle",
+                            aria_label: sidebar_button_label,
+                            title: sidebar_button_label,
+                            onclick: move |_| toggle_sidebar(sidebar_collapsed, mobile_sidebar_open),
+                            HamburgerIcon {}
                         }
                         Breadcrumbs {
                             items: crumbs,
@@ -107,6 +137,18 @@ pub fn SpecDetailPage(
                     },
                 }
             },
+            {render_spec_list_sidebar(
+                sidebar_collapsed,
+                mobile_sidebar_open,
+                specs,
+                loading,
+                list_error,
+                filter,
+                state_filter,
+                nav.clone(),
+                navigation_store,
+                Some(id.clone()),
+            )}
             div {
                 class: "spec-detail-page",
                 SpecDetail {

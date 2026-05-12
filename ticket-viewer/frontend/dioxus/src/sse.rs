@@ -7,6 +7,7 @@
 //! |-----------------|----------------------------------------------------|
 //! | `ticket.upsert` | Update state/title in-place or append a new entry. |
 //! | `ticket.delete` | Remove the entry by ID.                            |
+//! | `snapshot.ready`| Trigger a background list refetch.                 |
 //! | `edge.*`        | Acknowledged, no ticket-list mutation.             |
 //! | `open`          | Reset backoff to the initial value.                |
 //! | `error`         | Close the connection, schedule reconnect w/ backoff. |
@@ -108,9 +109,16 @@ async fn sleep_ms(ms: u32) {
 ///   string parameter).
 /// * `tickets` — signal that holds the displayed ticket list; the hook mutates
 ///   it in response to `ticket.upsert` and `ticket.delete` events.
+/// * `refresh_counter` — monotonic signal incremented when the backend emits a
+///   `snapshot.ready` heartbeat, allowing the list page to refetch from the
+///   current filter state.
+/// * `silent_refresh` — marks the next refetch as background-only so the
+///   current list stays visible during reconcile heartbeats.
 pub fn use_sse(
     workspace: String,
     tickets: Signal<Vec<TicketSummary>>,
+    refresh_counter: Signal<u32>,
+    silent_refresh: Signal<bool>,
 ) {
     // Monotonic counter — incrementing this value re-runs the effect, which
     // drops the old `SseHandle` (closing the EventSource) and opens a fresh one.
@@ -186,6 +194,17 @@ pub fn use_sse(
             }
         });
 
+        // ── snapshot.ready ────────────────────────────────────────────────
+        // The HTTP reconcile loop emits this heartbeat so clients can rebuild
+        // local state after mutations made outside this process (for example
+        // via the CLI or MCP server).
+        let mut refresh = refresh_counter;
+        let mut silent = silent_refresh;
+        let l_snapshot = EventListener::new(&es, "snapshot.ready", move |_| {
+            silent.set(true);
+            refresh.with_mut(|value| *value += 1);
+        });
+
         // ── edge events ────────────────────────────────────────────────────
         // Acknowledged without mutating the ticket list.  The dep-graph
         // component has its own SSE subscription that handles edge events.
@@ -229,7 +248,13 @@ pub fn use_sse(
             *h = Some(SseHandle {
                 es,
                 _listeners: vec![
-                    l_upsert, l_delete, l_edge_up, l_edge_del, l_open, l_error,
+                    l_upsert,
+                    l_delete,
+                    l_snapshot,
+                    l_edge_up,
+                    l_edge_del,
+                    l_open,
+                    l_error,
                 ],
             });
         });

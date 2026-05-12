@@ -76,6 +76,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut selected_ids: Signal<Vec<String>> = use_signal(Vec::new);
     let mut show_checkboxes: Signal<bool> = use_signal(|| false);
     let mut refresh_counter: Signal<u32> = use_signal(|| 0);
+    let mut silent_refresh: Signal<bool> = use_signal(|| false);
     let mut view_mode: Signal<String> = use_signal(|| "split".to_string());
     let mut graph_layout_mode: Signal<LayoutMode> =
         use_signal(LayoutMode::default);
@@ -93,7 +94,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut detail_panel_override: Signal<Option<bool>> = use_signal(|| None);
     let mut graph_panel_override: Signal<Option<bool>> = use_signal(|| None);
 
-    use_sse(workspace.clone(), tickets);
+    use_sse(workspace.clone(), tickets, refresh_counter, silent_refresh);
 
     {
         let workspace = workspace.clone();
@@ -102,9 +103,13 @@ pub fn TicketListPage(workspace: String) -> Element {
             let query = filter.read().clone();
             let state = state_filter.read().clone();
             let _refresh = *refresh_counter.read();
-            loading.set(true);
+            let is_silent_refresh = *silent_refresh.peek();
+            if !is_silent_refresh {
+                loading.set(true);
+            }
             list_error.set(None);
             spawn(async move {
+                let mut silent_refresh = silent_refresh;
                 let backend = HttpTicketBackend::new(None);
                 let query = if query.trim().is_empty() {
                     None
@@ -124,10 +129,12 @@ pub fn TicketListPage(workspace: String) -> Element {
                     Ok(response) => {
                         tickets.set(response.items);
                         loading.set(false);
+                        silent_refresh.set(false);
                     },
                     Err(error) => {
                         list_error.set(Some(error));
                         loading.set(false);
+                        silent_refresh.set(false);
                     },
                 }
             });
