@@ -50,6 +50,7 @@ pub(crate) fn render_ticket_detail(
     rsx! {
         {render_conflict_dialog(view.conflict.clone(), handlers.on_discard, handlers.on_keep)}
         div {
+            "data-testid": "ticket-detail-panel",
             style: "
                 width: 100%; min-width: 0; height: 100%;
                 overflow-y: auto; overflow-x: hidden;

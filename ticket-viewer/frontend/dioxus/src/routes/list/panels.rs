@@ -108,6 +108,7 @@ pub(super) fn render_selected_main_panel(
                         .unwrap_or_else(|| selected_ticket_id.clone());
                     rsx! {
                         PanelResizer {
+                            key: "detail-{detail_id}",
                             on_resize: move |delta: f64| {
                                 let width = (*detail_panel_width.read() - delta).max(150.0);
                                 detail_panel_width.set(width);
@@ -116,7 +117,6 @@ pub(super) fn render_selected_main_panel(
                         div {
                             style: "width: {detail_panel_width}px; flex-shrink: 0; overflow: hidden; height: 100%;",
                             TicketDetail {
-                                key: "{detail_id}",
                                 workspace: workspace.clone(),
                                 id: detail_id,
                             }

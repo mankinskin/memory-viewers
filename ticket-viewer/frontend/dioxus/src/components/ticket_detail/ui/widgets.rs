@@ -118,6 +118,7 @@ pub(super) fn FieldRow(props: FieldRowProps) -> Element {
 
     rsx! {
         div {
+            "data-testid": "ticket-detail-field-{field_key}",
             style: "margin-bottom: 0.5rem;",
             div {
                 style: "
