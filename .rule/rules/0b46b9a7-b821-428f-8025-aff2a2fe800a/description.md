@@ -6,7 +6,7 @@ memory-viewers is the top-level repository for the user-facing viewer tools and 
 
 | Tool | What it exposes | Use it when |
 | --- | --- | --- |
-| `ticket-viewer` | Ticket board and graph views | You want to review active work, owners, and dependency flow visually. |
-| `spec-viewer` | Spec browsing UI | You want to inspect specs, sections, and linked code references. |
-| `memory-api` | CLI, MCP, HTTP, and VS Code tooling | You need automation or authoring workflows behind rules, specs, tickets, and audits. |
-| `viewer-api` | Shared viewer-facing APIs | You need reusable viewer integration surfaces across the stack. |
+| <code>ticket&#8209;viewer</code> | Ticket board and graph views | You want to review active work, owners, and dependency flow visually. |
+| <code>spec&#8209;viewer</code> | Spec browsing UI | You want to inspect specs, sections, and linked code references. |
+| <code>memory&#8209;api</code> | CLI, MCP, HTTP, and VS Code tooling | You need automation or authoring workflows behind rules, specs, tickets, and audits. |
+| <code>viewer&#8209;api</code> | Shared viewer-facing APIs | You need reusable viewer integration surfaces across the stack. |
