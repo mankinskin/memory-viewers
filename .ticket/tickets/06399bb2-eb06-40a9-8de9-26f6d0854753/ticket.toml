@@ -1,0 +1,7 @@
+id = "06399bb2-eb06-40a9-8de9-26f6d0854753"
+created_at = "2026-04-20T22:39:35.949140600+00:00"
+title = "[spec-viewer] GPU-accelerated spec browser — Dioxus SPA + spec-http backend"
+state = "done"
+component = "spec-viewer"
+priority = "high"
+type = "tracker-improvement"

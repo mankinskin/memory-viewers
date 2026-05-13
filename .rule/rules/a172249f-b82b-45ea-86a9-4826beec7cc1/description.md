@@ -1,0 +1,3 @@
+- If public behavior or docs changed, run doc validation workflows.
+- Follow `.github/hooks/` reminders when they fire.
+- Scratch notes belong in temporary files only; do not commit ephemeral notes.

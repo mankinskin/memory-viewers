@@ -1,0 +1,10 @@
+id = "ec5d383a-1fa6-4e15-8090-6e5e3c1d94fa"
+created_at = "2026-04-08T14:20:31.576463900Z"
+acceptance_criteria = "SVG-based hierarchical graph layout by depth; state-colored nodes; directed edges with arrowheads; root node highlighting; renders from /api/graph/subgraph response; click node to open ticket"
+component = "ticket-viewer"
+deleted = true
+priority = "medium"
+risk_level = "low"
+state = "new"
+title = "Port: SVG dependency graph fallback view"
+type = "tracker-improvement"

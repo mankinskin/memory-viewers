@@ -1,0 +1,1 @@
+{"rev":1,"ts":"2026-05-02T21:38:29.390586900+00:00","fields":{"component":"ticket-viewer","priority":"high","risk_level":"low","state":"ready","title":"Bug: TicketDetail right panel hardcoded colors — port to theme variables","type":"tracker-improvement","workflow_stage":"ready"}}

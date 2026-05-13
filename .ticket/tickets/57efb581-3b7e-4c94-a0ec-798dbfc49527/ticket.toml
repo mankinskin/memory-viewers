@@ -1,0 +1,10 @@
+id = "57efb581-3b7e-4c94-a0ec-798dbfc49527"
+created_at = "2026-04-08T14:20:31.111447600Z"
+acceptance_criteria = "Hierarchical FileTree grouped by ticket state (9 state groups); full-text search filter (title+id); state dropdown filter; sort by title/modified/created; state badges with color coding; lazy detail loading on selection"
+component = "ticket-viewer"
+deleted = true
+priority = "high"
+risk_level = "medium"
+state = "new"
+title = "Port: TicketTree with state grouping, search, filter, sort"
+type = "tracker-improvement"

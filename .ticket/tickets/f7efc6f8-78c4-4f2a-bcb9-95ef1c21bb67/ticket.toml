@@ -1,0 +1,10 @@
+id = "f7efc6f8-78c4-4f2a-bcb9-95ef1c21bb67"
+created_at = "2026-04-08T14:20:46.252468800Z"
+acceptance_criteria = "New crate at tools/viewer/ticket-viewer/dioxus-frontend; Cargo.toml with dioxus 0.7 web + viewer-api-dioxus dep; Trunk.toml; index.html; builds and serves on dev port; ticket-viewer backend serves both old static/ and new dioxus WASM"
+component = "ticket-viewer"
+deleted = true
+priority = "critical"
+risk_level = "low"
+state = "new"
+title = "Arch: ticket-viewer dioxus-frontend crate scaffold with Trunk"
+type = "tracker-improvement"
