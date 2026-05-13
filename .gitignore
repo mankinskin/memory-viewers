@@ -10,7 +10,9 @@ tools/context-editor/**/dist/
 
 # Generated Playwright output
 **/playwright-report/
+**/playwright-report-*/
 **/test-results/
+**/test-results-*/
 
 # Generated demo logs (produced by tools/log-viewer/scripts/generate-demo-logs.sh)
 tools/log-viewer/demo-logs/
