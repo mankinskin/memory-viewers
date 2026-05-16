@@ -1,18 +1,19 @@
-targets:
-  - name: memory-viewers-readme
+files:
+- name: README.md
+  target:
+    name: memory-viewers-readme
     repo_scope: memory-viewers
     file_kind: README
     path_scope: README.md
-    output_path: README.md
     nodes:
-      - name: tool-surface
-        section: memory-viewers
-      - name: tool-screenshots
-        title: Tool Screenshots
-        section: memory-viewers/user-stories
-      - name: dependency-graph
-        title: Dependency Graph
-        section: memory-viewers/usage-guide
-      - name: tool-use-examples
-        title: Tool Use Examples
-        section: memory-viewers/nested-workspaces
+    - name: tool-surface
+      section: memory-viewers
+    - name: tool-screenshots
+      title: Tool Screenshots
+      section: memory-viewers/user-stories
+    - name: dependency-graph
+      title: Dependency Graph
+      section: memory-viewers/usage-guide
+    - name: tool-use-examples
+      title: Tool Use Examples
+      section: memory-viewers/nested-workspaces
