@@ -33,7 +33,7 @@ pub type GraphCache = Prefetcher<String, GraphLayout>;
 fn main() {
     #[cfg(target_arch = "wasm32")]
     viewer_api_dioxus::tracing_setup::install();
-    dioxus::launch(App);
+    dioxus_web::launch::launch_cfg(App, dioxus_web::Config::default());
 }
 
 /// Root application component for the ticket viewer.
@@ -52,6 +52,7 @@ fn App() -> Element {
     // Provide a single shared LRU graph-layout cache (capacity 20) for the
     // entire app.  Graph3D consults it before falling back to the network,
     // eliminating the "Loading graph…" flash when revisiting a ticket.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_variables))]
     let cache =
         use_context_provider::<GraphCache>(|| Prefetcher::with_capacity(20));
 

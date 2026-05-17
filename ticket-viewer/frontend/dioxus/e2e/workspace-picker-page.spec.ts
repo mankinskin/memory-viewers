@@ -77,6 +77,43 @@ async function mockWorkspacesError(page: Page, message = 'internal error') {
 test.describe('WorkspacePickerPage ("/")', () => {
   // ── Static chrome (always visible) ────────────────────────────────────────
 
+  test('does not log the legacy /_dioxus websocket handshake error on startup', async ({
+    page,
+  }) => {
+    const consoleErrors: string[] = [];
+    await page.addInitScript(() => {
+      localStorage.clear();
+      sessionStorage.clear();
+    });
+
+    page.on('console', (message) => {
+      if (message.type() === 'error') {
+        consoleErrors.push(message.text());
+      }
+    });
+
+    await mockWorkspacesOk(page);
+    await page.goto('/');
+    await page
+      .locator('h3', { hasText: 'Your app is being rebuilt.' })
+      .waitFor({ state: 'detached', timeout: 90_000 })
+      .catch(() => {
+        /* element was never present or already detached — proceed */
+      });
+    await page
+      .getByRole('button', { name: 'Settings' })
+      .waitFor({ state: 'visible', timeout: 30_000 });
+    await page.waitForTimeout(1500);
+
+    expect(
+      consoleErrors.filter(
+        (message) =>
+          message.includes('/_dioxus')
+          || message.includes('Unexpected response code: 200'),
+      ),
+    ).toEqual([]);
+  });
+
   test('shows the page heading and subtitle', async ({ page }) => {
     await mockWorkspacesOk(page);
     await page.goto('/');
