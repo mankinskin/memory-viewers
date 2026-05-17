@@ -24,6 +24,7 @@ pub(super) fn render_ticket_rows(
     expanded_ids: Signal<HashSet<String>>,
     file_cache: Signal<HashMap<String, Vec<TicketFileEntry>>>,
     loading_files: Signal<HashSet<String>>,
+    focused_ticket_id: Signal<Option<String>>,
 ) -> Element {
     rsx! {
         for ticket in sorted {
@@ -33,6 +34,7 @@ pub(super) fn render_ticket_rows(
                 expanded_ids,
                 file_cache,
                 loading_files,
+                focused_ticket_id,
             )}
         }
     }
@@ -44,24 +46,32 @@ fn render_ticket_entry(
     expanded_ids: Signal<HashSet<String>>,
     file_cache: Signal<HashMap<String, Vec<TicketFileEntry>>>,
     loading_files: Signal<HashSet<String>>,
+    mut focused_ticket_id: Signal<Option<String>>,
 ) -> Element {
     let ticket_id = ticket.id.clone();
     let ticket_id_toggle = ticket_id.clone();
     let ticket_id_expand = ticket_id.clone();
     let ticket_id_select = ticket_id.clone();
+    let ticket_id_focus = ticket_id.clone();
     let title = ticket.title.clone().unwrap_or_else(|| "Untitled".into());
     let state = ticket.state.clone().unwrap_or_else(|| "new".into());
     let is_selected = props.selected_id.as_deref() == Some(ticket_id.as_str());
+    let is_keyboard_focused = focused_ticket_id.read().as_deref()
+        == Some(ticket_id.as_str());
     let is_checked = props.selected_ids.contains(&ticket_id);
     let is_expanded = expanded_ids.read().contains(&ticket_id);
     let dot_color = crate::types::state_accent(Some(&state));
     let row_bg = if is_selected {
         "var(--bg-active)"
+    } else if is_keyboard_focused {
+        "rgba(95, 122, 196, 0.15)"
     } else {
         "transparent"
     };
     let row_border = if is_selected {
         format!("border-left: 2px solid {dot_color};")
+    } else if is_keyboard_focused {
+        "border-left: 2px solid rgba(95, 122, 196, 0.6);".to_string()
     } else {
         "border-left: 2px solid transparent;".to_string()
     };
@@ -75,6 +85,7 @@ fn render_ticket_entry(
     rsx! {
         div { key: "{ticket_id}",
             div {
+                "data-testid": "ticket-tree-row-{ticket_id}",
                 style: "
                     display: flex;
                     align-items: center;
@@ -128,6 +139,9 @@ fn render_ticket_entry(
                     "{arrow}"
                 }
                 button {
+                    "data-testid": "ticket-tree-ticket-{ticket_id}",
+                    "data-selected": if is_selected { "true" } else { "false" },
+                    aria_selected: if is_keyboard_focused { "true" } else { "false" },
                     style: "
                         display: flex;
                         align-items: center;
@@ -143,6 +157,9 @@ fn render_ticket_entry(
                         overflow: hidden;
                         white-space: nowrap;
                     ",
+                    onmouseenter: move |_| {
+                        focused_ticket_id.set(Some(ticket_id_focus.clone()));
+                    },
                     onclick: move |_| on_select.call(ticket_id_select.clone()),
                     span {
                         style: "
@@ -155,6 +172,7 @@ fn render_ticket_entry(
                         aria_hidden: "true",
                     }
                     span {
+                        "data-testid": "ticket-tree-ticket-title-{ticket_id}",
                         style: "
                             font-size: 12px;
                             font-weight: 400;
@@ -167,6 +185,7 @@ fn render_ticket_entry(
                         "{title}"
                     }
                     span {
+                        "data-testid": "ticket-tree-ticket-state-{ticket_id}",
                         style: "
                             font-size: 10px;
                             color: var(--text-muted);

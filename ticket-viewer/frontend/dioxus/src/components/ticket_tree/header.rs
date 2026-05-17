@@ -10,7 +10,15 @@ pub(super) fn render_filter_controls(
     filter: String,
     state_filter_val: String,
     all_checked: bool,
+    displayed_ticket_ids: Vec<String>,
+    mut focused_ticket_id: Signal<Option<String>>,
 ) -> Element {
+    let displayed_ticket_ids_for_focus = displayed_ticket_ids.clone();
+    let displayed_ticket_ids_for_keydown = displayed_ticket_ids.clone();
+    let selected_id_for_focus = props.selected_id.clone();
+    let selected_id_for_keydown = props.selected_id.clone();
+    let on_select_for_keydown = props.on_select.clone();
+
     rsx! {
         div {
             style: "
@@ -21,6 +29,7 @@ pub(super) fn render_filter_controls(
                 gap: 6px;
             ",
             input {
+                "data-testid": "ticket-tree-filter",
                 r#type: "text",
                 placeholder: "Filter tickets…",
                 style: "
@@ -36,6 +45,46 @@ pub(super) fn render_filter_controls(
                 ",
                 value: "{filter}",
                 oninput: move |event| props.on_filter_change.call(event.value()),
+                onfocus: move |_| {
+                    if let Some(ticket_id) = active_ticket_id(
+                        &displayed_ticket_ids_for_focus,
+                        focused_ticket_id,
+                        selected_id_for_focus.clone(),
+                    ) {
+                        focused_ticket_id.set(Some(ticket_id));
+                    }
+                },
+                onkeydown: move |event| match event.key() {
+                    Key::ArrowDown => {
+                        event.prevent_default();
+                        move_ticket_focus(
+                            &displayed_ticket_ids_for_keydown,
+                            focused_ticket_id,
+                            selected_id_for_keydown.clone(),
+                            1,
+                        );
+                    },
+                    Key::ArrowUp => {
+                        event.prevent_default();
+                        move_ticket_focus(
+                            &displayed_ticket_ids_for_keydown,
+                            focused_ticket_id,
+                            selected_id_for_keydown.clone(),
+                            -1,
+                        );
+                    },
+                    Key::Enter => {
+                        if let Some(ticket_id) = active_ticket_id(
+                            &displayed_ticket_ids_for_keydown,
+                            focused_ticket_id,
+                            selected_id_for_keydown.clone(),
+                        ) {
+                            event.prevent_default();
+                            on_select_for_keydown.call(ticket_id);
+                        }
+                    },
+                    _ => {},
+                },
             }
             div {
                 style: "display: flex; flex-wrap: wrap; align-items: center; gap: 4px;",
@@ -51,6 +100,11 @@ pub(super) fn render_filter_controls(
                         rsx! {
                             button {
                                 key: "{value}",
+                                "data-testid": if value.is_empty() {
+                                    "ticket-tree-state-chip-all".to_string()
+                                } else {
+                                    format!("ticket-tree-state-chip-{value}")
+                                },
                                 class: "{chip_class}",
                                 aria_pressed: if is_active { "true" } else { "false" },
                                 onclick: move |_| props.on_state_filter_change.call(value.clone()),
@@ -101,4 +155,53 @@ pub(super) fn render_filter_controls(
             }
         }
     }
+}
+
+fn active_ticket_id(
+    displayed_ticket_ids: &[String],
+    focused_ticket_id: Signal<Option<String>>,
+    selected_id: Option<String>,
+) -> Option<String> {
+    let focused = focused_ticket_id.read().clone();
+    focused
+        .filter(|id| displayed_ticket_ids.iter().any(|candidate| candidate == id))
+        .or_else(|| {
+            selected_id.filter(|id| {
+                displayed_ticket_ids.iter().any(|candidate| candidate == id)
+            })
+        })
+        .or_else(|| displayed_ticket_ids.first().cloned())
+}
+
+fn move_ticket_focus(
+    displayed_ticket_ids: &[String],
+    mut focused_ticket_id: Signal<Option<String>>,
+    selected_id: Option<String>,
+    delta: i32,
+) {
+    if displayed_ticket_ids.is_empty() {
+        focused_ticket_id.set(None);
+        return;
+    }
+
+    let current_id = active_ticket_id(
+        displayed_ticket_ids,
+        focused_ticket_id,
+        selected_id,
+    );
+    let current_index = current_id
+        .as_ref()
+        .and_then(|id| {
+            displayed_ticket_ids
+                .iter()
+                .position(|candidate| candidate == id)
+        })
+        .unwrap_or(0);
+    let next_index = if delta.is_negative() {
+        current_index.saturating_sub(1)
+    } else {
+        (current_index + 1).min(displayed_ticket_ids.len().saturating_sub(1))
+    };
+
+    focused_ticket_id.set(Some(displayed_ticket_ids[next_index].clone()));
 }

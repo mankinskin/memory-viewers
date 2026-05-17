@@ -201,7 +201,13 @@ pub fn TicketListPage(workspace: String) -> Element {
     let selected_ticket_id = selected_id.read().clone();
 
     rsx! {
-        SearchBar { workspace: workspace.clone() }
+        SearchBar {
+            workspace: workspace.clone(),
+            on_ticket_open: move |ticket_id: String| {
+                selected_id.set(Some(ticket_id));
+                mobile_sidebar_open.set(false);
+            },
+        }
         Layout {
             header: rsx! {
                 Header {

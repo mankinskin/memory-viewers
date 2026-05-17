@@ -12,13 +12,32 @@ use super::{
     recent::save_recent,
 };
 
-pub(super) fn render_search_results(
-    filtered: &[TicketSummary],
+pub(super) fn activate_search_result(
+    ticket: TicketSummary,
     workspace: String,
     query: String,
     mut open: Signal<bool>,
     nav: Navigator,
-    mut hovered_result: Signal<Option<usize>>,
+    on_ticket_open: EventHandler<String>,
+) {
+    let trimmed = query.trim().to_string();
+    if !trimmed.is_empty() {
+        save_recent(&workspace, &trimmed);
+    }
+    on_ticket_open.call(ticket.id.clone());
+    open.set(false);
+    set_hash_param("id", &ticket.id);
+    nav.push(Route::TicketListPage { workspace });
+}
+
+pub(super) fn render_search_results(
+    filtered: &[TicketSummary],
+    workspace: String,
+    query: String,
+    open: Signal<bool>,
+    nav: Navigator,
+    on_ticket_open: EventHandler<String>,
+    hovered_result: Signal<Option<usize>>,
 ) -> Element {
     rsx! {
         for (index, ticket) in filtered.iter().enumerate() {
@@ -30,6 +49,7 @@ pub(super) fn render_search_results(
                     query.clone(),
                     open,
                     nav.clone(),
+                    on_ticket_open.clone(),
                     hovered_result,
                 )
             }
@@ -51,8 +71,9 @@ fn render_result_row(
     index: usize,
     workspace: String,
     query: String,
-    mut open: Signal<bool>,
+    open: Signal<bool>,
     nav: Navigator,
+    on_ticket_open: EventHandler<String>,
     mut hovered_result: Signal<Option<usize>>,
 ) -> Element {
     let id = ticket.id.clone();
@@ -70,6 +91,8 @@ fn render_result_row(
 
     rsx! {
         button {
+            "data-testid": "search-result-{id}",
+            aria_selected: if is_hovered { "true" } else { "false" },
             style: "
                 display: flex;
                 flex-direction: column;
@@ -86,15 +109,14 @@ fn render_result_row(
             onmouseenter: move |_| hovered_result.set(Some(index)),
             onmouseleave: move |_| hovered_result.set(None),
             onclick: move |_| {
-                let trimmed = query.trim().to_string();
-                if !trimmed.is_empty() {
-                    save_recent(&workspace, &trimmed);
-                }
-                open.set(false);
-                set_hash_param("id", &id);
-                nav.push(Route::TicketListPage {
-                    workspace: workspace.clone(),
-                });
+                activate_search_result(
+                    ticket.clone(),
+                    workspace.clone(),
+                    query.clone(),
+                    open,
+                    nav.clone(),
+                    on_ticket_open.clone(),
+                );
             },
             div {
                 style: "

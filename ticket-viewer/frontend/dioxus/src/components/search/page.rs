@@ -19,6 +19,7 @@ use super::{
     },
     recent::load_recent,
     results::{
+        activate_search_result,
         render_empty_state,
         render_search_results,
     },
@@ -29,23 +30,25 @@ const MAX_RESULTS: usize = 8;
 #[derive(Props, Clone, PartialEq)]
 pub struct SearchBarProps {
     pub workspace: String,
+    pub on_ticket_open: EventHandler<String>,
 }
 
 #[component]
 pub fn SearchBar(props: SearchBarProps) -> Element {
     let workspace = props.workspace.clone();
+    let on_ticket_open = props.on_ticket_open.clone();
     let mut open: Signal<bool> = use_signal(|| false);
     let mut query: Signal<String> = use_signal(String::new);
-    let mut results: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
-    let mut loading: Signal<bool> = use_signal(|| false);
-    let mut search_err: Signal<Option<String>> = use_signal(|| None);
+    let results: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
+    let loading: Signal<bool> = use_signal(|| false);
+    let search_err: Signal<Option<String>> = use_signal(|| None);
     let mut state_filter: Signal<Option<String>> = use_signal(|| None);
     let mut type_filter: Signal<Option<String>> = use_signal(|| None);
-    let mut recents: Signal<Vec<String>> =
+    let recents: Signal<Vec<String>> =
         use_signal(|| load_recent(&workspace));
     let mut hovered_recent: Signal<Option<usize>> = use_signal(|| None);
     let mut hovered_result: Signal<Option<usize>> = use_signal(|| None);
-    let mut keydown_listener: Signal<Option<EventListener>> =
+    let keydown_listener: Signal<Option<EventListener>> =
         use_signal(|| None);
     let nav = use_navigator();
 
@@ -72,6 +75,30 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
     let recent_items = recents.read().clone();
     let q_display = query.read().clone();
     let is_empty_query = q_display.trim().is_empty();
+    let filtered_len = filtered.len();
+    let recent_len = recent_items.len();
+
+    use_effect(move || {
+        if is_empty_query {
+            let current_recent = *hovered_recent.read();
+            let next_recent = normalize_hover_index(current_recent, recent_len);
+            if current_recent != next_recent {
+                hovered_recent.set(next_recent);
+            }
+            if hovered_result.read().is_some() {
+                hovered_result.set(None);
+            }
+        } else {
+            let current_result = *hovered_result.read();
+            let next_result = normalize_hover_index(current_result, filtered_len);
+            if current_result != next_result {
+                hovered_result.set(next_result);
+            }
+            if hovered_recent.read().is_some() {
+                hovered_recent.set(None);
+            }
+        }
+    });
 
     rsx! {
         div {
@@ -113,6 +140,7 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
                         "🔍"
                     }
                     input {
+                        "data-testid": "search-input",
                         r#type: "text",
                         autofocus: true,
                         placeholder: "Search… or state:<value>  priority:<value>  type:<value>",
@@ -132,8 +160,76 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
                             type_filter.set(None);
                         },
                         onkeydown: move |evt| {
-                            if evt.key() == Key::Escape {
-                                open.set(false);
+                            match evt.key() {
+                                Key::Escape => open.set(false),
+                                Key::ArrowDown => {
+                                    evt.prevent_default();
+                                    if is_empty_query {
+                                        let next_recent = move_hover_index(
+                                            *hovered_recent.read(),
+                                            recent_items.len(),
+                                            1,
+                                        );
+                                        hovered_recent.set(next_recent);
+                                    } else {
+                                        let next_result = move_hover_index(
+                                            *hovered_result.read(),
+                                            filtered.len(),
+                                            1,
+                                        );
+                                        hovered_result.set(next_result);
+                                    }
+                                },
+                                Key::ArrowUp => {
+                                    evt.prevent_default();
+                                    if is_empty_query {
+                                        let next_recent = move_hover_index(
+                                            *hovered_recent.read(),
+                                            recent_items.len(),
+                                            -1,
+                                        );
+                                        hovered_recent.set(next_recent);
+                                    } else {
+                                        let next_result = move_hover_index(
+                                            *hovered_result.read(),
+                                            filtered.len(),
+                                            -1,
+                                        );
+                                        hovered_result.set(next_result);
+                                    }
+                                },
+                                Key::Enter => {
+                                    evt.prevent_default();
+                                    if is_empty_query {
+                                        if let Some(index) =
+                                            normalize_hover_index(
+                                                *hovered_recent.read(),
+                                                recent_items.len(),
+                                            )
+                                        {
+                                            if let Some(recent) = recent_items.get(index) {
+                                                state_filter.set(None);
+                                                type_filter.set(None);
+                                                query.set(recent.clone());
+                                            }
+                                        }
+                                    } else if let Some(index) = normalize_hover_index(
+                                        *hovered_result.read(),
+                                        filtered.len(),
+                                    ) {
+                                        if let Some(ticket) = filtered.get(index) {
+                                            activate_search_result(
+                                                ticket.clone(),
+                                                workspace.clone(),
+                                                q_display.clone(),
+                                                open,
+                                                nav.clone(),
+                                                on_ticket_open.clone(),
+                                            );
+                                        }
+                                    }
+                                },
+                                _ => {},
                             }
                         },
                     }
@@ -184,6 +280,7 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
                             q_display.clone(),
                             open,
                             nav,
+                            on_ticket_open.clone(),
                             hovered_result,
                         )}
                     }
@@ -327,6 +424,35 @@ fn matches_filter(
     active.is_none_or(|active| value == active)
 }
 
+fn normalize_hover_index(
+    current: Option<usize>,
+    len: usize,
+) -> Option<usize> {
+    if len == 0 {
+        None
+    } else {
+        Some(current.filter(|index| *index < len).unwrap_or(0))
+    }
+}
+
+fn move_hover_index(
+    current: Option<usize>,
+    len: usize,
+    delta: i32,
+) -> Option<usize> {
+    if len == 0 {
+        return None;
+    }
+
+    let current = current.unwrap_or(0);
+    let next = if delta.is_negative() {
+        current.saturating_sub(1)
+    } else {
+        (current + 1).min(len.saturating_sub(1))
+    };
+    Some(next)
+}
+
 fn slash_inside_input(keyboard_event: &web_sys::KeyboardEvent) -> bool {
     let Some(target) = keyboard_event
         .target()
@@ -371,6 +497,8 @@ fn render_recent_searches(
                     };
                     rsx! {
                         button {
+                            "data-testid": "search-recent-{index}",
+                            aria_selected: if is_hovered { "true" } else { "false" },
                             style: "
                                 display: flex;
                                 align-items: center;
