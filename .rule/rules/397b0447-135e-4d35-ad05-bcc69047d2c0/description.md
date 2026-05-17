@@ -1,6 +1,7 @@
 ## Quality Gates
 
-- Tests relevant to your change must pass before completion.
+- Relevant validation must pass before completion. If a required check repeatedly fails, stop expanding scope and record the failing command, log or manual result, and blocker clearly in the ticket/spec status summary.
+- Before a ticket moves to `in-review`, ensure the relevant spec is updated for the changed requirements or goals and links the related tickets, updated docs, and test or validation results.
 - **Browser verification is mandatory** for any change to a server interface or frontend feature:
   open the affected viewer in the browser and confirm the feature works visually before marking work done.
 - **Write Playwright end-to-end tests** for all browser-facing features and server interface changes.
