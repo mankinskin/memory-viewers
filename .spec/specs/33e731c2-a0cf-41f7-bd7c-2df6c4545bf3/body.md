@@ -55,6 +55,8 @@ When quick-search is open:
 - A query combined with selected states only returns tickets that match the query and at least one selected state.
 - The sidebar and quick-search both expose deterministic visible keyboard focus.
 - Reloading the page restores the persisted explorer filter state without corrupting older saved state.
+- If `/api/tickets` or `/api/stream` fails, the sidebar keeps rendering its error or empty-state copy without panicking the WASM app.
+- After those offline failures, clicking or reconnect retries must not crash the explorer; the route stays interactive and can recover when the backend returns.
 
 ## Related shared specs
 

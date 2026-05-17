@@ -22,6 +22,7 @@
 
 use dioxus::prelude::*;
 use gloo_events::EventListener;
+use gloo_timers::callback::Timeout;
 use serde::Deserialize;
 use wasm_bindgen::JsCast;
 
@@ -76,24 +77,6 @@ impl Drop for SseHandle {
 const BACKOFF_INITIAL_MS: u32 = 1_000;
 const BACKOFF_MAX_MS: u32 = 30_000;
 
-// ── Browser sleep via JS setTimeout ───────────────────────────────────────
-
-/// Suspend the current async task for `ms` milliseconds.
-///
-/// Uses a [`js_sys::Promise`] resolved by `window.setTimeout` so the JS event
-/// loop stays unblocked during the wait.
-async fn sleep_ms(ms: u32) {
-    let promise = js_sys::Promise::new(&mut |resolve, _reject| {
-        web_sys::window()
-            .expect("no window")
-            .set_timeout_with_callback_and_timeout_and_arguments_0(
-                &resolve, ms as i32,
-            )
-            .expect("setTimeout failed");
-    });
-    let _ = wasm_bindgen_futures::JsFuture::from(promise).await;
-}
-
 // ── Hook ───────────────────────────────────────────────────────────────────
 
 /// Dioxus hook: open an SSE connection to `/api/stream?workspace={workspace}`
@@ -131,6 +114,10 @@ pub fn use_sse(
     // The Option allows us to drop it explicitly before creating the next one.
     let mut handle: Signal<Option<SseHandle>> = use_signal(|| None);
 
+    // Owns the pending reconnect timer so it can be cancelled on rerender or
+    // unmount instead of firing after the hook has been torn down.
+    let mut retry_timer: Signal<Option<Timeout>> = use_signal(|| None);
+
     use_effect(move || {
         // Reading `reconnect_gen` subscribes this effect to its changes, so
         // the effect body re-runs each time we increment it for a reconnect.
@@ -140,6 +127,7 @@ pub fn use_sse(
         // `SseHandle::drop` calls `es.close()`, preventing the browser's own
         // auto-reconnect from racing with ours.
         handle.with_mut(|h| *h = None);
+        retry_timer.with_mut(|timer| *timer = None);
 
         let url = format!("/api/stream?workspace={workspace}");
         let es = match web_sys::EventSource::new(&url) {
@@ -226,6 +214,7 @@ pub fn use_sse(
         let es_close = es.clone();
         let mut rgen = reconnect_gen;
         let mut boff_err = backoff_ms;
+        let mut retry_timer_err = retry_timer;
         let l_error = EventListener::new(&es, "error", move |_| {
             // Prevent the browser's built-in SSE reconnect.
             es_close.close();
@@ -235,12 +224,13 @@ pub fn use_sse(
             boff_err.set(next_delay);
             tracing::debug!("SSE error; reconnecting in {delay} ms (next backoff {next_delay} ms)");
 
-            spawn(async move {
-                sleep_ms(delay).await;
-                // Incrementing `reconnect_gen` re-triggers the enclosing
-                // `use_effect`, which drops the old SseHandle and opens a
-                // fresh EventSource.
-                rgen.with_mut(|v| *v += 1);
+            retry_timer_err.with_mut(|timer| {
+                *timer = Some(Timeout::new(delay, move || {
+                    // Incrementing `reconnect_gen` re-triggers the enclosing
+                    // `use_effect`, which drops the old SseHandle and opens a
+                    // fresh EventSource.
+                    rgen.with_mut(|v| *v += 1);
+                }));
             });
         });
 
