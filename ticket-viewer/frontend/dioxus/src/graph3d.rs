@@ -36,6 +36,7 @@ use crate::{
         GraphLayout,
         LayoutMode,
     },
+    types::TicketRef,
 };
 
 /// Tracing target used by all events in this module.
@@ -98,7 +99,7 @@ pub fn lift_2d(
 pub struct Graph3DProps {
     pub workspace: String,
     pub root_id: String,
-    pub on_select: EventHandler<String>,
+    pub on_select: EventHandler<TicketRef>,
     /// Optional graph-preview selection — highlights this node with an ember
     /// border effect without changing the primary ticket-list selection.
     #[props(optional)]
@@ -171,10 +172,15 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     // Try to get the layout from the cache.  If absent, show the spinner.
     // GraphFetchService.ensure_fetched() was already called by TicketListPage
     // when selected_id changed; we do NOT start a second fetch here.
-    let layout = match cache.get(&cache_key) {
+    let (layout, ticket_refs_by_id) = match cache.get(&cache_key) {
         Some(layout) => {
             tracing::debug!(target: T, rid = %root_id, nodes = layout.nodes.len(), "cache_hit");
-            lift_2d(layout, layout_mode)
+            let ticket_refs_by_id = layout
+                .nodes
+                .iter()
+                .map(|node| (node.id.clone(), node.ticket_ref.clone()))
+                .collect::<HashMap<_, _>>();
+            (lift_2d(layout, layout_mode), ticket_refs_by_id)
         },
         None => match fetch_state {
             crate::graph_fetch::GraphFetchState::Error {
@@ -259,7 +265,10 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                         let state_str  = node.state.clone().unwrap_or_else(|| "new".into());
                         let color      = ticket_card::state_color(Some(state_str.as_str()));
                         let short_id   = if node_id.len() > 8 { node_id[..8].to_string() } else { node_id.clone() };
-                        let node_id_click = node_id.clone();
+                        let ticket_ref_click = ticket_refs_by_id
+                            .get(&node_id)
+                            .cloned()
+                            .unwrap_or_else(|| TicketRef::new(workspace.clone(), node_id.clone()));
                         let is_selected = selected_node_id.as_deref() == Some(node_id.as_str());
                         let card_class = if is_selected {
                             "graph-node-card content node-card-selected"
@@ -274,7 +283,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                 style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 260px; height: 56px; box-sizing: border-box; border: 1px solid var(--graph-node-border, rgba(200,200,200,0.35)); border-left: 3px solid {color}; border-radius: 7px; background: var(--graph-node-surface, rgba(30,30,40,0.92)); backdrop-filter: blur(2px); padding: 9px 11px; cursor: pointer; overflow: hidden; font-family: sans-serif; color: var(--graph-node-text, #e8e8f0); box-shadow: var(--graph-node-shadow, 0 3px 12px rgba(0,0,0,0.6));",
                                 onclick: move |evt: Event<MouseData>| {
                                     evt.stop_propagation();
-                                    on_select.call(node_id_click.clone());
+                                    on_select.call(ticket_ref_click.clone());
                                 },
                                 div {
                                     style: "font-size: 13px; font-weight: 600; color: var(--graph-node-text, #e8e8f0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",

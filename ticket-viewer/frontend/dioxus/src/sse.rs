@@ -26,7 +26,10 @@ use gloo_timers::callback::Timeout;
 use serde::Deserialize;
 use wasm_bindgen::JsCast;
 
-use crate::types::TicketSummary;
+use crate::types::{
+    TicketRef,
+    TicketSummary,
+};
 
 // ── SSE payload types (frontend deserialisation) ───────────────────────────
 
@@ -145,6 +148,7 @@ pub fn use_sse(
         // Update state/title in-place for known tickets, or append a minimal
         // stub for tickets that arrived before the initial HTTP list completed.
         let mut tix_up = tickets;
+        let workspace_for_upsert = workspace.clone();
         let l_upsert = EventListener::new(&es, "ticket.upsert", move |event| {
             let data = msg_data(event);
             match serde_json::from_str::<UpsertPayload>(&data) {
@@ -157,8 +161,13 @@ pub fn use_sse(
                             existing.title = p.ticket.title;
                         }
                     } else {
+                        let ticket_id = p.ticket.id;
                         v.push(TicketSummary {
-                            id: p.ticket.id,
+                            id: ticket_id.clone(),
+                            ticket_ref: TicketRef::new(
+                                workspace_for_upsert.clone(),
+                                ticket_id,
+                            ),
                             title: p.ticket.title,
                             state: p.ticket.state,
                             ticket_type: None,

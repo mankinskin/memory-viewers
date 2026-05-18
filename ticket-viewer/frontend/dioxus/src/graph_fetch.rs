@@ -327,7 +327,18 @@ impl GraphFetchService {
         match futures_util::future::select(fetch_fut, timeout_fut).await {
             futures_util::future::Either::Left((fetch_result, _)) =>
                 match fetch_result {
-                    Ok(resp) => Ok(GraphLayout::build(resp.nodes, resp.edges)),
+                    Ok(resp) => {
+                        let active_workspace = if resp.active_workspace.is_empty() {
+                            workspace.to_string()
+                        } else {
+                            resp.active_workspace.clone()
+                        };
+                        Ok(GraphLayout::build(
+                            &active_workspace,
+                            resp.nodes,
+                            resp.edges,
+                        ))
+                    },
                     Err(e) => Err(format!("request failed: {e}")),
                 },
             futures_util::future::Either::Right((_elapsed, _)) =>

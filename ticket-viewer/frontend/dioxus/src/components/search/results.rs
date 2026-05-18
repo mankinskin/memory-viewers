@@ -1,10 +1,12 @@
 use dioxus::prelude::*;
 use dioxus_router::Navigator;
-use viewer_api_dioxus::set_hash_param;
 
 use crate::{
     routes::Route,
-    types::TicketSummary,
+    types::{
+        TicketRef,
+        TicketSummary,
+    },
 };
 
 use super::{
@@ -18,16 +20,15 @@ pub(super) fn activate_search_result(
     query: String,
     mut open: Signal<bool>,
     nav: Navigator,
-    on_ticket_open: EventHandler<String>,
+    on_ticket_open: EventHandler<TicketRef>,
 ) {
     let trimmed = query.trim().to_string();
     if !trimmed.is_empty() {
         save_recent(&workspace, &trimmed);
     }
-    on_ticket_open.call(ticket.id.clone());
+    on_ticket_open.call(ticket.resolved_ticket_ref(&workspace));
     open.set(false);
-    set_hash_param("id", &ticket.id);
-    nav.push(Route::TicketListPage { workspace });
+    nav.push(Route::TicketListRootPage {});
 }
 
 pub(super) fn render_search_results(
@@ -36,7 +37,7 @@ pub(super) fn render_search_results(
     query: String,
     open: Signal<bool>,
     nav: Navigator,
-    on_ticket_open: EventHandler<String>,
+    on_ticket_open: EventHandler<TicketRef>,
     hovered_result: Signal<Option<usize>>,
 ) -> Element {
     rsx! {
@@ -73,7 +74,7 @@ fn render_result_row(
     query: String,
     open: Signal<bool>,
     nav: Navigator,
-    on_ticket_open: EventHandler<String>,
+    on_ticket_open: EventHandler<TicketRef>,
     mut hovered_result: Signal<Option<usize>>,
 ) -> Element {
     let id = ticket.id.clone();

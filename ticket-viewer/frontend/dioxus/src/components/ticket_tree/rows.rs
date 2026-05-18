@@ -12,6 +12,7 @@ use crate::{
     },
     types::{
         TicketFileEntry,
+        TicketRef,
         TicketSummary,
     },
 };
@@ -49,9 +50,11 @@ fn render_ticket_entry(
     mut focused_ticket_id: Signal<Option<String>>,
 ) -> Element {
     let ticket_id = ticket.id.clone();
+    let ticket_ref = ticket.resolved_ticket_ref(&props.workspace);
+    let ticket_key = ticket_ref.key();
     let ticket_id_toggle = ticket_id.clone();
-    let ticket_id_expand = ticket_id.clone();
-    let ticket_id_select = ticket_id.clone();
+    let ticket_ref_expand = ticket_ref.clone();
+    let ticket_ref_select = ticket_ref.clone();
     let ticket_id_focus = ticket_id.clone();
     let title = ticket.title.clone().unwrap_or_else(|| "Untitled".into());
     let state = ticket.state.clone().unwrap_or_else(|| "new".into());
@@ -59,7 +62,7 @@ fn render_ticket_entry(
     let is_keyboard_focused = focused_ticket_id.read().as_deref()
         == Some(ticket_id.as_str());
     let is_checked = props.selected_ids.contains(&ticket_id);
-    let is_expanded = expanded_ids.read().contains(&ticket_id);
+    let is_expanded = expanded_ids.read().contains(&ticket_key);
     let dot_color = crate::types::state_accent(Some(&state));
     let row_bg = if is_selected {
         "var(--bg-active)"
@@ -80,10 +83,9 @@ fn render_ticket_entry(
     let on_select = props.on_select.clone();
     let on_select_file = props.on_select_file.clone();
     let selected_file = props.selected_file.clone();
-    let workspace = props.workspace.clone();
 
     rsx! {
-        div { key: "{ticket_id}",
+        div { key: "{ticket_key}",
             div {
                 "data-testid": "ticket-tree-row-{ticket_id}",
                 style: "
@@ -129,8 +131,7 @@ fn render_ticket_entry(
                     onclick: move |event| {
                         event.stop_propagation();
                         toggle_ticket_expansion(
-                            ticket_id_expand.clone(),
-                            workspace.clone(),
+                            ticket_ref_expand.clone(),
                             expanded_ids,
                             file_cache,
                             loading_files,
@@ -160,7 +161,7 @@ fn render_ticket_entry(
                     onmouseenter: move |_| {
                         focused_ticket_id.set(Some(ticket_id_focus.clone()));
                     },
-                    onclick: move |_| on_select.call(ticket_id_select.clone()),
+                    onclick: move |_| on_select.call(ticket_ref_select.clone()),
                     span {
                         style: "
                             width: 7px;
@@ -198,7 +199,7 @@ fn render_ticket_entry(
             }
             if is_expanded {
                 {render_expanded_files(
-                    ticket.id,
+                    ticket_ref,
                     selected_file,
                     on_select_file,
                     file_cache,
@@ -210,14 +211,15 @@ fn render_ticket_entry(
 }
 
 fn render_expanded_files(
-    ticket_id: String,
-    selected_file: Option<(String, String)>,
-    on_select_file: Option<EventHandler<(String, String)>>,
+    ticket_ref: TicketRef,
+    selected_file: Option<(TicketRef, String)>,
+    on_select_file: Option<EventHandler<(TicketRef, String)>>,
     file_cache: Signal<HashMap<String, Vec<TicketFileEntry>>>,
     loading_files: Signal<HashSet<String>>,
 ) -> Element {
-    let is_loading_files = loading_files.read().contains(&ticket_id);
-    let cached_files = file_cache.read().get(&ticket_id).cloned();
+    let ticket_key = ticket_ref.key();
+    let is_loading_files = loading_files.read().contains(&ticket_key);
+    let cached_files = file_cache.read().get(&ticket_key).cloned();
 
     rsx! {
         if is_loading_files {
@@ -243,12 +245,12 @@ fn render_expanded_files(
             } else {
                 for file in files {
                     {
-                        let file_ticket_id = ticket_id.clone();
+                        let file_ticket_ref = ticket_ref.clone();
                         let file_path = file.path.clone();
                         let file_name = file.name.clone();
                         let is_active = selected_file
                             .as_ref()
-                            .map(|(ticket, path)| ticket == &file_ticket_id && path == &file_path)
+                            .map(|(ticket, path)| ticket == &file_ticket_ref && path == &file_path)
                             .unwrap_or(false);
                         let file_bg = if is_active {
                             "background: var(--bg-active);"
@@ -277,7 +279,7 @@ fn render_expanded_files(
                                 ",
                                 onclick: move |_| {
                                     if let Some(ref handler) = on_select_file {
-                                        handler.call((file_ticket_id.clone(), file_path.clone()));
+                                        handler.call((file_ticket_ref.clone(), file_path.clone()));
                                     }
                                 },
                                 span { aria_hidden: "true", "📄" }
@@ -295,33 +297,34 @@ fn render_expanded_files(
 }
 
 fn toggle_ticket_expansion(
-    ticket_id: String,
-    workspace: String,
+    ticket_ref: TicketRef,
     mut expanded_ids: Signal<HashSet<String>>,
     mut file_cache: Signal<HashMap<String, Vec<TicketFileEntry>>>,
     mut loading_files: Signal<HashSet<String>>,
 ) {
-    let already_expanded = expanded_ids.read().contains(&ticket_id);
+    let ticket_key = ticket_ref.key();
+    let already_expanded = expanded_ids.read().contains(&ticket_key);
     if already_expanded {
-        expanded_ids.write().remove(&ticket_id);
+        expanded_ids.write().remove(&ticket_key);
         return;
     }
 
-    expanded_ids.write().insert(ticket_id.clone());
-    if file_cache.read().contains_key(&ticket_id)
-        || loading_files.read().contains(&ticket_id)
+    expanded_ids.write().insert(ticket_key.clone());
+    if file_cache.read().contains_key(&ticket_key)
+        || loading_files.read().contains(&ticket_key)
     {
         return;
     }
 
-    loading_files.write().insert(ticket_id.clone());
+    loading_files.write().insert(ticket_key.clone());
     spawn(async move {
         let backend = HttpTicketBackend::new(None);
-        if let Ok(response) =
-            backend.list_ticket_files(&workspace, &ticket_id).await
+        if let Ok(response) = backend
+            .list_ticket_files(&ticket_ref.workspace, &ticket_ref.id)
+            .await
         {
-            file_cache.write().insert(ticket_id.clone(), response.files);
+            file_cache.write().insert(ticket_key.clone(), response.files);
         }
-        loading_files.write().remove(&ticket_id);
+        loading_files.write().remove(&ticket_key);
     });
 }

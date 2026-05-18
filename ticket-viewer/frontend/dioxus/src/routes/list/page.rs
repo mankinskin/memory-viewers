@@ -24,7 +24,10 @@ use crate::{
     },
     routes::Route,
     sse::use_sse,
-    types::TicketSummary,
+    types::{
+        TicketRef,
+        TicketSummary,
+    },
 };
 
 use super::{
@@ -63,11 +66,12 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut tickets: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
     let mut loading: Signal<bool> = use_signal(|| true);
     let mut list_error: Signal<Option<String>> = use_signal(|| None);
-    let mut selected_id = store.open_ticket_id;
-    let mut graph_content_id: Signal<Option<String>> = use_signal(|| None);
+    let mut selected_ticket = store.open_ticket;
+    let mut graph_content_ticket: Signal<Option<TicketRef>> =
+        use_signal(|| None);
     use_effect(move || {
-        let _ = selected_id.read();
-        graph_content_id.set(None);
+        let _ = selected_ticket.read();
+        graph_content_ticket.set(None);
     });
     let mut filter = store.filter;
     let mut state_filter = store.state_filter;
@@ -84,7 +88,7 @@ pub fn TicketListPage(workspace: String) -> Element {
         use_signal(Projection::default);
     let mut graph_panel_width: Signal<f64> = use_signal(|| 320.0_f64);
     let mut detail_panel_width: Signal<f64> = use_signal(|| 240.0_f64);
-    let mut selected_file: Signal<Option<(String, String)>> =
+    let mut selected_file: Signal<Option<(TicketRef, String)>> =
         use_signal(|| None);
     #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut window_width: Signal<u32> = use_signal(initial_window_width);
@@ -144,10 +148,9 @@ pub fn TicketListPage(workspace: String) -> Element {
     #[cfg(target_arch = "wasm32")]
     {
         let service = use_context::<crate::graph_fetch::GraphFetchService>();
-        let workspace_selected = workspace.clone();
         use_effect(move || {
-            if let Some(ref id) = *selected_id.read() {
-                service.ensure_fetched(&workspace_selected, id);
+            if let Some(ticket_ref) = selected_ticket.read().clone() {
+                service.ensure_fetched(&ticket_ref.workspace, &ticket_ref.id);
             }
         });
     }
@@ -160,7 +163,8 @@ pub fn TicketListPage(workspace: String) -> Element {
         use_effect(move || {
             let tickets = tickets.read();
             for ticket in tickets.iter().take(PREFETCH_N) {
-                service.ensure_fetched(&workspace_prefetch, &ticket.id);
+                let ticket_ref = ticket.resolved_ticket_ref(&workspace_prefetch);
+                service.ensure_fetched(&ticket_ref.workspace, &ticket_ref.id);
             }
         });
     }
@@ -198,13 +202,13 @@ pub fn TicketListPage(workspace: String) -> Element {
         *mobile_sidebar_open.read(),
         *sidebar_collapsed.read(),
     );
-    let selected_ticket_id = selected_id.read().clone();
+    let selected_ticket_ref = selected_ticket.read().clone();
 
     rsx! {
         SearchBar {
             workspace: workspace.clone(),
-            on_ticket_open: move |ticket_id: String| {
-                selected_id.set(Some(ticket_id));
+            on_ticket_open: move |ticket_ref: TicketRef| {
+                selected_ticket.set(Some(ticket_ref));
                 mobile_sidebar_open.set(false);
             },
         }
@@ -251,15 +255,15 @@ pub fn TicketListPage(workspace: String) -> Element {
                     state_filter: state_filter.read().clone(),
                     on_state_filter_change: move |value: String| state_filter.set(value),
                     sort_key: sort_key.read().clone(),
-                    selected_id: selected_id.read().clone(),
-                    on_select: move |ticket_id: String| {
-                        selected_id.set(Some(ticket_id));
+                    selected_id: selected_ticket.read().as_ref().map(|ticket| ticket.id.clone()),
+                    on_select: move |ticket_ref: TicketRef| {
+                        selected_ticket.set(Some(ticket_ref));
                         mobile_sidebar_open.set(false);
                     },
-                    on_select_file: move |(ticket_id, path): (String, String)| handle_file_selection(
-                        ticket_id,
+                    on_select_file: move |(ticket_ref, path): (TicketRef, String)| handle_file_selection(
+                        ticket_ref,
                         path,
-                        selected_id,
+                        selected_ticket,
                         selected_file,
                         mobile_sidebar_open,
                         view_mode,
@@ -280,12 +284,12 @@ pub fn TicketListPage(workspace: String) -> Element {
             div {
                 class: "content",
                 style: "display: flex; flex-direction: column; overflow: hidden;",
-                if let Some(selected_ticket_id) = selected_ticket_id {
+                if let Some(selected_ticket_ref) = selected_ticket_ref {
                     {render_selected_main_panel(
                         workspace.clone(),
-                        selected_ticket_id,
+                        selected_ticket_ref,
                         tickets,
-                        graph_content_id,
+                        graph_content_ticket,
                         view_mode,
                         graph_panel_collapsed,
                         detail_is_collapsed,

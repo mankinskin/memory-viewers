@@ -12,7 +12,10 @@ use crate::{
         ticket_content::TicketContent,
         ticket_detail::TicketDetail,
     },
-    types::TicketSummary,
+    types::{
+        TicketRef,
+        TicketSummary,
+    },
 };
 
 use super::{
@@ -21,10 +24,10 @@ use super::{
 };
 
 pub(super) fn render_selected_main_panel(
-    workspace: String,
-    selected_ticket_id: String,
+    active_workspace: String,
+    selected_ticket: TicketRef,
     tickets: Signal<Vec<TicketSummary>>,
-    mut graph_content_id: Signal<Option<String>>,
+    mut graph_content_ticket: Signal<Option<TicketRef>>,
     mut view_mode: Signal<String>,
     graph_panel_collapsed: bool,
     detail_is_collapsed: bool,
@@ -32,7 +35,7 @@ pub(super) fn render_selected_main_panel(
     mut graph_projection: Signal<Projection>,
     mut graph_panel_width: Signal<f64>,
     mut detail_panel_width: Signal<f64>,
-    selected_file: Signal<Option<(String, String)>>,
+    selected_file: Signal<Option<(TicketRef, String)>>,
     mut graph_panel_override: Signal<Option<bool>>,
     mut detail_panel_override: Signal<Option<bool>>,
     window_width: Signal<u32>,
@@ -53,7 +56,7 @@ pub(super) fn render_selected_main_panel(
             style: "display: flex; flex-direction: row; flex: 1; overflow: hidden; min-height: 0;",
             if view_mode_value.as_str() != "content" && !graph_panel_collapsed {
                 {
-                    let graph_root_id = selected_ticket_id.clone();
+                    let graph_root = selected_ticket.clone();
                     let graph_style = if view_mode_value.as_str() == "graph" {
                         "flex: 1; position: relative; min-width: 0; overflow: hidden;".to_string()
                     } else {
@@ -64,17 +67,17 @@ pub(super) fn render_selected_main_panel(
                     };
                     rsx! {
                         div {
-                            key: "{graph_root_id}",
+                            key: "{graph_root.key()}",
                             style: "{graph_style}",
                             DepGraph {
-                                workspace: workspace.clone(),
-                                root_id: graph_root_id,
-                                selected_node_id: graph_content_id.read().clone(),
+                                workspace: graph_root.workspace.clone(),
+                                root_id: graph_root.id.clone(),
+                                selected_node_id: graph_content_ticket.read().as_ref().map(|ticket| ticket.id.clone()),
                                 layout_mode: *graph_layout_mode.read(),
                                 projection: *graph_projection.read(),
                                 on_layout_mode_change: move |mode| graph_layout_mode.set(mode),
                                 on_projection_change: move |projection| graph_projection.set(projection),
-                                on_select: move |ticket_id: String| graph_content_id.set(Some(ticket_id)),
+                                on_select: move |ticket_ref: TicketRef| graph_content_ticket.set(Some(ticket_ref)),
                             }
                         }
                     }
@@ -93,22 +96,22 @@ pub(super) fn render_selected_main_panel(
             }
             if view_mode_value.as_str() != "graph" {
                 {render_content_panel(
-                    workspace.clone(),
-                    selected_ticket_id.clone(),
+                    active_workspace.clone(),
+                    selected_ticket.clone(),
                     tickets,
-                    graph_content_id,
+                    graph_content_ticket,
                     selected_file,
                 )}
             }
             if view_mode_value.as_str() != "graph" && !detail_is_collapsed {
                 {
-                    let detail_id = graph_content_id
+                    let detail_ticket = graph_content_ticket
                         .read()
                         .clone()
-                        .unwrap_or_else(|| selected_ticket_id.clone());
+                        .unwrap_or_else(|| selected_ticket.clone());
                     rsx! {
                         PanelResizer {
-                            key: "detail-{detail_id}",
+                            key: "detail-{detail_ticket.key()}",
                             on_resize: move |delta: f64| {
                                 let width = (*detail_panel_width.read() - delta).max(150.0);
                                 detail_panel_width.set(width);
@@ -117,8 +120,8 @@ pub(super) fn render_selected_main_panel(
                         div {
                             style: "width: {detail_panel_width}px; flex-shrink: 0; overflow: hidden; height: 100%;",
                             TicketDetail {
-                                workspace: workspace.clone(),
-                                id: detail_id,
+                                workspace: detail_ticket.workspace.clone(),
+                                id: detail_ticket.id.clone(),
                             }
                         }
                     }
@@ -262,35 +265,34 @@ fn render_view_mode_bar(
 }
 
 fn render_content_panel(
-    workspace: String,
-    selected_ticket_id: String,
+    active_workspace: String,
+    selected_ticket: TicketRef,
     tickets: Signal<Vec<TicketSummary>>,
-    graph_content_id: Signal<Option<String>>,
-    selected_file: Signal<Option<(String, String)>>,
+    graph_content_ticket: Signal<Option<TicketRef>>,
+    selected_file: Signal<Option<(TicketRef, String)>>,
 ) -> Element {
-    let content_id = graph_content_id
+    let content_ticket = graph_content_ticket
         .read()
         .clone()
-        .unwrap_or_else(|| selected_ticket_id.clone());
+        .unwrap_or_else(|| selected_ticket.clone());
     let active_asset = selected_file
         .read()
         .as_ref()
-        .filter(|(ticket_id, _)| ticket_id == &content_id)
+        .filter(|(ticket_ref, _)| ticket_ref == &content_ticket)
         .map(|(_, path)| path.clone());
     let fields = tickets
         .read()
         .iter()
-        .find(|ticket| ticket.id == content_id)
+        .find(|ticket| ticket.resolved_ticket_ref(&active_workspace) == content_ticket)
         .map(|ticket| ticket.fields.clone())
         .unwrap_or(serde_json::Value::Object(Default::default()));
 
     rsx! {
         div {
-            key: "content-{content_id}",
             style: "flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column;",
             TicketContent {
-                workspace,
-                ticket_id: content_id,
+                workspace: content_ticket.workspace,
+                ticket_id: content_ticket.id,
                 fields,
                 asset_path: active_asset,
             }

@@ -7,6 +7,7 @@ use crate::{
         TicketBackend,
     },
     layout::GraphLayout,
+    types::TicketRef,
 };
 
 use super::{
@@ -70,7 +71,13 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                 let backend = HttpTicketBackend::new(None);
                 match backend.get_subgraph(&workspace, &root_id, 4).await {
                     Ok(response) => {
+                        let active_workspace = if response.active_workspace.is_empty() {
+                            workspace.clone()
+                        } else {
+                            response.active_workspace.clone()
+                        };
                         layout.set(Some(GraphLayout::build(
+                            &active_workspace,
                             response.nodes,
                             response.edges,
                         )));
@@ -126,7 +133,7 @@ fn render_webgpu_graph(
     props: DepGraphProps,
     workspace: String,
     root_id: String,
-    on_select: Option<EventHandler<String>>,
+    on_select: Option<EventHandler<TicketRef>>,
     selected_node_id: Option<String>,
 ) -> Element {
     rsx! {
@@ -139,12 +146,11 @@ fn render_webgpu_graph(
             projection: props.projection,
             on_layout_mode_change: props.on_layout_mode_change.clone(),
             on_projection_change: props.on_projection_change.clone(),
-            on_select: move |id: String| {
+            on_select: move |ticket_ref: TicketRef| {
                 select_node_or_navigate(
                     on_select.clone(),
                     nav.clone(),
-                    workspace.clone(),
-                    id,
+                    ticket_ref,
                 )
             }
         }

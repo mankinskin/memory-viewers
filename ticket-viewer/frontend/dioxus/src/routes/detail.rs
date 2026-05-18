@@ -1,4 +1,5 @@
 use dioxus::prelude::*;
+use viewer_api_dioxus::update_hash_params;
 
 use crate::routes::Route;
 
@@ -12,12 +13,14 @@ pub fn TicketDetailPage(
     let ticket_id = id.clone();
 
     use_effect(move || {
-        if let Some(window) = web_sys::window() {
-            let _ = window.location().set_hash(&format!("id={ticket_id}"));
-        }
-        nav.replace(Route::TicketListPage {
-            workspace: workspace.clone(),
-        });
+        update_hash_params(
+            &[
+                ("ticket-workspace", &workspace),
+                ("ticket-id", &ticket_id),
+            ],
+            &["id"],
+        );
+        nav.replace(Route::TicketListRootPage {});
     });
 
     rsx! {}

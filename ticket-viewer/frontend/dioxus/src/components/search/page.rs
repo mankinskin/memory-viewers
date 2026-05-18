@@ -7,7 +7,10 @@ use crate::{
         HttpTicketBackend,
         TicketBackend,
     },
-    types::TicketSummary,
+    types::{
+        TicketRef,
+        TicketSummary,
+    },
 };
 
 use super::{
@@ -30,7 +33,7 @@ const MAX_RESULTS: usize = 8;
 #[derive(Props, Clone, PartialEq)]
 pub struct SearchBarProps {
     pub workspace: String,
-    pub on_ticket_open: EventHandler<String>,
+    pub on_ticket_open: EventHandler<TicketRef>,
 }
 
 #[component]

@@ -104,9 +104,10 @@ pub(crate) fn spawn_create_ticket(
         match backend.create_ticket(&workspace, &request).await {
             Ok(response) => {
                 clear_draft();
+                let ticket_ref = response.ticket.resolved_ticket_ref(&workspace);
                 nav.push(Route::TicketDetailPage {
-                    workspace: workspace.clone(),
-                    id: response.ticket.id,
+                    workspace: ticket_ref.workspace,
+                    id: ticket_ref.id,
                 });
             },
             Err(error) => {

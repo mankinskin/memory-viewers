@@ -5,11 +5,14 @@
 //!
 //! Each ticket row has an expand/collapse arrow.  When expanded the row shows
 //! the ticket's files (description.md + assets/*.md) fetched lazily from the
-//! server.  Clicking a file row calls `on_select_file((ticket_id, path))`.
+//! server.  Clicking a file row calls `on_select_file((ticket_ref, path))`.
 
 use dioxus::prelude::*;
 
-use crate::types::TicketSummary;
+use crate::types::{
+    TicketRef,
+    TicketSummary,
+};
 
 // ── Props ──────────────────────────────────────────────────────────────────
 
@@ -38,16 +41,16 @@ pub struct TicketTreeProps {
     /// ID of the selected ticket (highlighted row).
     pub selected_id: Option<String>,
     /// Called when a ticket row is clicked.
-    pub on_select: EventHandler<String>,
+    pub on_select: EventHandler<TicketRef>,
 
-    /// Called when a file sub-row is clicked: `(ticket_id, relative_path)`.
+    /// Called when a file sub-row is clicked: `(ticket_ref, relative_path)`.
     #[props(default)]
-    pub on_select_file: Option<EventHandler<(String, String)>>,
+    pub on_select_file: Option<EventHandler<(TicketRef, String)>>,
 
-    /// Currently selected file: `(ticket_id, relative_path)` — used to
+    /// Currently selected file: `(ticket_ref, relative_path)` — used to
     /// highlight the active file row.
     #[props(default)]
-    pub selected_file: Option<(String, String)>,
+    pub selected_file: Option<(TicketRef, String)>,
 
     /// When true, each row shows a checkbox for batch selection.
     #[props(default = false)]

@@ -8,6 +8,30 @@ use serde::{
     Serialize,
 };
 
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct TicketRef {
+    #[serde(default)]
+    pub workspace: String,
+    #[serde(default)]
+    pub id: String,
+}
+
+impl TicketRef {
+    pub fn new(
+        workspace: impl Into<String>,
+        id: impl Into<String>,
+    ) -> Self {
+        Self {
+            workspace: workspace.into(),
+            id: id.into(),
+        }
+    }
+
+    pub fn key(&self) -> String {
+        format!("{}:{}", self.workspace, self.id)
+    }
+}
+
 // ── Workspace ─────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize)]
@@ -17,6 +41,8 @@ pub struct WorkspaceInfo {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkspacesResponse {
+    #[serde(default)]
+    pub active_workspace: String,
     pub workspaces: Vec<WorkspaceInfo>,
 }
 
@@ -25,6 +51,8 @@ pub struct WorkspacesResponse {
 #[derive(Debug, Clone, PartialEq, Deserialize)]
 pub struct TicketSummary {
     pub id: String,
+    #[serde(default)]
+    pub ticket_ref: TicketRef,
     pub title: Option<String>,
     pub state: Option<String>,
     #[serde(rename = "type", default)]
@@ -36,8 +64,24 @@ pub struct TicketSummary {
     pub fields: serde_json::Value,
 }
 
+impl TicketSummary {
+    pub fn resolved_ticket_ref(
+        &self,
+        active_workspace: &str,
+    ) -> TicketRef {
+        if !self.ticket_ref.workspace.is_empty() && !self.ticket_ref.id.is_empty()
+        {
+            return self.ticket_ref.clone();
+        }
+
+        TicketRef::new(active_workspace, self.id.clone())
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct TicketsResponse {
+    #[serde(default)]
+    pub active_workspace: String,
     pub workspace: String,
     pub items: Vec<TicketSummary>,
     pub next_cursor: Option<String>,
@@ -46,12 +90,30 @@ pub struct TicketsResponse {
 #[derive(Debug, Clone, Deserialize)]
 pub struct TicketDetail {
     pub id: String,
+    #[serde(default)]
+    pub ticket_ref: TicketRef,
     pub created_at: String,
     pub fields: serde_json::Value,
 }
 
+impl TicketDetail {
+    pub fn resolved_ticket_ref(
+        &self,
+        active_workspace: &str,
+    ) -> TicketRef {
+        if !self.ticket_ref.workspace.is_empty() && !self.ticket_ref.id.is_empty()
+        {
+            return self.ticket_ref.clone();
+        }
+
+        TicketRef::new(active_workspace, self.id.clone())
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct TicketDetailResponse {
+    #[serde(default)]
+    pub active_workspace: String,
     pub workspace: String,
     pub ticket: TicketDetail,
 }
@@ -59,7 +121,11 @@ pub struct TicketDetailResponse {
 #[derive(Debug, Clone, Deserialize)]
 pub struct TicketDescriptionResponse {
     pub id: String,
+    #[serde(default)]
+    pub active_workspace: String,
     pub workspace: String,
+    #[serde(default)]
+    pub ticket_ref: TicketRef,
     pub description: Option<String>,
 }
 
@@ -78,14 +144,22 @@ pub struct TicketFileEntry {
 #[derive(Debug, Clone, Deserialize)]
 pub struct TicketFilesResponse {
     pub id: String,
+    #[serde(default)]
+    pub active_workspace: String,
     pub workspace: String,
+    #[serde(default)]
+    pub ticket_ref: TicketRef,
     pub files: Vec<TicketFileEntry>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct TicketAssetResponse {
     pub id: String,
+    #[serde(default)]
+    pub active_workspace: String,
     pub workspace: String,
+    #[serde(default)]
+    pub ticket_ref: TicketRef,
     pub path: String,
     pub content: String,
 }
@@ -95,6 +169,8 @@ pub struct TicketAssetResponse {
 #[derive(Debug, Clone, Deserialize)]
 pub struct GraphNodeItem {
     pub id: String,
+    #[serde(default)]
+    pub ticket_ref: TicketRef,
     pub title: Option<String>,
     pub state: Option<String>,
     pub depth: usize,
@@ -104,11 +180,53 @@ pub struct GraphNodeItem {
     pub priority: Option<String>,
 }
 
+impl GraphNodeItem {
+    pub fn resolved_ticket_ref(
+        &self,
+        active_workspace: &str,
+    ) -> TicketRef {
+        if !self.ticket_ref.workspace.is_empty() && !self.ticket_ref.id.is_empty()
+        {
+            return self.ticket_ref.clone();
+        }
+
+        TicketRef::new(active_workspace, self.id.clone())
+    }
+}
+
 #[derive(Debug, Clone, Deserialize)]
 pub struct GraphEdgeItem {
     pub from: String,
     pub to: String,
+    #[serde(default)]
+    pub from_ref: TicketRef,
+    #[serde(default)]
+    pub to_ref: TicketRef,
     pub kind: String,
+}
+
+impl GraphEdgeItem {
+    pub fn resolved_from_ref(
+        &self,
+        active_workspace: &str,
+    ) -> TicketRef {
+        if !self.from_ref.workspace.is_empty() && !self.from_ref.id.is_empty() {
+            return self.from_ref.clone();
+        }
+
+        TicketRef::new(active_workspace, self.from.clone())
+    }
+
+    pub fn resolved_to_ref(
+        &self,
+        active_workspace: &str,
+    ) -> TicketRef {
+        if !self.to_ref.workspace.is_empty() && !self.to_ref.id.is_empty() {
+            return self.to_ref.clone();
+        }
+
+        TicketRef::new(active_workspace, self.to.clone())
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -120,6 +238,8 @@ pub struct SubgraphStats {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct GraphSubgraphResponse {
+    #[serde(default)]
+    pub active_workspace: String,
     pub workspace: String,
     pub nodes: Vec<GraphNodeItem>,
     pub edges: Vec<GraphEdgeItem>,
@@ -160,12 +280,16 @@ pub struct TypeSchema {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SchemaListResponse {
+    #[serde(default)]
+    pub active_workspace: Option<String>,
     pub workspace: String,
     pub types: Vec<TypeSchema>,
 }
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct SchemaDetailResponse {
+    #[serde(default)]
+    pub active_workspace: Option<String>,
     pub workspace: String,
     pub schema: TypeSchema,
 }
@@ -197,6 +321,8 @@ pub struct CreateTicketRequest {
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct CreateTicketResponse {
+    #[serde(default)]
+    pub active_workspace: String,
     pub workspace: String,
     pub ticket: TicketDetail,
 }
@@ -223,7 +349,11 @@ pub struct HistoryEntry {
 #[derive(Debug, Clone, Deserialize)]
 pub struct TicketHistoryResponse {
     pub id: String,
+    #[serde(default)]
+    pub active_workspace: String,
     pub workspace: String,
+    #[serde(default)]
+    pub ticket_ref: TicketRef,
     pub count: u64,
     pub entries: Vec<HistoryEntry>,
 }

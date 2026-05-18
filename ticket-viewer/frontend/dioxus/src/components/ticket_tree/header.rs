@@ -1,5 +1,10 @@
 use dioxus::prelude::*;
 
+use crate::types::{
+    TicketRef,
+    TicketSummary,
+};
+
 use super::{
     TicketTreeProps,
     STATE_CHIPS,
@@ -80,7 +85,11 @@ pub(super) fn render_filter_controls(
                             selected_id_for_keydown.clone(),
                         ) {
                             event.prevent_default();
-                            on_select_for_keydown.call(ticket_id);
+                            on_select_for_keydown.call(resolve_ticket_ref(
+                                &props.tickets,
+                                &props.workspace,
+                                &ticket_id,
+                            ));
                         }
                     },
                     _ => {},
@@ -204,4 +213,16 @@ fn move_ticket_focus(
     };
 
     focused_ticket_id.set(Some(displayed_ticket_ids[next_index].clone()));
+}
+
+fn resolve_ticket_ref(
+    tickets: &[TicketSummary],
+    workspace: &str,
+    ticket_id: &str,
+) -> TicketRef {
+    tickets
+        .iter()
+        .find(|ticket| ticket.id == ticket_id)
+        .map(|ticket| ticket.resolved_ticket_ref(workspace))
+        .unwrap_or_else(|| TicketRef::new(workspace, ticket_id.to_string()))
 }

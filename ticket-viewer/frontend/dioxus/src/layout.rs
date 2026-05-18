@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use crate::types::{
     GraphEdgeItem,
     GraphNodeItem,
+    TicketRef,
 };
 
 // ── Layout mode ────────────────────────────────────────────────────────────
@@ -25,6 +26,7 @@ pub use viewer_api_dioxus::LayoutMode;
 #[derive(Debug, Clone)]
 pub struct GraphNode {
     pub id: String,
+    pub ticket_ref: TicketRef,
     pub title: Option<String>,
     pub state: Option<String>,
     /// BFS depth from the root ticket.
@@ -79,14 +81,21 @@ impl GraphLayout {
     /// Build a hierarchical layout from raw API items using the default
     /// [`LayoutMode::Hierarchical3D`] algorithm.
     pub fn build(
+        active_workspace: &str,
         api_nodes: Vec<GraphNodeItem>,
         api_edges: Vec<GraphEdgeItem>,
     ) -> Self {
-        Self::build_with_mode(api_nodes, api_edges, LayoutMode::default())
+        Self::build_with_mode(
+            active_workspace,
+            api_nodes,
+            api_edges,
+            LayoutMode::default(),
+        )
     }
 
     /// Build a layout using the specified [`LayoutMode`].
     pub fn build_with_mode(
+        active_workspace: &str,
         api_nodes: Vec<GraphNodeItem>,
         api_edges: Vec<GraphEdgeItem>,
         mode: LayoutMode,
@@ -94,7 +103,8 @@ impl GraphLayout {
         let nodes: Vec<GraphNode> = api_nodes
             .into_iter()
             .map(|node| GraphNode {
-                id: node.id,
+                id: node.id.clone(),
+                ticket_ref: node.resolved_ticket_ref(active_workspace),
                 title: node.title,
                 state: node.state,
                 depth: node.depth,

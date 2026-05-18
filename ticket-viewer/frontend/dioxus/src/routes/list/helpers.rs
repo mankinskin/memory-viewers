@@ -2,7 +2,10 @@ use dioxus::prelude::*;
 
 use viewer_api_dioxus::is_mobile_sidebar_viewport;
 
-use crate::types::TicketSummary;
+use crate::types::{
+    TicketRef,
+    TicketSummary,
+};
 
 pub(super) fn initial_window_width() -> u32 {
     #[cfg(target_arch = "wasm32")]
@@ -65,15 +68,15 @@ pub(super) fn close_mobile_or_toggle_sidebar(
 }
 
 pub(super) fn handle_file_selection(
-    ticket_id: String,
+    ticket_ref: TicketRef,
     path: String,
-    mut selected_id: Signal<Option<String>>,
-    mut selected_file: Signal<Option<(String, String)>>,
+    mut selected_ticket: Signal<Option<TicketRef>>,
+    mut selected_file: Signal<Option<(TicketRef, String)>>,
     mut mobile_sidebar_open: Signal<bool>,
     mut view_mode: Signal<String>,
 ) {
-    selected_id.set(Some(ticket_id.clone()));
-    selected_file.set(Some((ticket_id, path)));
+    selected_ticket.set(Some(ticket_ref.clone()));
+    selected_file.set(Some((ticket_ref, path)));
     mobile_sidebar_open.set(false);
     if view_mode.read().as_str() == "graph" {
         view_mode.set("content".to_string());

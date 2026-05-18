@@ -2,8 +2,7 @@
 //!
 //! State is persisted to `localStorage` under the key
 //! `ticket-viewer:{workspace}:ui` and restored on mount.  The active ticket
-//! ID is additionally mirrored into the URL hash as `#id=<ticket_id>` for
-//! deep-link support.
+//! reference is additionally mirrored into the URL hash for deep-link support.
 //!
 //! ## Usage
 //!
@@ -34,9 +33,10 @@ use serde::{
 };
 use viewer_api_dioxus::{
     get_hash_param,
-    remove_hash_param,
-    set_hash_param,
+    update_hash_params,
 };
+
+use crate::types::TicketRef;
 
 // ── localStorage key ──────────────────────────────────────────────────────────
 #[cfg(target_arch = "wasm32")]
@@ -58,9 +58,9 @@ pub struct WorkspaceUiState {
     /// Sort key for the ticket list.
     #[serde(default = "default_sort_key")]
     pub sort_key: String,
-    /// Currently selected ticket ID, if any.
+    /// Currently selected ticket reference, if any.
     #[serde(default)]
-    pub open_ticket_id: Option<String>,
+    pub open_ticket: Option<TicketRef>,
     /// Active tab inside the ticket detail panel.
     #[serde(default = "default_active_tab")]
     pub active_tab: String,
@@ -72,7 +72,7 @@ impl Default for WorkspaceUiState {
             filter: String::new(),
             state_filter: String::new(),
             sort_key: default_sort_key(),
-            open_ticket_id: None,
+            open_ticket: None,
             active_tab: default_active_tab(),
         }
     }
@@ -164,8 +164,8 @@ pub struct TicketListStore {
     pub state_filter: Signal<String>,
     /// Sort column key.
     pub sort_key: Signal<String>,
-    /// Currently open ticket ID, or `None`.
-    pub open_ticket_id: Signal<Option<String>>,
+    /// Currently open ticket reference, or `None`.
+    pub open_ticket: Signal<Option<TicketRef>>,
     /// Active tab inside the detail panel (`"description"`, `"history"`, …).
     pub active_tab: Signal<String>,
     /// RAII guard that keeps the `hashchange` listener alive for the
@@ -177,38 +177,39 @@ impl TicketListStore {
     /// Initialise the store inside a Dioxus component.
     ///
     /// 1. Loads saved state from `localStorage` (`ticket-viewer:{workspace}:ui`).
-    /// 2. Checks `#id=…` in the URL hash and, if present, uses it as the
-    ///    initial `open_ticket_id` (deep-link priority over localStorage).
+    /// 2. Checks the URL hash and, if present, uses it as the initial
+    ///    `open_ticket` (deep-link priority over localStorage).
     /// 3. Registers a `hashchange` listener on `window` so that browser
-    ///    back / forward navigation updates `open_ticket_id` reactively.
+    ///    back / forward navigation updates `open_ticket` reactively.
     pub fn use_store(workspace: &str) -> Self {
         let saved = load_from_local_storage(workspace);
 
-        // URL hash takes priority for the ticket ID (supports deep-links).
-        let hash_id = get_hash_param("id");
-        let initial_id = hash_id.or(saved.open_ticket_id.clone());
+        // URL hash takes priority for the ticket ref (supports deep-links).
+        let initial_ticket =
+            read_hash_ticket_ref(workspace).or(saved.open_ticket.clone());
 
         let filter = use_signal(|| saved.filter);
         let state_filter = use_signal(|| saved.state_filter);
         let sort_key = use_signal(|| saved.sort_key);
-        let mut open_ticket_id: Signal<Option<String>> =
-            use_signal(|| initial_id);
+        let mut open_ticket: Signal<Option<TicketRef>> =
+            use_signal(|| initial_ticket);
         let active_tab = use_signal(|| saved.active_tab);
 
         // ── hashchange listener ───────────────────────────────────────────────
         // Stored in a Signal so it is dropped automatically when the component
-        // unmounts (RAII).  The closure captures `open_ticket_id` by copy
+        // unmounts (RAII).  The closure captures `open_ticket` by copy
         // (Signal<T> is Copy) so no lifetime issues arise.
         let _hash_listener: Signal<Option<EventListener>> = use_signal(|| {
             #[cfg(target_arch = "wasm32")]
             {
+                let workspace = workspace.to_string();
                 web_sys::window().map(|window| {
                     EventListener::new(&window, "hashchange", move |_event| {
-                        let id = get_hash_param("id");
+                        let ticket_ref = read_hash_ticket_ref(&workspace);
                         // Only mutate when the value actually changed to
                         // prevent re-render loops.
-                        if *open_ticket_id.peek() != id {
-                            open_ticket_id.set(id);
+                        if *open_ticket.peek() != ticket_ref {
+                            open_ticket.set(ticket_ref);
                         }
                     })
                 })
@@ -223,15 +224,14 @@ impl TicketListStore {
             filter,
             state_filter,
             sort_key,
-            open_ticket_id,
+            open_ticket,
             active_tab,
             _hash_listener,
         }
     }
 
     /// Persist the current signal values to `localStorage` and mirror the
-    /// active ticket ID into the URL hash (`#id=<id>` or removes `id` when
-    /// `None`).
+    /// active ticket ref into the URL hash.
     ///
     /// Call this inside a `use_effect` — Dioxus will re-run the effect
     /// automatically whenever any of the signals read by this method change.
@@ -243,15 +243,38 @@ impl TicketListStore {
             filter: self.filter.read().clone(),
             state_filter: self.state_filter.read().clone(),
             sort_key: self.sort_key.read().clone(),
-            open_ticket_id: self.open_ticket_id.read().clone(),
+            open_ticket: self.open_ticket.read().clone(),
             active_tab: self.active_tab.read().clone(),
         };
         save_to_local_storage(workspace, &state);
 
         // Keep the URL hash in sync for deep-link support.
-        match state.open_ticket_id.as_deref() {
-            Some(id) => set_hash_param("id", id),
-            None => remove_hash_param("id"),
+        match state.open_ticket.as_ref() {
+            Some(ticket_ref) => write_hash_ticket_ref(ticket_ref),
+            None => clear_hash_ticket_ref(),
         }
     }
+}
+
+fn read_hash_ticket_ref(default_workspace: &str) -> Option<TicketRef> {
+    let ticket_id = get_hash_param("ticket-id")
+        .or_else(|| get_hash_param("id"))?;
+    let workspace = get_hash_param("ticket-workspace")
+        .unwrap_or_else(|| default_workspace.to_string());
+
+    Some(TicketRef::new(workspace, ticket_id))
+}
+
+fn write_hash_ticket_ref(ticket_ref: &TicketRef) {
+    update_hash_params(
+        &[
+            ("ticket-workspace", &ticket_ref.workspace),
+            ("ticket-id", &ticket_ref.id),
+        ],
+        &["id"],
+    );
+}
+
+fn clear_hash_ticket_ref() {
+    update_hash_params(&[], &["ticket-workspace", "ticket-id", "id"]);
 }

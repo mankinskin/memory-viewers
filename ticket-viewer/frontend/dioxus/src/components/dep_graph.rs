@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 use crate::layout::LayoutMode;
+use crate::types::TicketRef;
 
 use viewer_api_dioxus::Projection;
 
@@ -21,7 +22,7 @@ pub struct DepGraphProps {
     /// When provided the component calls this instead of navigating to
     /// `TicketDetailPage`.
     #[props(optional)]
-    pub on_select: Option<EventHandler<String>>,
+    pub on_select: Option<EventHandler<TicketRef>>,
     /// Graph-preview selection — the node ID currently shown in the content
     /// panel (set by clicking a node). Highlights that card with an ember
     /// border without changing the primary list selection.

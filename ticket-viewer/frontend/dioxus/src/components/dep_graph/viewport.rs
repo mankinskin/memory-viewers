@@ -4,6 +4,7 @@ use dioxus_router::Navigator;
 use crate::{
     components::ticket_card::TicketCard,
     layout::GraphLayout,
+    types::TicketRef,
 };
 
 use super::{
@@ -24,7 +25,7 @@ use super::{
 #[component]
 pub(super) fn GraphViewport(
     workspace: String,
-    on_select: Option<EventHandler<String>>,
+    on_select: Option<EventHandler<TicketRef>>,
     layout: Signal<Option<GraphLayout>>,
     load_error: Signal<Option<String>>,
     mut fetch_trigger: Signal<u32>,
@@ -135,7 +136,7 @@ fn render_loading_state(
 
 fn render_graph_nodes(
     workspace: String,
-    on_select: Option<EventHandler<String>>,
+    on_select: Option<EventHandler<TicketRef>>,
     nav: Navigator,
     layout: Signal<Option<GraphLayout>>,
     pan_x: Signal<f64>,
@@ -158,6 +159,7 @@ fn render_graph_nodes(
             {
                 let node_id = node.id.clone();
                 let node_id_drag = node.id.clone();
+                let ticket_ref = node.ticket_ref.clone();
                 let node_title = node.title.clone();
                 let node_state = node.state.clone();
                 let node_depth = node.depth;
@@ -165,7 +167,6 @@ fn render_graph_nodes(
                 let node_ticket_type = node.ticket_type.clone();
                 let layout_x = node.x;
                 let layout_y = node.y;
-                let workspace = workspace.clone();
                 let on_select = on_select.clone();
                 let nav = nav.clone();
                 rsx! {
@@ -188,8 +189,7 @@ fn render_graph_nodes(
                             select_node_or_navigate(
                                 on_select.clone(),
                                 nav.clone(),
-                                workspace.clone(),
-                                node_id.clone(),
+                                ticket_ref.clone(),
                             )
                         },
                         on_drag_start: move |(_, client_x, client_y): (String, f64, f64)| {

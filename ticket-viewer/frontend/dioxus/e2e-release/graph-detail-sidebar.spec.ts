@@ -158,6 +158,10 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
     await childNode.click();
 
     await expect(componentField).toContainText(candidate.childComponent, { timeout: 20_000 });
-    await expect(page).toHaveURL(new RegExp(`#id=${candidate.rootId}$`));
+    await expect(page).toHaveURL(
+      new RegExp(
+        `#(?=.*(?:id|ticket-id)=${candidate.rootId})(?:(?=.*ticket-workspace=default).*)?$`,
+      ),
+    );
   });
 });

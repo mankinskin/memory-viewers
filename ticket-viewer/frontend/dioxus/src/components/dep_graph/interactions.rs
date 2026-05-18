@@ -4,6 +4,7 @@ use dioxus_router::Navigator;
 use crate::{
     layout::GraphLayout,
     routes::Route,
+    types::TicketRef,
 };
 
 use super::state::{
@@ -12,17 +13,16 @@ use super::state::{
 };
 
 pub(super) fn select_node_or_navigate(
-    on_select: Option<EventHandler<String>>,
+    on_select: Option<EventHandler<TicketRef>>,
     nav: Navigator,
-    workspace: String,
-    node_id: String,
+    ticket_ref: TicketRef,
 ) {
     if let Some(ref callback) = on_select {
-        callback.call(node_id);
+        callback.call(ticket_ref.clone());
     } else {
         nav.push(Route::TicketDetailPage {
-            workspace,
-            id: node_id,
+            workspace: ticket_ref.workspace,
+            id: ticket_ref.id,
         });
     }
 }
