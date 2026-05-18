@@ -292,7 +292,7 @@ test.afterAll(async () => {
   fixture = null;
 });
 
-test('root route follows mixed-workspace ticket refs for history and file actions', async ({ page }) => {
+test('root route follows mixed-workspace ticket refs for history, file, and asset actions', async ({ page }) => {
   test.setTimeout(120_000);
 
   expect(fixture, 'seeded viewer fixture must be ready').not.toBeNull();
@@ -362,11 +362,55 @@ test('root route follows mixed-workspace ticket refs for history and file action
   const filesResponse = await filesResponsePromise;
   expect(filesResponse.ok(), 'mixed-workspace file list request must succeed').toBe(true);
 
-  await expectJson<TicketFilesResponse>(filesResponse, 'mixed-workspace file list JSON must parse');
-  const historyTab = page.getByTestId('tab-history');
-  await expect(historyTab).toBeVisible();
-  await historyTab.click();
-  await expect(page.getByTestId('history-panel')).toBeVisible({ timeout: 20_000 });
+  const fileList = await expectJson<TicketFilesResponse>(
+    filesResponse,
+    'mixed-workspace file list JSON must parse',
+  );
+  const asset = (fileList.files ?? []).find((file) => file.path !== 'description.md');
+  expect(asset, 'seeded child ticket should expose a non-description asset').toBeTruthy();
+
+  const assetButton = page.getByTestId(
+    `ticket-tree-file-${currentFixture.childTicketId}-${asset!.name}`,
+  );
+  const renderedFileButtons = await page
+    .locator('[data-testid^="ticket-tree-file-"]')
+    .evaluateAll((buttons) => {
+      return buttons.map((button) => ({
+        testId: button.getAttribute('data-testid'),
+        text: button.textContent,
+      }));
+    });
+  const renderedAssetTextButtons = await page.locator('button').evaluateAll(
+    (buttons, assetName) => {
+      return buttons
+        .map((button) => ({
+          testId: button.getAttribute('data-testid'),
+          text: button.textContent,
+        }))
+        .filter((button) => button.text?.includes(assetName as string));
+    },
+    asset!.name,
+  );
+  if (!renderedFileButtons.some((button) => button.testId === `ticket-tree-file-${currentFixture.childTicketId}-${asset!.name}`)) {
+    throw new Error(
+      `Expected seeded asset button was not rendered. Visible file buttons: ${JSON.stringify(renderedFileButtons)}. Buttons containing asset text: ${JSON.stringify(renderedAssetTextButtons)}`,
+    );
+  }
+  await expect(assetButton).toBeVisible();
+
+  const assetResponsePromise = page.waitForResponse((response) => {
+    return (
+      response.request().method() === 'GET' &&
+      response.url().includes(`/api/tickets/${currentFixture.childTicketId}/asset?`) &&
+      response.url().includes(`workspace=${encodeURIComponent(currentFixture.childWorkspace)}`) &&
+      response.url().includes(`path=${encodeURIComponent(asset!.path)}`)
+    );
+  });
+  await assetButton.click();
+  const assetResponse = await assetResponsePromise;
+  expect(assetResponse.ok(), 'mixed-workspace asset request must succeed').toBe(true);
+
+  await expect(page.getByTestId('desc-markdown')).toBeVisible({ timeout: 20_000 });
   await expect(page).toHaveURL(
     new RegExp(
       `^${escapedBaseUrl}/#(?=.*ticket-id=${currentFixture.childTicketId})(?=.*ticket-workspace=${currentFixture.childWorkspace}).*$`,

@@ -260,6 +260,7 @@ fn render_expanded_files(
                         rsx! {
                             button {
                                 key: "{file_path}",
+                                "data-testid": "ticket-tree-file-{ticket_ref.id}-{file_name}",
                                 style: "
                                     display: flex;
                                     align-items: center;
