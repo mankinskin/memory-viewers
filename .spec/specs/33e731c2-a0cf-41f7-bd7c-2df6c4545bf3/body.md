@@ -17,6 +17,11 @@ The sidebar explorer combines:
 2. Multiple selected states combine with OR semantics.
 3. The empty state-filter set means "All states".
 4. Explorer persistence includes query text, selected states, sort key, and selected ticket.
+5. Free-text terms search ticket titles and description/body content, including partial-word substring matches such as `cracker` -> `Firecracker`.
+6. Within a query string, whitespace-separated terms combine with AND semantics, and quoted phrases remain a single term.
+7. Supported explicit predicates are `id:<value>`, `title:<value>`, `state:<value>` / `status:<value>`, and `type:<value>` / `ticket_type:<value>`.
+8. `title:<value>` searches title content only and still supports substring matches for single terms such as `title:cracker` -> `Firecracker`.
+9. The sidebar and quick-search hint copy must advertise only the supported predicate keys and the title/body free-text scope.
 
 ### Transport contract
 
@@ -53,7 +58,12 @@ When quick-search is open:
 
 - The sidebar can show tickets from multiple workflow states at the same time.
 - A query combined with selected states only returns tickets that match the query and at least one selected state.
+- A unique phrase that appears only in a ticket description/body is discoverable from the sidebar query and the quick-search overlay.
+- A partial-word substring query such as `cracker` surfaces tickets containing `Firecracker` in the title or description/body.
+- A `title:` predicate such as `title:cracker` surfaces tickets containing `Firecracker` in the title without relying on description/body matches.
+- The quick-search overlay must not silently truncate broad backend matches to eight rows; when a query returns more than eight hits, the overlay still surfaces at least the first nine ranked matches and allows scrolling through the list.
 - The sidebar and quick-search both expose deterministic visible keyboard focus.
+- The visible search hints document the supported predicate keys, quoted-phrase behavior, and conjunction semantics without mentioning unsupported fields.
 - Reloading the page restores the persisted explorer filter state without corrupting older saved state.
 - If `/api/tickets` or `/api/stream` fails, the sidebar keeps rendering its error or empty-state copy without panicking the WASM app.
 - After those offline failures, clicking or reconnect retries must not crash the explorer; the route stays interactive and can recover when the backend returns.
@@ -62,3 +72,17 @@ When quick-search is open:
 
 - `viewer-api/components/tree-view`
 - `viewer-api/keyboard-interaction-model`
+
+## Traceability
+
+- Ticket: `.ticket/tickets/fcced2f3-c32c-4533-9743-56543f428222`
+- Viewer implementation: `memory-viewers/ticket-viewer/frontend/dioxus/src/search_syntax.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/src/components/search/page.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_tree/header.rs`
+- Viewer docs: `memory-viewers/ticket-viewer/frontend/dioxus/src/components/search.rs`
+- Viewer validation passed:
+	- `cargo check --manifest-path memory-viewers/ticket-viewer/frontend/dioxus/Cargo.toml --target wasm32-unknown-unknown`
+	- `viewer-ctl prepare ticket-viewer && viewer-ctl restart ticket-viewer && node target/tmp/firecracker_probe.mjs`
+	- `cargo build -p ticket-viewer --release && viewer-ctl stop ticket-viewer && viewer-ctl install ticket-viewer && viewer-ctl start ticket-viewer && curl http://127.0.0.1:3002/api/tickets?workspace=default&limit=20&query=cracker`
+	- `npm run test:e2e:release -- keyboard-navigation.spec.ts -g "sidebar filter keeps focus|documents supported syntax"`
+	- `npm run test:e2e:release -- keyboard-navigation.spec.ts -g "documents supported syntax|surfaces at least nine results"`
+	- `npm run test:e2e:release -- keyboard-navigation.spec.ts -g "matches partial-word substrings|documents supported syntax|surfaces at least nine results"`
+- Viewer validation blocked by an existing unrelated failure in `npm run test:e2e:release -- keyboard-navigation.spec.ts`: `quick-search keeps input focus while arrows move the active result and Enter opens it` still fails because the selected sidebar ticket is not found after opening a search result.

@@ -1,5 +1,9 @@
 use dioxus::prelude::*;
 
+use crate::search_syntax::{
+    SEARCH_INPUT_PLACEHOLDER,
+    SEARCH_SYNTAX_HINT,
+};
 use crate::types::{
     TicketRef,
     TicketSummary,
@@ -36,7 +40,7 @@ pub(super) fn render_filter_controls(
             input {
                 "data-testid": "ticket-tree-filter",
                 r#type: "text",
-                placeholder: "Filter tickets…",
+                placeholder: SEARCH_INPUT_PLACEHOLDER,
                 style: "
                     width: 100%;
                     padding: 6px 10px;
@@ -94,6 +98,15 @@ pub(super) fn render_filter_controls(
                     },
                     _ => {},
                 },
+            }
+            div {
+                "data-testid": "ticket-tree-filter-hint",
+                style: "
+                    color: var(--text-muted);
+                    font-size: 11px;
+                    line-height: 1.35;
+                ",
+                "{SEARCH_SYNTAX_HINT}"
             }
             div {
                 style: "display: flex; flex-wrap: wrap; align-items: center; gap: 4px;",

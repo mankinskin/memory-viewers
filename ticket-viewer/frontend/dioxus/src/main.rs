@@ -6,6 +6,7 @@ mod graph3d;
 mod graph_fetch;
 mod layout;
 mod routes;
+mod search_syntax;
 mod sse;
 mod store;
 mod types;

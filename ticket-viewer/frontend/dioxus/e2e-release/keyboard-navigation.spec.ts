@@ -114,6 +114,55 @@ async function findSearchCandidate(page: Page): Promise<{ query: string; ids: st
   throw new Error('No quick-search query with at least two results was found');
 }
 
+async function findBroadSearchCandidate(
+  page: Page,
+  minimumResults: number,
+): Promise<{ query: string; ids: string[] }> {
+  const items = await fetchTickets(page);
+  const words = new Set<string>();
+  for (const item of items) {
+    for (const word of candidateWords(item.title)) {
+      words.add(word);
+    }
+  }
+
+  for (const word of words) {
+    const matches = await fetchTickets(page, word);
+    if (matches.length >= minimumResults) {
+      return {
+        query: word,
+        ids: matches.slice(0, minimumResults).map((item) => item.id),
+      };
+    }
+  }
+
+  throw new Error(`No quick-search query with at least ${minimumResults} results was found`);
+}
+
+async function findSubstringSearchCandidate(
+  page: Page,
+): Promise<{ query: string; expectedId: string }> {
+  const items = await fetchTickets(page);
+  for (const item of items) {
+    for (const word of candidateWords(item.title)) {
+      if (word.length < 8) {
+        continue;
+      }
+
+      const substring = word.slice(2, word.length - 1);
+      const matches = await fetchTickets(page, substring);
+      if (matches.some((candidate) => candidate.id === item.id)) {
+        return {
+          query: substring,
+          expectedId: item.id,
+        };
+      }
+    }
+  }
+
+  throw new Error('No quick-search substring candidate could be resolved for the current workspace');
+}
+
 test.describe('ticket-viewer — keyboard navigation', () => {
   test('sidebar filter keeps focus while arrows move the active ticket and Enter selects it', async ({ page }) => {
     await gotoWorkspace(page);
@@ -121,6 +170,10 @@ test.describe('ticket-viewer — keyboard navigation', () => {
     await expect.poll(async () => (await visibleSidebarTicketIds(page)).length).toBeGreaterThan(1);
 
     const filterInput = page.getByTestId('ticket-tree-filter');
+    const filterHint = page.getByTestId('ticket-tree-filter-hint');
+    await expect(filterHint).toContainText('Free text searches titles and descriptions');
+    await expect(filterHint).toContainText('id:<value>');
+    await expect(filterHint).not.toContainText('priority:');
     await filterInput.click();
     await expect(filterInput).toBeFocused();
 
@@ -203,5 +256,71 @@ test.describe('ticket-viewer — keyboard navigation', () => {
       'data-selected',
       'true',
     );
+  });
+
+  test('quick-search documents supported syntax and id predicates narrow results', async ({ page }) => {
+    const items = await fetchTickets(page);
+    expect(items.length).toBeGreaterThan(0);
+
+    const candidate = items[0];
+    const titleCandidate = await findSubstringSearchCandidate(page);
+    await gotoWorkspace(page);
+
+    await page.locator('body').click();
+    await page.keyboard.press('/');
+
+    const searchInput = page.getByTestId('search-input');
+    const syntaxHint = page.getByTestId('search-syntax-hint');
+    await expect(searchInput).toBeVisible();
+    await expect(searchInput).toHaveAttribute('placeholder', /id:, title:, state:, type:/);
+    await expect(syntaxHint).toContainText('Free text searches titles and descriptions');
+    await expect(syntaxHint).toContainText('state:<value>/status:<value>');
+    await expect(syntaxHint).toContainText('type:<value>/ticket_type:<value>');
+    await expect(syntaxHint).not.toContainText('priority:');
+
+    await searchInput.fill(`id:${candidate.id}`);
+
+    await expect.poll(async () => visibleSearchResultIds(page)).toEqual([candidate.id]);
+
+    await searchInput.fill(`title:${titleCandidate.query}`);
+
+    await expect.poll(async () =>
+      (await visibleSearchResultIds(page)).includes(titleCandidate.expectedId),
+    ).toBe(true);
+  });
+
+  test('quick-search surfaces at least nine results for broad queries', async ({ page }) => {
+    const candidate = await findBroadSearchCandidate(page, 9);
+    await gotoWorkspace(page);
+
+    await page.locator('body').click();
+    await page.keyboard.press('/');
+
+    const searchInput = page.getByTestId('search-input');
+    await expect(searchInput).toBeVisible();
+    await searchInput.fill(candidate.query);
+
+    await expect.poll(async () => (await visibleSearchResultIds(page)).length).toBeGreaterThanOrEqual(
+      candidate.ids.length,
+    );
+    await expect.poll(async () => (await visibleSearchResultIds(page)).slice(0, candidate.ids.length)).toEqual(
+      candidate.ids,
+    );
+  });
+
+  test('quick-search matches partial-word substrings', async ({ page }) => {
+    const candidate = await findSubstringSearchCandidate(page);
+    await gotoWorkspace(page);
+
+    await page.locator('body').click();
+    await page.keyboard.press('/');
+
+    const searchInput = page.getByTestId('search-input');
+    await expect(searchInput).toBeVisible();
+    await searchInput.fill(candidate.query);
+
+    await expect.poll(async () =>
+      (await visibleSearchResultIds(page)).includes(candidate.expectedId),
+    ).toBe(true);
   });
 });

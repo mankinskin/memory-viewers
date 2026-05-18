@@ -7,6 +7,10 @@ use crate::{
         HttpTicketBackend,
         TicketBackend,
     },
+    search_syntax::{
+        SEARCH_INPUT_PLACEHOLDER,
+        SEARCH_SYNTAX_HINT,
+    },
     types::{
         TicketRef,
         TicketSummary,
@@ -28,7 +32,7 @@ use super::{
     },
 };
 
-const MAX_RESULTS: usize = 8;
+const MAX_RESULTS: usize = 20;
 
 #[derive(Props, Clone, PartialEq)]
 pub struct SearchBarProps {
@@ -136,7 +140,6 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
                         align-items: center;
                         gap: 0.5rem;
                         padding: 0.75rem 1rem;
-                        border-bottom: 1px solid rgba(100, 100, 200, 0.2);
                     ",
                     span {
                         style: "color: #9999bb; font-size: 1rem; user-select: none;",
@@ -146,7 +149,7 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
                         "data-testid": "search-input",
                         r#type: "text",
                         autofocus: true,
-                        placeholder: "Search… or state:<value>  priority:<value>  type:<value>",
+                        placeholder: SEARCH_INPUT_PLACEHOLDER,
                         value: "{q_display}",
                         style: "
                             flex: 1;
@@ -245,6 +248,17 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
                         ",
                         "Esc to close"
                     }
+                }
+                div {
+                    "data-testid": "search-syntax-hint",
+                    style: "
+                        padding: 0 1rem 0.6rem;
+                        border-bottom: 1px solid rgba(100, 100, 200, 0.2);
+                        color: #9999bb;
+                        font-size: 11px;
+                        line-height: 1.4;
+                    ",
+                    "{SEARCH_SYNTAX_HINT}"
                 }
                 if !state_facets.is_empty() || !type_facets.is_empty() {
                     {render_facet_chips(&state_facets, &type_facets, state_filter, type_filter)}
