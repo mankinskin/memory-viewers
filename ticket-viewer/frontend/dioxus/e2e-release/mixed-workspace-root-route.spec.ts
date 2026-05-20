@@ -50,9 +50,13 @@ interface SeededViewerFixture {
   tempDir: string;
   url: string;
   viewer: ChildProcessWithoutNullStreams;
+  parentTicketId: string;
+  parentTitle: string;
+  parentDescriptionSnippet: string;
   childTicketId: string;
   childWorkspace: string;
   childTitle: string;
+  childDescriptionSnippet: string;
 }
 
 let fixture: SeededViewerFixture | null = null;
@@ -196,15 +200,18 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
   const childBodyPath = path.join(tempDir, 'child-description.md');
   const childAssetPath = path.join(tempDir, 'child-asset.md');
   const childWorkspace = 'child';
+  const parentTitle = 'Seeded parent ticket';
   const childTitle = 'Seeded child ticket';
+  const parentDescriptionSnippet = 'Default workspace root for mixed-workspace validation.';
+  const childDescriptionSnippet = 'Mixed-workspace ticket body used by Playwright validation.';
 
   await fs.mkdir(parentTicketsDir, { recursive: true });
   await fs.mkdir(childTicketsDir, { recursive: true });
-  await fs.writeFile(parentBodyPath, '# Parent ticket\n\nDefault workspace root for mixed-workspace validation.\n');
-  await fs.writeFile(childBodyPath, '# Child ticket\n\nMixed-workspace ticket body used by Playwright validation.\n');
+  await fs.writeFile(parentBodyPath, `# Parent ticket\n\n${parentDescriptionSnippet}\n`);
+  await fs.writeFile(childBodyPath, `# Child ticket\n\n${childDescriptionSnippet}\n`);
   await fs.writeFile(childAssetPath, '# Asset\n\nMixed-workspace asset payload.\n');
 
-  await runTicketCli<CreatePayload>([
+  const parentTicket = await runTicketCli<CreatePayload>([
     'create',
     '--json',
     '--index-root',
@@ -212,7 +219,7 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
     '--type',
     'tracker-improvement',
     '--title',
-    'Seeded parent ticket',
+    parentTitle,
     '--body-file',
     parentBodyPath,
   ]);
@@ -264,9 +271,13 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
     tempDir,
     url,
     viewer,
+    parentTicketId: parentTicket.id,
+    parentTitle,
+    parentDescriptionSnippet,
     childTicketId: childTicket.id,
     childWorkspace,
     childTitle,
+    childDescriptionSnippet,
   };
 }
 
@@ -378,6 +389,41 @@ test('root route follows mixed-workspace ticket refs for history and file action
     ),
   );
   await expect(page).not.toHaveURL(/\/workspace\/default/);
+});
+
+test('root route swaps content panel body when clicking different ticket rows', async ({ page }) => {
+  test.setTimeout(120_000);
+
+  expect(fixture, 'seeded viewer fixture must be ready').not.toBeNull();
+  const currentFixture = fixture!;
+  const escapedBaseUrl = escapeRegex(currentFixture.url);
+
+  await gotoAndWaitForSeededViewer(page, currentFixture.url);
+  await page.evaluate(() => window.localStorage.clear());
+  await gotoAndWaitForSeededViewer(page, currentFixture.url);
+  await expect(page.getByText('Select a ticket from the sidebar to view details.')).toBeVisible();
+
+  const parentButton = page.getByTestId(`ticket-tree-ticket-${currentFixture.parentTicketId}`);
+  const childButton = page.getByTestId(`ticket-tree-ticket-${currentFixture.childTicketId}`);
+  await expect(parentButton).toBeVisible({ timeout: 30_000 });
+  await expect(childButton).toBeVisible({ timeout: 30_000 });
+  await expect(parentButton).toContainText(currentFixture.parentTitle);
+  await expect(childButton).toContainText(currentFixture.childTitle);
+
+  await parentButton.click();
+  await expect(page.getByTestId('desc-markdown')).toContainText(currentFixture.parentDescriptionSnippet);
+  await expect(page).toHaveURL(
+    new RegExp(`^${escapedBaseUrl}/#(?=.*ticket-id=${currentFixture.parentTicketId}).*$`),
+  );
+
+  await childButton.click();
+  await expect(page.getByTestId('desc-markdown')).toContainText(currentFixture.childDescriptionSnippet);
+  await expect(page.getByTestId('desc-markdown')).not.toContainText(currentFixture.parentDescriptionSnippet);
+  await expect(page).toHaveURL(
+    new RegExp(
+      `^${escapedBaseUrl}/#(?=.*ticket-id=${currentFixture.childTicketId})(?=.*ticket-workspace=${currentFixture.childWorkspace}).*$`,
+    ),
+  );
 });
 
 test.fixme('asset file click should trigger owning-workspace asset request', async ({ page }) => {

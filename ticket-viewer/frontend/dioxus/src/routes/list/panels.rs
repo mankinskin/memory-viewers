@@ -280,6 +280,11 @@ fn render_content_panel(
         .as_ref()
         .filter(|(ticket_ref, _)| ticket_ref == &content_ticket)
         .map(|(_, path)| path.clone());
+    let content_key = format!(
+        "content-{}-{}",
+        content_ticket.key(),
+        active_asset.as_deref().unwrap_or("description.md")
+    );
     let fields = tickets
         .read()
         .iter()
@@ -289,6 +294,7 @@ fn render_content_panel(
 
     rsx! {
         div {
+            key: "{content_key}",
             style: "flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column;",
             TicketContent {
                 workspace: content_ticket.workspace,
