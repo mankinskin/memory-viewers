@@ -72,6 +72,49 @@ test.describe('spec-viewer — shared detail-shell primitives', () => {
     await expect(page.getByRole('navigation', { name: 'Breadcrumb' })).toContainText(spec.id);
   });
 
+  test('shared Home action returns to the browse route from detail and graph headers', async ({ page }) => {
+    test.setTimeout(90_000);
+    await gotoAndWaitForViewer(page, SPEC_VIEWER);
+    const spec = await fetchFirstSidebarLeaf(page);
+
+    await page.goto(`${SPEC_VIEWER.url}${buildSpecDetailUrl(spec.id)}`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.locator(SPEC_VIEWER.readySelector).first().waitFor({
+      state: 'visible',
+      timeout: SPEC_VIEWER.readyTimeout,
+    });
+
+    const homeButton = page.getByRole('button', { name: 'Home' });
+    await expect(homeButton).toBeVisible({ timeout: 10_000 });
+    await homeButton.click();
+
+    await expect
+      .poll(() => page.url(), {
+        timeout: 15_000,
+        message: 'detail-page Home should navigate back to the canonical browse route',
+      })
+      .toBe(`${SPEC_VIEWER.url}/specs`);
+
+    await page.goto(`${SPEC_VIEWER.url}/specs/graph`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.locator(SPEC_VIEWER.readySelector).first().waitFor({
+      state: 'visible',
+      timeout: SPEC_VIEWER.readyTimeout,
+    });
+
+    await expect(homeButton).toBeVisible({ timeout: 10_000 });
+    await homeButton.click();
+
+    await expect
+      .poll(() => page.url(), {
+        timeout: 15_000,
+        message: 'graph-page Home should navigate back to the canonical browse route',
+      })
+      .toBe(`${SPEC_VIEWER.url}/specs`);
+  });
+
   test('selecting a second sidebar spec preserves the current detail view', async ({ page }) => {
     test.setTimeout(90_000);
     await gotoAndWaitForViewer(page, SPEC_VIEWER);

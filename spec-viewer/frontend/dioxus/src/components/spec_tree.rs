@@ -10,9 +10,11 @@ use std::collections::BTreeMap;
 
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
+    ExplorerShell,
     FileTree,
     FilterDef,
     NodeIcon,
+    SidebarSearch,
     SortKey,
     TreeNode,
 };
@@ -77,6 +79,16 @@ fn spec_leaf(s: &SpecSummary) -> TreeNode {
         .unwrap_or_else(|| s.slug.as_deref().unwrap_or("Untitled"))
         .to_string();
     let state = s.state.clone().unwrap_or_default();
+    let tooltip_id = s.id.clone();
+    let tooltip_label = label.clone();
+    let tooltip_slug = s.slug.clone();
+    let tooltip_component = s.component.clone();
+    let tooltip_state = if state.is_empty() {
+        None
+    } else {
+        Some(state.clone())
+    };
+
     TreeNode {
         id: s.id.clone(),
         label,
@@ -92,6 +104,30 @@ fn spec_leaf(s: &SpecSummary) -> TreeNode {
         icon: NodeIcon::Doc,
         children: vec![],
     }
+    .with_tooltip_render(move || {
+        rsx! {
+            div {
+                style: "display: flex; flex-direction: column; gap: 4px;",
+                div {
+                    style: "font-weight: 600; color: var(--text-primary);",
+                    "{tooltip_label}"
+                }
+                if let Some(slug) = tooltip_slug.as_deref() {
+                    div { "slug: {slug}" }
+                }
+                if let Some(component) = tooltip_component.as_deref() {
+                    div { "component: {component}" }
+                }
+                if let Some(state) = tooltip_state.as_deref() {
+                    div { "state: {state}" }
+                }
+                div {
+                    style: "color: var(--text-muted); font-size: 11px;",
+                    "id: {tooltip_id}"
+                }
+            }
+        }
+    })
 }
 
 /// Build nested `TreeNode`s from a flat spec list, grouping by `component`.
@@ -171,61 +207,62 @@ pub fn SpecTree(props: SpecTreeProps) -> Element {
     let on_filter = props.on_filter_change.clone();
     let filter_val = props.filter.clone();
     let active_filters_closure = active_filters.clone();
+    let status = if let Some(err) = props.error.as_deref() {
+        Some(rsx! {
+            div {
+                style: "padding: 12px 14px; color: var(--level-error-text); font-size: 13px;",
+                "Failed to load specifications: {err}"
+            }
+        })
+    } else if !props.loading && nodes.is_empty() {
+        Some(rsx! {
+            div {
+                style: "padding: 12px 14px; color: var(--text-muted); font-size: 13px; line-height: 1.45;",
+                if props.filter.trim().is_empty() && props.state_filter.is_empty() {
+                    "No specifications are available yet."
+                } else {
+                    "No specifications match the current search or state filter."
+                }
+            }
+        })
+    } else {
+        None
+    };
 
     rsx! {
-        div {
-            style: "display: flex; flex-direction: column; height: 100%; overflow: hidden;",
-
-            // ── Search input ──────────────────────────────────────────────
-            div {
-                class: "sidebar-search",
-                input {
-                    r#type: "text",
-                    value: "{filter_val}",
-                    placeholder: "Search specs…",
-                    oninput: move |e| on_filter.call(e.value()),
+        ExplorerShell {
+            search: Some(rsx! {
+                SidebarSearch {
+                    value: filter_val,
+                    on_input: EventHandler::new(move |value: String| on_filter.call(value)),
+                    placeholder: "Search specs…".to_string(),
                 }
-            }
-
-            if let Some(err) = props.error.as_deref() {
-                div {
-                    style: "padding: 12px 14px; color: var(--level-error-text); font-size: 13px;",
-                    "Failed to load specifications: {err}"
-                }
-            } else if !props.loading && nodes.is_empty() {
-                div {
-                    style: "padding: 12px 14px; color: var(--text-muted); font-size: 13px; line-height: 1.45;",
-                    if props.filter.trim().is_empty() && props.state_filter.is_empty() {
-                        "No specifications are available yet."
-                    } else {
-                        "No specifications match the current search or state filter."
+            }),
+            status,
+            body: if props.loading || !nodes.is_empty() {
+                Some(rsx! {
+                    FileTree {
+                        nodes,
+                        sort_keys,
+                        filters: filter_defs,
+                        active_filters,
+                        loading: props.loading,
+                        selected_id: props.selected_id.clone(),
+                        initially_expanded: props.initially_expanded.clone(),
+                        on_select: move |id: String| {
+                            if !id.starts_with("__folder__") {
+                                on_select.call(id);
+                            }
+                        },
+                        on_filter: move |key: String| {
+                            let is_active = active_filters_closure.contains(&key);
+                            on_state_filter.call(if is_active { String::new() } else { key });
+                        },
                     }
-                }
-            }
-
-            // ── FileTree with state filters ───────────────────────────────
-            if props.loading || !nodes.is_empty() {
-                FileTree {
-                    nodes,
-                    sort_keys,
-                    filters: filter_defs,
-                    active_filters,
-                    loading: props.loading,
-                    selected_id: props.selected_id.clone(),
-                    initially_expanded: props.initially_expanded.clone(),
-                    on_select: move |id: String| {
-                        // Ignore clicks on folder pseudo-nodes.
-                        if !id.starts_with("__folder__") {
-                            on_select.call(id);
-                        }
-                    },
-                    on_filter: move |key: String| {
-                        // Toggle: if already active clear it, else set it.
-                        let is_active = active_filters_closure.contains(&key);
-                        on_state_filter.call(if is_active { String::new() } else { key });
-                    },
-                }
-            }
+                })
+            } else {
+                None
+            },
         }
     }
 }

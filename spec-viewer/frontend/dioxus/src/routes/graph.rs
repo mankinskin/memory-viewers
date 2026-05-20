@@ -1,9 +1,8 @@
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
-    Header,
-    HeaderActions,
     Layout,
     Overlay,
+    PageHeader,
     ThemeSettings,
 };
 
@@ -14,14 +13,15 @@ use super::Route;
 #[component]
 pub fn SpecGraphPage() -> Element {
     let nav = use_navigator();
+    let nav_home = nav.clone();
     let mut show_theme_settings = use_signal(|| false);
 
     rsx! {
         Layout {
             class: "spec-graph-shell".to_string(),
             header: rsx! {
-                Header {
-                    left: rsx! {
+                PageHeader {
+                    lead: Some(rsx! {
                         button {
                             class: "btn-back",
                             "data-testid": "spec-graph-back",
@@ -29,22 +29,16 @@ pub fn SpecGraphPage() -> Element {
                             onclick: move |_| nav.go_back(),
                             "\u{2190} Back"
                         }
-                        span { class: "header-icon", "\u{1F310}" }
-                        span { class: "header-title", "Spec Graph" }
-                    },
-                    right: rsx! {
-                        Link {
-                            to: Route::SpecListPage {},
-                            class: "btn-nav-link",
-                            "\u{1F4D0} Specs"
-                        }
-                        HeaderActions {
-                            on_theme_toggle: Some(EventHandler::new(move |_| {
-                                let next = !*show_theme_settings.read();
-                                show_theme_settings.set(next);
-                            })),
-                        }
-                    },
+                    }),
+                    icon: Some(rsx! { "\u{1F310}" }),
+                    title: Some("Spec Graph".to_string()),
+                    on_home: Some(EventHandler::new(move |_| {
+                        nav_home.push(Route::SpecListPage {});
+                    })),
+                    on_theme_toggle: Some(EventHandler::new(move |_| {
+                        let next = !*show_theme_settings.read();
+                        show_theme_settings.set(next);
+                    })),
                 }
             },
             div {

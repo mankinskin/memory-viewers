@@ -1,11 +1,11 @@
 use dioxus::prelude::*;
 
 use viewer_api_dioxus::{
-    is_mobile_sidebar_viewport,
     HamburgerIcon,
-    Header,
     Layout,
     LayoutMode,
+    Overlay,
+    PageHeader,
     Projection,
     Sidebar,
     ThemeSettings,
@@ -203,6 +203,7 @@ pub fn TicketListPage(workspace: String) -> Element {
         *sidebar_collapsed.read(),
     );
     let selected_ticket_ref = selected_ticket.read().clone();
+    let nav_home = nav.clone();
 
     rsx! {
         SearchBar {
@@ -214,8 +215,8 @@ pub fn TicketListPage(workspace: String) -> Element {
         }
         Layout {
             header: rsx! {
-                Header {
-                    left: rsx! {
+                PageHeader {
+                    lead: Some(rsx! {
                         button {
                             class: if sidebar_button_active { "btn btn-icon btn-active" } else { "btn btn-icon" },
                             aria_label: sidebar_button_label,
@@ -223,19 +224,16 @@ pub fn TicketListPage(workspace: String) -> Element {
                             onclick: move |_| toggle_sidebar_button(mobile_sidebar_open, sidebar_collapsed),
                             HamburgerIcon {}
                         }
-                        span { class: "header-icon", "🎫" }
-                        span { class: "header-title", "{workspace}" }
-                        span { class: "header-subtitle", "{workspace}" }
-                    },
-                    right: rsx! {
-                        button {
-                            class: "btn btn-icon",
-                            aria_label: "Settings",
-                            title: "Settings",
-                            onclick: move |_| show_theme_settings.set(!show_theme_settings()),
-                            "⚙"
-                        }
-                    },
+                    }),
+                    icon: Some(rsx! { "🎫" }),
+                    title: Some(workspace.clone()),
+                    on_home: Some(EventHandler::new(move |_| {
+                        nav_home.push(Route::TicketListRootPage {});
+                    })),
+                    on_theme_toggle: Some(EventHandler::new(move |_| {
+                        let next = !*show_theme_settings.read();
+                        show_theme_settings.set(next);
+                    })),
                 }
             },
             Sidebar {
@@ -307,15 +305,13 @@ pub fn TicketListPage(workspace: String) -> Element {
                 }
             }
         }
-        if *show_theme_settings.read() {
-            div {
-                style: "
-                    position: fixed; top: 48px; right: 16px; z-index: 200;
-                    max-height: calc(100vh - 64px); overflow-y: auto;
-                ",
-                ThemeSettings {
-                    on_close: move |_| show_theme_settings.set(false),
-                }
+        Overlay {
+            open: *show_theme_settings.read(),
+            on_close: move |_| show_theme_settings.set(false),
+            panel_class: "theme-settings-modal".to_string(),
+            aria_label: "Theme settings".to_string(),
+            ThemeSettings {
+                on_close: move |_| show_theme_settings.set(false),
             }
         }
         if !selected_ids.read().is_empty() {

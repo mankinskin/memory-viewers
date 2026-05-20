@@ -7,8 +7,7 @@ use viewer_api_dioxus::{
     CardGrid,
     CardSection,
     HamburgerIcon,
-    Header,
-    HeaderActions,
+    PageHeader,
     Sidebar,
 };
 
@@ -34,8 +33,8 @@ pub(super) fn render_spec_list_header(
     on_home: EventHandler<()>,
 ) -> Element {
     rsx! {
-        Header {
-            left: rsx! {
+        PageHeader {
+            lead: Some(rsx! {
                 button {
                     class: if sidebar_button_active { "btn btn-icon btn-active" } else { "btn btn-icon" },
                     aria_label: sidebar_button_label,
@@ -43,30 +42,28 @@ pub(super) fn render_spec_list_header(
                     onclick: move |_| toggle_sidebar(sidebar_collapsed, mobile_sidebar_open),
                     HamburgerIcon {}
                 }
-                span { class: "header-icon", "📐" }
-                span { class: "header-title", "Spec Viewer" }
-            },
-            right: rsx! {
+            }),
+            icon: Some(rsx! { "📐" }),
+            title: Some("Spec Viewer".to_string()),
+            right_prefix: Some(rsx! {
                 Link {
                     to: Route::SpecGraphPage {},
                     class: "btn-nav-link",
                     "🌐 Graph"
                 }
-                HeaderActions {
-                    on_home: Some(on_home),
-                    on_filter_toggle: Some(EventHandler::new(move |_| {
-                        let next = !*filter_panel_open.read();
-                        filter_panel_open.set(next);
-                    })),
-                    on_theme_toggle: Some(EventHandler::new(move |_| {
-                        let next = !*show_theme_settings.read();
-                        show_theme_settings.set(next);
-                    })),
-                    filter_active: *filter_panel_open.read(),
-                    has_active_filters: !filter.read().trim().is_empty()
-                        || !state_filter.read().is_empty(),
-                }
-            },
+            }),
+            on_home: Some(on_home),
+            on_filter_toggle: Some(EventHandler::new(move |_| {
+                let next = !*filter_panel_open.read();
+                filter_panel_open.set(next);
+            })),
+            on_theme_toggle: Some(EventHandler::new(move |_| {
+                let next = !*show_theme_settings.read();
+                show_theme_settings.set(next);
+            })),
+            filter_active: *filter_panel_open.read(),
+            has_active_filters: !filter.read().trim().is_empty()
+                || !state_filter.read().is_empty(),
         }
     }
 }

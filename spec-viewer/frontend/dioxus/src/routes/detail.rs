@@ -3,10 +3,9 @@ use viewer_api_dioxus::{
     BreadcrumbItem,
     Breadcrumbs,
     HamburgerIcon,
-    Header,
-    HeaderActions,
     Layout,
     Overlay,
+    PageHeader,
     ThemeSettings,
 };
 
@@ -56,6 +55,7 @@ pub fn SpecDetailPage(
 
     let nav_specs = nav.clone();
     let nav_graph = nav.clone();
+    let nav_home = nav.clone();
     let crumbs: Vec<BreadcrumbItem> = vec![
         BreadcrumbItem::link(
             "Specs",
@@ -102,8 +102,8 @@ pub fn SpecDetailPage(
     rsx! {
         Layout {
             header: rsx! {
-                Header {
-                    left: rsx! {
+                PageHeader {
+                    lead: Some(rsx! {
                         button {
                             class: if sidebar_button_active { "btn btn-icon btn-active" } else { "btn btn-icon" },
                             "data-testid": "spec-detail-spec-list-toggle",
@@ -112,29 +112,27 @@ pub fn SpecDetailPage(
                             onclick: move |_| toggle_sidebar(sidebar_collapsed, mobile_sidebar_open),
                             HamburgerIcon {}
                         }
+                    }),
+                    left_extra: Some(rsx! {
                         Breadcrumbs {
                             items: crumbs,
                             class: "spec-detail__breadcrumbs".to_string(),
                         }
-                    },
-                    right: rsx! {
-                        Link {
-                            to: Route::SpecListPage {},
-                            class: "btn-nav-link",
-                            "\u{1F4D0} Specs"
-                        }
+                    }),
+                    right_prefix: Some(rsx! {
                         Link {
                             to: Route::SpecGraphPage {},
                             class: "btn-nav-link",
                             "\u{1F310} Graph"
                         }
-                        HeaderActions {
-                            on_theme_toggle: Some(EventHandler::new(move |_| {
-                                let next = !*show_theme_settings.read();
-                                show_theme_settings.set(next);
-                            })),
-                        }
-                    },
+                    }),
+                    on_home: Some(EventHandler::new(move |_| {
+                        nav_home.push(Route::SpecListPage {});
+                    })),
+                    on_theme_toggle: Some(EventHandler::new(move |_| {
+                        let next = !*show_theme_settings.read();
+                        show_theme_settings.set(next);
+                    })),
                 }
             },
             {render_spec_list_sidebar(

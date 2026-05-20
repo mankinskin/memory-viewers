@@ -41,5 +41,19 @@ export function registerCommonViewerSuite(viewer: ViewerConfig): void {
         timeout: viewer.readyTimeout,
       });
     });
+
+    test('shared header actions render Home and Theme settings affordances', async ({ page }) => {
+      test.setTimeout(90_000);
+
+      await page.goto(viewer.url, { waitUntil: 'domcontentloaded' });
+      await expect(page.locator(viewer.readySelector).first()).toBeVisible({
+        timeout: viewer.readyTimeout,
+      });
+
+      await expect(page.getByRole('button', { name: 'Home' })).toBeVisible({
+        timeout: 10_000,
+      });
+      await expect(page.getByRole('button', { name: 'Theme settings' })).toBeVisible();
+    });
   });
 }

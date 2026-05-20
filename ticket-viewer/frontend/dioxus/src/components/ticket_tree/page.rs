@@ -4,7 +4,15 @@ use std::collections::{
 };
 
 use dioxus::prelude::*;
+use viewer_api_dioxus::{
+    ExplorerShell,
+    SidebarSearch,
+};
 
+use crate::search_syntax::{
+    SEARCH_INPUT_PLACEHOLDER,
+    SEARCH_SYNTAX_HINT,
+};
 use crate::types::TicketFileEntry;
 
 use super::{
@@ -48,43 +56,115 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
             .iter()
             .all(|ticket| props.selected_ids.contains(&ticket.id));
     let is_empty = props.tickets.is_empty();
-
-    rsx! {
-        {render_filter_controls(
-            props.clone(),
-            filter,
-            state_filter_val,
-            all_checked,
-            displayed_ticket_ids,
-            focused_ticket_id,
-        )}
-        if props.loading {
+    let displayed_ticket_ids_for_focus = displayed_ticket_ids.clone();
+    let displayed_ticket_ids_for_keydown = displayed_ticket_ids.clone();
+    let selected_id_for_focus = props.selected_id.clone();
+    let selected_id_for_keydown = props.selected_id.clone();
+    let on_filter_change = props.on_filter_change.clone();
+    let on_select_for_keydown = props.on_select.clone();
+    let search_tickets = props.tickets.clone();
+    let search_workspace = props.workspace.clone();
+    let status = if props.loading {
+        Some(rsx! {
             div {
                 class: "sidebar-loading",
                 "Loading tickets…"
             }
-        }
-        if let Some(ref error) = props.error {
+        })
+    } else if let Some(ref error) = props.error {
+        Some(rsx! {
             div {
                 style: "padding: 12px; color: var(--error); font-size: 12px;",
                 "Failed to load: {error}"
             }
-        }
-        if !props.loading {
-            if is_empty {
-                div {
-                    class: "sidebar-empty",
-                    "No tickets in this workspace."
-                }
+        })
+    } else if is_empty {
+        Some(rsx! {
+            div {
+                class: "sidebar-empty",
+                "No tickets in this workspace."
             }
-            {render_ticket_rows(
-                props,
-                sorted,
-                expanded_ids,
-                file_cache,
-                loading_files,
-                focused_ticket_id,
-            )}
+        })
+    } else {
+        None
+    };
+
+    rsx! {
+        ExplorerShell {
+            search: Some(rsx! {
+                SidebarSearch {
+                    value: filter,
+                    on_input: EventHandler::new(move |value: String| on_filter_change.call(value)),
+                    placeholder: SEARCH_INPUT_PLACEHOLDER.to_string(),
+                    hint: Some(SEARCH_SYNTAX_HINT.to_string()),
+                    input_testid: Some("ticket-tree-filter".to_string()),
+                    hint_testid: Some("ticket-tree-filter-hint".to_string()),
+                    on_focus: Some(EventHandler::new(move |_| {
+                        if let Some(ticket_id) = super::header::active_ticket_id(
+                            &displayed_ticket_ids_for_focus,
+                            focused_ticket_id,
+                            selected_id_for_focus.clone(),
+                        ) {
+                            focused_ticket_id.set(Some(ticket_id));
+                        }
+                    })),
+                    on_keydown: Some(EventHandler::new(move |event: KeyboardEvent| match event.key() {
+                        Key::ArrowDown => {
+                            event.prevent_default();
+                            super::header::move_ticket_focus(
+                                &displayed_ticket_ids_for_keydown,
+                                focused_ticket_id,
+                                selected_id_for_keydown.clone(),
+                                1,
+                            );
+                        },
+                        Key::ArrowUp => {
+                            event.prevent_default();
+                            super::header::move_ticket_focus(
+                                &displayed_ticket_ids_for_keydown,
+                                focused_ticket_id,
+                                selected_id_for_keydown.clone(),
+                                -1,
+                            );
+                        },
+                        Key::Enter => {
+                            if let Some(ticket_id) = super::header::active_ticket_id(
+                                &displayed_ticket_ids_for_keydown,
+                                focused_ticket_id,
+                                selected_id_for_keydown.clone(),
+                            ) {
+                                event.prevent_default();
+                                on_select_for_keydown.call(super::header::resolve_ticket_ref(
+                                    &search_tickets,
+                                    &search_workspace,
+                                    &ticket_id,
+                                ));
+                            }
+                        },
+                        _ => {},
+                    })),
+                }
+            }),
+            controls: Some(render_filter_controls(
+                props.clone(),
+                state_filter_val,
+                all_checked,
+            )),
+            status,
+            body: if !props.loading && !is_empty {
+                Some(rsx! {
+                    {render_ticket_rows(
+                        props,
+                        sorted,
+                        expanded_ids,
+                        file_cache,
+                        loading_files,
+                        focused_ticket_id,
+                    )}
+                })
+            } else {
+                None
+            },
         }
     }
 }
