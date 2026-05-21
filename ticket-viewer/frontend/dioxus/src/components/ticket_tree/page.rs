@@ -32,6 +32,11 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
         use_signal(HashMap::new);
     let loading_files: Signal<HashSet<String>> = use_signal(HashSet::new);
     let mut focused_ticket_id: Signal<Option<String>> = use_signal(|| None);
+    // Only set by keyboard navigation; the scroll effect subscribes to this
+    // rather than to `focused_ticket_id` so that data refreshes and focus
+    // initialisation never trigger a scroll jump.
+    let mut keyboard_scroll_request: Signal<Option<String>> =
+        use_signal(|| None);
     let sorted = sorted_tickets(props.tickets.clone(), &props.sort_key);
     let displayed_ticket_ids = sorted
         .iter()
@@ -54,7 +59,7 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
     }
     #[cfg(target_arch = "wasm32")]
     use_effect(move || {
-        let Some(ticket_id) = focused_ticket_id.read().clone() else {
+        let Some(ticket_id) = keyboard_scroll_request.read().clone() else {
             return;
         };
 
@@ -66,7 +71,9 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
             r#"button[data-testid="ticket-tree-ticket-{ticket_id}"]"#
         );
         if let Ok(Some(element)) = document.query_selector(&selector) {
-            element.scroll_into_view_with_bool(false);
+            let mut opts = web_sys::ScrollIntoViewOptions::new();
+            opts.block(web_sys::ScrollLogicalPosition::Nearest);
+            element.scroll_into_view_with_scroll_into_view_options(&opts);
         }
     });
     let all_checked = props.show_checkboxes
@@ -79,6 +86,7 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
     let displayed_ticket_ids_for_keydown = displayed_ticket_ids.clone();
     let selected_id_for_focus = props.selected_id.clone();
     let selected_id_for_keydown = props.selected_id.clone();
+    let mut keyboard_scroll_request_for_keydown = keyboard_scroll_request;
     let on_filter_change = props.on_filter_change.clone();
     let on_select_for_keydown = props.on_select.clone();
     let search_tickets = props.tickets.clone();
@@ -136,6 +144,8 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                                 selected_id_for_keydown.clone(),
                                 1,
                             );
+                            keyboard_scroll_request_for_keydown
+                                .set(focused_ticket_id.read().clone());
                         },
                         Key::ArrowUp => {
                             event.prevent_default();
@@ -145,6 +155,8 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
                                 selected_id_for_keydown.clone(),
                                 -1,
                             );
+                            keyboard_scroll_request_for_keydown
+                                .set(focused_ticket_id.read().clone());
                         },
                         Key::Enter => {
                             if let Some(ticket_id) = super::header::active_ticket_id(

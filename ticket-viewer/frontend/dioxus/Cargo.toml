@@ -85,6 +85,9 @@ web-sys = { version = "0.3", features = [
     "GpuCommandBuffer",
     "GpuRenderPassEncoder",
     "GpuRenderPassDescriptor",
+    # scrollIntoView({block: 'nearest'})
+    "ScrollIntoViewOptions",
+    "ScrollLogicalPosition",
 ] }
 
 # Serialization — matches the ticket-http REST responses
