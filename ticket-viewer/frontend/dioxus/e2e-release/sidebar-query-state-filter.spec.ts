@@ -40,6 +40,14 @@ function candidateWords(title: string | undefined): string[] {
     .filter((word) => word.length >= 4);
 }
 
+async function visibleTicketIds(page: Page): Promise<string[]> {
+  return await page.locator('button[data-testid^="ticket-tree-ticket-"]').evaluateAll((nodes) =>
+    nodes
+      .map((node) => node.getAttribute('data-testid') ?? '')
+      .map((testId) => testId.replace('ticket-tree-ticket-', '')),
+  );
+}
+
 async function resolveActiveWorkspace(page: Page): Promise<string> {
   const response = await page.request.get(`${TICKET_VIEWER_URL}/api/workspaces`);
   expect(response.ok(), 'workspace list request failed').toBe(true);
@@ -211,11 +219,165 @@ test.describe('ticket-viewer — sidebar query + state filter', () => {
     await filteredResponsePromise;
 
     await expect.poll(async () => {
-      const ids = await page.locator('button[data-testid^="ticket-tree-ticket-"]').evaluateAll((nodes) =>
-        nodes
-          .map((node) => node.getAttribute('data-testid') ?? '')
-          .map((testId) => testId.replace('ticket-tree-ticket-', '')),
+      const ids = await visibleTicketIds(page);
+      return ids.sort();
+    }).toEqual(expectedIds);
+  });
+
+  test('latest filtered error wins over a slower initial list success', async ({ page }) => {
+    test.setTimeout(120_000);
+
+    const activeWorkspace = await resolveActiveWorkspace(page);
+    let delayedInitialList = false;
+    const initialListResponsePromise = page.waitForResponse((response) => {
+      if (!response.ok()) {
+        return false;
+      }
+
+      const url = new URL(response.url());
+      return (
+        url.pathname === '/api/tickets' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
+        !url.searchParams.has('query') &&
+        !url.searchParams.has('state')
       );
+    });
+
+    await page.route('**/api/tickets?**', async (route) => {
+      const url = new URL(route.request().url());
+      const isInitialUnfilteredList =
+        !delayedInitialList &&
+        url.pathname === '/api/tickets' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
+        !url.searchParams.has('query') &&
+        !url.searchParams.has('state');
+
+      if (isInitialUnfilteredList) {
+        delayedInitialList = true;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await route.continue();
+        return;
+      }
+
+      const isFilteredReviewList =
+        url.pathname === '/api/tickets' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
+        url.searchParams.get('state') === 'in-review';
+
+      if (isFilteredReviewList) {
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'forced filtered failure' }),
+        });
+        return;
+      }
+
+      await route.continue();
+    });
+
+    await page.goto(`${TICKET_VIEWER_URL}/`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
+      state: 'visible',
+      timeout: TICKET_VIEWER.readyTimeout,
+    });
+
+    const filteredErrorPromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        response.status() === 500 &&
+        url.pathname === '/api/tickets' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
+        url.searchParams.get('state') === 'in-review'
+      );
+    });
+
+    const reviewChip = page.getByTestId('ticket-tree-state-chip-in-review');
+    await expect(reviewChip).toBeVisible();
+    await reviewChip.click();
+
+    await filteredErrorPromise;
+    await initialListResponsePromise;
+
+    await expect(page.getByText(/Failed to load:/)).toContainText('500');
+    await expect.poll(async () => await visibleTicketIds(page)).toEqual([]);
+  });
+
+  test('latest filtered success wins over a slower initial list error', async ({ page }) => {
+    test.setTimeout(120_000);
+
+    const activeWorkspace = await resolveActiveWorkspace(page);
+    const expectedItems = await fetchTickets(page, activeWorkspace, undefined, 'in-review');
+    const expectedIds = expectedItems.map((item) => item.id).sort();
+
+    let delayedInitialList = false;
+    const initialListErrorPromise = page.waitForResponse((response) => {
+      const url = new URL(response.url());
+      return (
+        response.status() === 500 &&
+        url.pathname === '/api/tickets' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
+        !url.searchParams.has('query') &&
+        !url.searchParams.has('state')
+      );
+    });
+
+    await page.route('**/api/tickets?**', async (route) => {
+      const url = new URL(route.request().url());
+      const isInitialUnfilteredList =
+        !delayedInitialList &&
+        url.pathname === '/api/tickets' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
+        !url.searchParams.has('query') &&
+        !url.searchParams.has('state');
+
+      if (isInitialUnfilteredList) {
+        delayedInitialList = true;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+        await route.fulfill({
+          status: 500,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'forced initial failure' }),
+        });
+        return;
+      }
+
+      await route.continue();
+    });
+
+    await page.goto(`${TICKET_VIEWER_URL}/`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
+      state: 'visible',
+      timeout: TICKET_VIEWER.readyTimeout,
+    });
+
+    const filteredResponsePromise = page.waitForResponse((response) => {
+      if (!response.ok()) {
+        return false;
+      }
+
+      const url = new URL(response.url());
+      return (
+        url.pathname === '/api/tickets' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
+        url.searchParams.get('state') === 'in-review'
+      );
+    });
+
+    const reviewChip = page.getByTestId('ticket-tree-state-chip-in-review');
+    await expect(reviewChip).toBeVisible();
+    await reviewChip.click();
+
+    await filteredResponsePromise;
+    await initialListErrorPromise;
+
+    await expect(page.getByText(/Failed to load:/)).toHaveCount(0);
+    await expect.poll(async () => {
+      const ids = await visibleTicketIds(page);
       return ids.sort();
     }).toEqual(expectedIds);
   });

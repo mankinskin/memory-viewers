@@ -1,12 +1,12 @@
 //! `use_sse` — Dioxus hook for live ticket updates via Server-Sent Events.
 //!
 //! Connects to `GET /api/stream?workspace={workspace}` and keeps the provided
-//! `tickets` [`Signal`] up-to-date with incoming events:
+//! list view authoritative under incoming events:
 //!
 //! | SSE event       | Action                                             |
 //! |-----------------|----------------------------------------------------|
-//! | `ticket.upsert` | Update state/title in-place or append a new entry. |
-//! | `ticket.delete` | Remove the entry by ID.                            |
+//! | `ticket.upsert` | Trigger a silent list refetch.                     |
+//! | `ticket.delete` | Trigger a silent list refetch.                     |
 //! | `snapshot.ready`| Trigger a background list refetch.                 |
 //! | `edge.*`        | Acknowledged, no ticket-list mutation.             |
 //! | `open`          | Reset backoff to the initial value.                |
@@ -26,10 +26,7 @@ use gloo_timers::callback::Timeout;
 use serde::Deserialize;
 use wasm_bindgen::JsCast;
 
-use crate::types::{
-    TicketRef,
-    TicketSummary,
-};
+use crate::types::TicketSummary;
 
 // ── SSE payload types (frontend deserialisation) ───────────────────────────
 
@@ -93,8 +90,7 @@ const BACKOFF_MAX_MS: u32 = 30_000;
 ///
 /// * `workspace` — name of the workspace to subscribe to (used as a query-
 ///   string parameter).
-/// * `tickets` — signal that holds the displayed ticket list; the hook mutates
-///   it in response to `ticket.upsert` and `ticket.delete` events.
+/// * `tickets` — signal that holds the displayed ticket list.
 /// * `refresh_counter` — monotonic signal incremented when the backend emits a
 ///   `snapshot.ready` heartbeat, allowing the list page to refetch from the
 ///   current filter state.
@@ -102,7 +98,7 @@ const BACKOFF_MAX_MS: u32 = 30_000;
 ///   current list stays visible during reconcile heartbeats.
 pub fn use_sse(
     workspace: String,
-    tickets: Signal<Vec<TicketSummary>>,
+    _tickets: Signal<Vec<TicketSummary>>,
     refresh_counter: Signal<u32>,
     silent_refresh: Signal<bool>,
 ) {
@@ -145,48 +141,31 @@ pub fn use_sse(
         };
 
         // ── ticket.upsert ──────────────────────────────────────────────────
-        // Update state/title in-place for known tickets, or append a minimal
-        // stub for tickets that arrived before the initial HTTP list completed.
-        let mut tix_up = tickets;
-        let workspace_for_upsert = workspace.clone();
+        // Refetch through the normal list request path so current query/state
+        // filters remain authoritative.
+        let mut refresh_upsert = refresh_counter;
+        let mut silent_upsert = silent_refresh;
         let l_upsert = EventListener::new(&es, "ticket.upsert", move |event| {
             let data = msg_data(event);
             match serde_json::from_str::<UpsertPayload>(&data) {
-                Ok(p) => tix_up.with_mut(|v| {
-                    if let Some(existing) =
-                        v.iter_mut().find(|t| t.id == p.ticket.id)
-                    {
-                        existing.state = p.ticket.state;
-                        if p.ticket.title.is_some() {
-                            existing.title = p.ticket.title;
-                        }
-                    } else {
-                        let ticket_id = p.ticket.id;
-                        v.push(TicketSummary {
-                            id: ticket_id.clone(),
-                            ticket_ref: TicketRef::new(
-                                workspace_for_upsert.clone(),
-                                ticket_id,
-                            ),
-                            title: p.ticket.title,
-                            state: p.ticket.state,
-                            ticket_type: None,
-                            created_at: String::new(),
-                            updated_at: String::new(),
-                            fields: serde_json::Value::Null,
-                        });
-                    }
-                }),
+                Ok(_payload) => {
+                    silent_upsert.set(true);
+                    refresh_upsert.with_mut(|value| *value += 1);
+                },
                 Err(e) => tracing::warn!("ticket.upsert parse error: {e}"),
             }
         });
 
         // ── ticket.delete ──────────────────────────────────────────────────
-        let mut tix_del = tickets;
+        let mut refresh_delete = refresh_counter;
+        let mut silent_delete = silent_refresh;
         let l_delete = EventListener::new(&es, "ticket.delete", move |event| {
             let data = msg_data(event);
             match serde_json::from_str::<DeletePayload>(&data) {
-                Ok(p) => tix_del.with_mut(|v| v.retain(|t| t.id != p.id)),
+                Ok(_payload) => {
+                    silent_delete.set(true);
+                    refresh_delete.with_mut(|value| *value += 1);
+                },
                 Err(e) => tracing::warn!("ticket.delete parse error: {e}"),
             }
         });
