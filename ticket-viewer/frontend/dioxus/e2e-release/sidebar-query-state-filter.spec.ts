@@ -9,6 +9,11 @@ interface TicketListItem {
   state?: string;
 }
 
+interface WorkspacesResponse {
+  active_workspace?: string;
+  workspaces?: Array<{ name: string }>;
+}
+
 interface QueryStateCandidate {
   query: string;
   state: string;
@@ -35,13 +40,23 @@ function candidateWords(title: string | undefined): string[] {
     .filter((word) => word.length >= 4);
 }
 
+async function resolveActiveWorkspace(page: Page): Promise<string> {
+  const response = await page.request.get(`${TICKET_VIEWER_URL}/api/workspaces`);
+  expect(response.ok(), 'workspace list request failed').toBe(true);
+  const body = (await response.json()) as WorkspacesResponse;
+  const workspace = body.active_workspace || body.workspaces?.[0]?.name;
+  expect(workspace, 'expected a concrete active workspace name').toBeTruthy();
+  return workspace!;
+}
+
 async function fetchTickets(
   page: Page,
+  workspace: string,
   query?: string,
   state?: string,
 ): Promise<TicketListItem[]> {
   const params = new URLSearchParams({
-    workspace: 'default',
+    workspace,
     limit: '200',
   });
   if (query) {
@@ -59,15 +74,18 @@ async function fetchTickets(
   return body?.items ?? [];
 }
 
-async function findQueryStateCandidate(page: Page): Promise<QueryStateCandidate> {
-  const items = await fetchTickets(page);
+async function findQueryStateCandidate(
+  page: Page,
+  workspace: string,
+): Promise<QueryStateCandidate> {
+  const items = await fetchTickets(page, workspace);
   for (const item of items) {
     if (!item.state || !(item.state in STATE_CHIP_BY_VALUE)) {
       continue;
     }
 
     for (const word of candidateWords(item.title)) {
-      const filtered = await fetchTickets(page, word, item.state);
+      const filtered = await fetchTickets(page, workspace, word, item.state);
       if (filtered.some((candidate) => candidate.id === item.id)) {
         return {
           query: word,
@@ -84,9 +102,10 @@ test.describe('ticket-viewer — sidebar query + state filter', () => {
   test('sidebar explorer keeps active state filter when filter text is non-empty', async ({ page }) => {
     test.setTimeout(120_000);
 
-    const candidate = await findQueryStateCandidate(page);
+    const activeWorkspace = await resolveActiveWorkspace(page);
+    const candidate = await findQueryStateCandidate(page, activeWorkspace);
 
-    await page.goto(`${TICKET_VIEWER_URL}/workspace/default`, {
+    await page.goto(`${TICKET_VIEWER_URL}/`, {
       waitUntil: 'domcontentloaded',
     });
     await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
@@ -109,7 +128,7 @@ test.describe('ticket-viewer — sidebar query + state filter', () => {
       const url = new URL(response.url());
       return (
         url.pathname === '/api/tickets' &&
-        url.searchParams.get('workspace') === 'default' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
         url.searchParams.get('query') === candidate.query &&
         url.searchParams.get('state') === candidate.state
       );
@@ -138,5 +157,66 @@ test.describe('ticket-viewer — sidebar query + state filter', () => {
     expect(expectedIds.length).toBeGreaterThan(0);
     expect(rowStates.length).toBeGreaterThan(0);
     expect([...rowStates].sort()).toEqual([...expectedStates].sort());
+  });
+
+  test('latest filtered response wins over a slower initial list response', async ({ page }) => {
+    test.setTimeout(120_000);
+
+    const activeWorkspace = await resolveActiveWorkspace(page);
+    const expectedItems = await fetchTickets(page, activeWorkspace, undefined, 'in-review');
+    const expectedIds = expectedItems.map((item) => item.id).sort();
+
+    let delayedInitialList = false;
+    await page.route('**/api/tickets?**', async (route) => {
+      const url = new URL(route.request().url());
+      const isInitialUnfilteredList =
+        !delayedInitialList &&
+        url.pathname === '/api/tickets' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
+        !url.searchParams.has('query') &&
+        !url.searchParams.has('state');
+
+      if (isInitialUnfilteredList) {
+        delayedInitialList = true;
+        await new Promise((resolve) => setTimeout(resolve, 1500));
+      }
+
+      await route.continue();
+    });
+
+    await page.goto(`${TICKET_VIEWER_URL}/`, {
+      waitUntil: 'domcontentloaded',
+    });
+    await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
+      state: 'visible',
+      timeout: TICKET_VIEWER.readyTimeout,
+    });
+
+    const filteredResponsePromise = page.waitForResponse((response) => {
+      if (!response.ok()) {
+        return false;
+      }
+
+      const url = new URL(response.url());
+      return (
+        url.pathname === '/api/tickets' &&
+        url.searchParams.get('workspace') === activeWorkspace &&
+        url.searchParams.get('state') === 'in-review'
+      );
+    });
+
+    const reviewChip = page.getByTestId('ticket-tree-state-chip-in-review');
+    await expect(reviewChip).toBeVisible();
+    await reviewChip.click();
+    await filteredResponsePromise;
+
+    await expect.poll(async () => {
+      const ids = await page.locator('button[data-testid^="ticket-tree-ticket-"]').evaluateAll((nodes) =>
+        nodes
+          .map((node) => node.getAttribute('data-testid') ?? '')
+          .map((testId) => testId.replace('ticket-tree-ticket-', '')),
+      );
+      return ids.sort();
+    }).toEqual(expectedIds);
   });
 });

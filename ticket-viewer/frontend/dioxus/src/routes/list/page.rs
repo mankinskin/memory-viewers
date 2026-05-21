@@ -81,6 +81,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut show_checkboxes: Signal<bool> = use_signal(|| false);
     let mut refresh_counter: Signal<u32> = use_signal(|| 0);
     let mut silent_refresh: Signal<bool> = use_signal(|| false);
+    let mut list_request_seq: Signal<u64> = use_signal(|| 0);
     let mut view_mode: Signal<String> = use_signal(|| "split".to_string());
     let mut graph_layout_mode: Signal<LayoutMode> =
         use_signal(LayoutMode::default);
@@ -107,6 +108,10 @@ pub fn TicketListPage(workspace: String) -> Element {
             let query = filter.read().clone();
             let state = state_filter.read().clone();
             let _refresh = *refresh_counter.read();
+            let request_seq = list_request_seq.with_mut(|value| {
+                *value += 1;
+                *value
+            });
             let is_silent_refresh = *silent_refresh.peek();
             if !is_silent_refresh {
                 loading.set(true);
@@ -114,6 +119,7 @@ pub fn TicketListPage(workspace: String) -> Element {
             list_error.set(None);
             spawn(async move {
                 let mut silent_refresh = silent_refresh;
+                let list_request_seq = list_request_seq;
                 let backend = HttpTicketBackend::new(None);
                 let query = if query.trim().is_empty() {
                     None
@@ -131,11 +137,17 @@ pub fn TicketListPage(workspace: String) -> Element {
                     .await
                 {
                     Ok(response) => {
+                        if *list_request_seq.peek() != request_seq {
+                            return;
+                        }
                         tickets.set(response.items);
                         loading.set(false);
                         silent_refresh.set(false);
                     },
                     Err(error) => {
+                        if *list_request_seq.peek() != request_seq {
+                            return;
+                        }
                         list_error.set(Some(error));
                         loading.set(false);
                         silent_refresh.set(false);

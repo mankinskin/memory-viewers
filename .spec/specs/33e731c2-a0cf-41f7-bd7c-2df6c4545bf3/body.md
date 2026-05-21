@@ -58,6 +58,7 @@ When quick-search is open:
 
 - The sidebar can show tickets from multiple workflow states at the same time.
 - A query combined with selected states only returns tickets that match the query and at least one selected state.
+- If multiple `/api/tickets` requests overlap, only the newest request may update the visible sidebar list, loading state, and error state.
 - A unique phrase that appears only in a ticket description/body is discoverable from the sidebar query and the quick-search overlay.
 - A partial-word substring query such as `cracker` surfaces tickets containing `Firecracker` in the title or description/body.
 - A `title:` predicate such as `title:cracker` surfaces tickets containing `Firecracker` in the title without relying on description/body matches.
@@ -77,8 +78,9 @@ When quick-search is open:
 ## Traceability
 
 - Ticket: `.ticket/tickets/fcced2f3-c32c-4533-9743-56543f428222`
+- Related ticket: `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/.ticket/tickets/02723a9b-23ff-47b1-8306-0480be087ddd`
 - Related ticket id: `b00b945b-045f-4124-9c69-ea15346b144f`
-- Viewer implementation: `memory-viewers/ticket-viewer/frontend/dioxus/src/search_syntax.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/src/components/search/page.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_tree/header.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/panels.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/mixed-workspace-root-route.spec.ts`
+- Viewer implementation: `memory-viewers/ticket-viewer/frontend/dioxus/src/search_syntax.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/src/components/search/page.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_tree/header.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/page.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/panels.rs`, `memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/mixed-workspace-root-route.spec.ts`, `memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/sidebar-query-state-filter.spec.ts`
 - Viewer docs: `memory-viewers/ticket-viewer/frontend/dioxus/src/components/search.rs`
 - Viewer validation passed:
 	- `cargo check --manifest-path memory-viewers/ticket-viewer/frontend/dioxus/Cargo.toml --target wasm32-unknown-unknown`
@@ -87,6 +89,7 @@ When quick-search is open:
 	- `npm run test:e2e:release -- keyboard-navigation.spec.ts -g "sidebar filter keeps focus|documents supported syntax"`
 	- `npm run test:e2e:release -- keyboard-navigation.spec.ts -g "documents supported syntax|surfaces at least nine results"`
 	- `npm run test:e2e:release -- keyboard-navigation.spec.ts -g "matches partial-word substrings|documents supported syntax|surfaces at least nine results"`
+	- `cd memory-viewers/ticket-viewer/frontend/dioxus && npx playwright test ./e2e-release/sidebar-query-state-filter.spec.ts -c playwright.release.config.ts`
 	- `viewer-ctl prepare ticket-viewer && cargo build -p ticket-viewer --release && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- mixed-workspace-root-route.spec.ts -g "swaps content panel body when clicking different ticket rows"`
 	- Headed Edge visual verification at `1440x900` against the managed `ticket-viewer`: clicked two sidebar ticket rows and confirmed the content panel rendered different description bodies for each selection.
 - Viewer validation blocked by an existing unrelated failure in `npm run test:e2e:release -- keyboard-navigation.spec.ts`: `quick-search keeps input focus while arrows move the active result and Enter opens it` still fails because the selected sidebar ticket is not found after opening a search result.
