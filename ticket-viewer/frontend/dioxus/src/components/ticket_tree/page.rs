@@ -52,6 +52,23 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
             }
         });
     }
+    #[cfg(target_arch = "wasm32")]
+    use_effect(move || {
+        let Some(ticket_id) = focused_ticket_id.read().clone() else {
+            return;
+        };
+
+        let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+            return;
+        };
+
+        let selector = format!(
+            r#"button[data-testid="ticket-tree-ticket-{ticket_id}"]"#
+        );
+        if let Ok(Some(element)) = document.query_selector(&selector) {
+            element.scroll_into_view_with_bool(false);
+        }
+    });
     let all_checked = props.show_checkboxes
         && !sorted.is_empty()
         && sorted
@@ -155,14 +172,21 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
             status,
             body: if !props.loading && !is_empty {
                 Some(rsx! {
-                    {render_ticket_rows(
-                        props,
-                        sorted,
-                        expanded_ids,
-                        file_cache,
-                        loading_files,
-                        focused_ticket_id,
-                    )}
+                    div {
+                        class: "file-tree ticket-tree-file-tree",
+                        div {
+                            class: "tree-view ticket-tree-scroll-region",
+                            "data-testid": "ticket-tree-scroll-region",
+                            {render_ticket_rows(
+                                props,
+                                sorted,
+                                expanded_ids,
+                                file_cache,
+                                loading_files,
+                                focused_ticket_id,
+                            )}
+                        }
+                    }
                 })
             } else {
                 None

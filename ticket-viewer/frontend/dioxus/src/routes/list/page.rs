@@ -216,7 +216,6 @@ pub fn TicketListPage(workspace: String) -> Element {
         *sidebar_collapsed.read(),
     );
     let selected_ticket_ref = selected_ticket.read().clone();
-    let nav_home = nav.clone();
 
     rsx! {
         SearchBar {
@@ -240,9 +239,6 @@ pub fn TicketListPage(workspace: String) -> Element {
                     }),
                     icon: Some(rsx! { "🎫" }),
                     title: Some(workspace.clone()),
-                    on_home: Some(EventHandler::new(move |_| {
-                        nav_home.push(Route::TicketListRootPage {});
-                    })),
                     on_theme_toggle: Some(EventHandler::new(move |_| {
                         let next = !*show_theme_settings.read();
                         show_theme_settings.set(next);

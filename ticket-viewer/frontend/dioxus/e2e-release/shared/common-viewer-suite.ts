@@ -42,7 +42,7 @@ export function registerCommonViewerSuite(viewer: ViewerConfig): void {
       });
     });
 
-    test('shared header actions render Home and Theme settings affordances', async ({ page }) => {
+    test('root-route header renders Theme settings without a redundant Home action', async ({ page }) => {
       test.setTimeout(90_000);
 
       await page.goto(viewer.url, { waitUntil: 'domcontentloaded' });
@@ -50,10 +50,8 @@ export function registerCommonViewerSuite(viewer: ViewerConfig): void {
         timeout: viewer.readyTimeout,
       });
 
-      await expect(page.getByRole('button', { name: 'Home' })).toBeVisible({
-        timeout: 10_000,
-      });
       await expect(page.getByRole('button', { name: 'Theme settings' })).toBeVisible();
+      await expect(page.getByRole('button', { name: 'Home' })).toHaveCount(0);
     });
   });
 }

@@ -1,11 +1,178 @@
 import { expect, test, type Page } from '@playwright/test';
+import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import { promisify } from 'node:util';
+
 import { TICKET_VIEWER } from './shared/viewers';
 
+const execFileAsync = promisify(execFile);
+const repoRoot = path.resolve(__dirname, '../../../../..');
+const ticketCli = path.join(repoRoot, 'target', 'debug', 'ticket.exe');
 const TICKET_VIEWER_URL = process.env.TICKET_VIEWER_URL ?? TICKET_VIEWER.url;
 
 interface TicketListItem {
   id: string;
   title?: string;
+}
+
+interface JsonEnvelope<T> {
+  payload: T;
+}
+
+interface CreatePayload {
+  id: string;
+}
+
+interface SeededScrollFixture {
+  tempDir: string;
+  url: string;
+  viewer: ChildProcessWithoutNullStreams;
+}
+
+async function resolveTicketViewerBin(): Promise<string> {
+  const candidates = [
+    process.env.TICKET_VIEWER_BIN,
+    path.join(repoRoot, 'target', 'release', 'ticket-viewer.exe'),
+    process.env.USERPROFILE
+      ? path.join(process.env.USERPROFILE, '.cargo', 'bin', 'ticket-viewer.exe')
+      : undefined,
+  ].filter((candidate): candidate is string => Boolean(candidate));
+
+  for (const candidate of candidates) {
+    try {
+      await fs.access(candidate);
+      return candidate;
+    } catch {
+      // Try the next candidate.
+    }
+  }
+
+  throw new Error('Could not locate ticket-viewer.exe for seeded sidebar-scroll validation.');
+}
+
+async function runTicketCli<T>(args: string[], cwd = repoRoot): Promise<T> {
+  const { stdout } = await execFileAsync(ticketCli, args, {
+    cwd,
+    windowsHide: true,
+  });
+  const envelope = JSON.parse(stdout) as JsonEnvelope<T>;
+  return envelope.payload;
+}
+
+async function waitForViewer(url: string): Promise<void> {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    try {
+      const response = await fetch(`${url}/api/workspaces`);
+      if (response.ok) {
+        return;
+      }
+    } catch {
+      // Viewer is still starting.
+    }
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  throw new Error(`Timed out waiting for seeded ticket-viewer at ${url}`);
+}
+
+async function startSeededViewer(
+  indexRoot: string,
+): Promise<{ url: string; viewer: ChildProcessWithoutNullStreams }> {
+  const ticketViewerBin = await resolveTicketViewerBin();
+
+  return await new Promise((resolve, reject) => {
+    const viewer = spawn(ticketViewerBin, ['--port', '0', '--index-root', indexRoot], {
+      cwd: repoRoot,
+      stdio: ['ignore', 'pipe', 'pipe'],
+      windowsHide: true,
+    });
+
+    let settled = false;
+    let output = '';
+    const timeout = setTimeout(() => {
+      if (!settled) {
+        viewer.kill();
+        reject(new Error(`Timed out waiting for ticket-viewer port announcement. Output:\n${output}`));
+      }
+    }, 60_000);
+
+    const onData = async (chunk: Buffer) => {
+      output += chunk.toString();
+      const match = output.match(/TICKET_VIEWER_PORT=(\d+)/);
+      if (!match || settled) {
+        return;
+      }
+
+      settled = true;
+      clearTimeout(timeout);
+      const url = `http://127.0.0.1:${match[1]}`;
+      try {
+        await waitForViewer(url);
+        resolve({ url, viewer });
+      } catch (error) {
+        viewer.kill();
+        reject(error);
+      }
+    };
+
+    viewer.stdout.on('data', (chunk) => {
+      void onData(chunk);
+    });
+    viewer.stderr.on('data', (chunk) => {
+      output += chunk.toString();
+    });
+    viewer.on('exit', (code) => {
+      if (!settled) {
+        clearTimeout(timeout);
+        reject(new Error(`ticket-viewer exited before startup completed (code ${code}). Output:\n${output}`));
+      }
+    });
+  });
+}
+
+async function stopSeededViewer(viewer: ChildProcessWithoutNullStreams): Promise<void> {
+  if (viewer.exitCode !== null) {
+    return;
+  }
+
+  viewer.kill();
+  await new Promise<void>((resolve) => {
+    viewer.once('exit', () => resolve());
+    setTimeout(resolve, 5_000);
+  });
+}
+
+async function seedScrollableWorkspaceFixture(
+  ticketCount = 36,
+): Promise<SeededScrollFixture> {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ticket-viewer-scroll-'));
+  const indexRoot = path.join(tempDir, 'workspace');
+
+  await fs.mkdir(indexRoot, { recursive: true });
+  await runTicketCli<unknown>(['init', '--json'], indexRoot);
+
+  for (let index = 0; index < ticketCount; index += 1) {
+    await runTicketCli<CreatePayload>([
+      'create',
+      '--json',
+      '--type',
+      'tracker-improvement',
+      '--title',
+      `Scroll seed ticket ${String(index + 1).padStart(2, '0')}`,
+    ], indexRoot);
+  }
+
+  await runTicketCli<unknown>(['scan', '--json'], indexRoot);
+  const { url, viewer } = await startSeededViewer(indexRoot);
+
+  return {
+    tempDir,
+    url,
+    viewer,
+  };
 }
 
 function candidateWords(title: string | undefined): string[] {
@@ -20,10 +187,14 @@ function candidateWords(title: string | undefined): string[] {
 }
 
 async function gotoWorkspace(page: Page): Promise<void> {
+  await gotoWorkspaceAt(page, TICKET_VIEWER_URL);
+}
+
+async function gotoWorkspaceAt(page: Page, viewerUrl: string): Promise<void> {
   await page.addInitScript(() => {
     localStorage.removeItem('ticket-viewer:default:ui');
   });
-  await page.goto(`${TICKET_VIEWER_URL}/workspace/default`, {
+  await page.goto(`${viewerUrl}/workspace/default`, {
     waitUntil: 'domcontentloaded',
   });
   await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
@@ -50,6 +221,53 @@ async function activeSidebarTicketId(page: Page): Promise<string | null> {
 
   const testId = await active.getAttribute('data-testid');
   return testId?.replace('ticket-tree-ticket-', '') ?? null;
+}
+
+async function sidebarScrollMetrics(
+  page: Page,
+): Promise<{ clientHeight: number; scrollHeight: number; scrollTop: number }> {
+  return page.getByTestId('ticket-tree-scroll-region').evaluate((node) => {
+    const element = node as HTMLElement;
+    return {
+      clientHeight: element.clientHeight,
+      scrollHeight: element.scrollHeight,
+      scrollTop: element.scrollTop,
+    };
+  });
+}
+
+async function viewportSidebarTicketIds(page: Page): Promise<string[]> {
+  return page.getByTestId('ticket-tree-scroll-region').evaluate((node) => {
+    const container = node as HTMLElement;
+    const containerRect = container.getBoundingClientRect();
+
+    return Array.from(
+      container.querySelectorAll('button[data-testid^="ticket-tree-ticket-"]'),
+    )
+      .filter((candidate) => {
+        const rect = (candidate as HTMLElement).getBoundingClientRect();
+        return rect.bottom > containerRect.top && rect.top < containerRect.bottom;
+      })
+      .map((candidate) => candidate.getAttribute('data-testid') ?? '')
+      .map((testId) => testId.replace('ticket-tree-ticket-', ''));
+  });
+}
+
+async function activeSidebarTicketIsVisible(page: Page): Promise<boolean> {
+  return page.getByTestId('ticket-tree-scroll-region').evaluate((node) => {
+    const container = node as HTMLElement;
+    const containerRect = container.getBoundingClientRect();
+    const active = container.querySelector(
+      'button[data-testid^="ticket-tree-ticket-"][aria-selected="true"]',
+    ) as HTMLElement | null;
+
+    if (!active) {
+      return false;
+    }
+
+    const rect = active.getBoundingClientRect();
+    return rect.top >= containerRect.top && rect.bottom <= containerRect.bottom;
+  });
 }
 
 async function visibleSearchResultIds(page: Page): Promise<string[]> {
@@ -164,6 +382,70 @@ async function findSubstringSearchCandidate(
 }
 
 test.describe('ticket-viewer — keyboard navigation', () => {
+  test('sidebar tree scrolls to deep tickets and keeps the keyboard-active row visible', async ({ page }) => {
+    test.setTimeout(180_000);
+
+    const fixture = await seedScrollableWorkspaceFixture();
+    try {
+      await page.addInitScript(() => {
+        localStorage.removeItem('ticket-viewer:default:ui');
+      });
+      await page.goto(fixture.url, { waitUntil: 'domcontentloaded' });
+      await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
+        state: 'visible',
+        timeout: TICKET_VIEWER.readyTimeout,
+      });
+
+      await expect.poll(async () => (await visibleSidebarTicketIds(page)).length).toBeGreaterThan(20);
+
+      const scrollRegion = page.getByTestId('ticket-tree-scroll-region');
+      await expect(scrollRegion).toBeVisible();
+
+      const initialMetrics = await sidebarScrollMetrics(page);
+      expect(initialMetrics.scrollHeight).toBeGreaterThan(initialMetrics.clientHeight);
+
+      const initialVisibleIds = await viewportSidebarTicketIds(page);
+      expect(initialVisibleIds.length).toBeGreaterThan(0);
+
+      await scrollRegion.evaluate((node) => {
+        const element = node as HTMLElement;
+        element.scrollTop = element.scrollHeight;
+      });
+
+      await expect.poll(async () => (await sidebarScrollMetrics(page)).scrollTop).toBeGreaterThan(0);
+
+      const deepVisibleIds = await viewportSidebarTicketIds(page);
+      expect(deepVisibleIds.length).toBeGreaterThan(0);
+      expect(deepVisibleIds).not.toEqual(initialVisibleIds);
+
+      const deepId = deepVisibleIds[deepVisibleIds.length - 1];
+      await page.getByTestId(`ticket-tree-ticket-${deepId}`).click();
+      await expect(page.getByTestId(`ticket-tree-ticket-${deepId}`)).toHaveAttribute(
+        'data-selected',
+        'true',
+      );
+
+      await scrollRegion.evaluate((node) => {
+        (node as HTMLElement).scrollTop = 0;
+      });
+      await expect.poll(async () => (await sidebarScrollMetrics(page)).scrollTop).toBe(0);
+
+      const filterInput = page.getByTestId('ticket-tree-filter');
+      await filterInput.click();
+      await expect(filterInput).toBeFocused();
+
+      for (let i = 0; i < 30; i += 1) {
+        await page.keyboard.press('ArrowDown');
+      }
+
+      await expect.poll(async () => (await sidebarScrollMetrics(page)).scrollTop).toBeGreaterThan(0);
+      await expect.poll(async () => activeSidebarTicketIsVisible(page)).toBe(true);
+    } finally {
+      await stopSeededViewer(fixture.viewer);
+      await fs.rm(fixture.tempDir, { recursive: true, force: true });
+    }
+  });
+
   test('sidebar filter keeps focus while arrows move the active ticket and Enter selects it', async ({ page }) => {
     await gotoWorkspace(page);
 

@@ -15,14 +15,13 @@ export function registerDioxusThemeSuite(viewer: ViewerConfig): void {
       await expect(page.locator('#webgpu-canvas')).toBeAttached({ timeout: 5_000 });
     });
 
-    test('theme settings button opens and closes the theme settings panel', async ({ page }) => {
+    test('theme settings palette button opens and closes the theme settings panel', async ({ page }) => {
       test.setTimeout(90_000);
 
       await gotoAndWaitForViewer(page, viewer);
 
       const themeBtn = page.getByRole('button', { name: 'Theme settings' });
       await expect(themeBtn).toBeVisible({ timeout: 30_000 });
-      await expect(page.getByRole('button', { name: 'Home' })).toBeVisible();
 
       const panel = page.locator('.theme-settings');
       await expect(panel).not.toBeVisible();
