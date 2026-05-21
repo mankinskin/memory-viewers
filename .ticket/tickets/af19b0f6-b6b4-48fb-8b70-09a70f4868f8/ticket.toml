@@ -4,6 +4,7 @@ title = "Port: TicketContent viewer — Markdown + TOML tabs"
 state = "done"
 acceptance_criteria = "Two-tab interface: description.md rendered as Markdown + TOML tab showing ticket fields as dynamically generated TOML (generated from in-memory ticket struct, not raw file); Markdown rendering via pulldown-cmark+syntect; TOML tab content mirrors the current live field state (useful for copy-paste or debugging); loading/error states for both tabs; code syntax highlighting in Markdown code blocks"
 component = "ticket-viewer"
+depends_on = ["44d22e8f-bdc5-4268-b678-023dc0154c0f", "7330aa36-102d-452c-b61d-6f4c8651b422"]
 priority = "high"
 risk_level = "medium"
 type = "tracker-improvement"

@@ -4,6 +4,7 @@ title = "Composite: Ticket-Viewer Feature Bundle (sorting, 3D graph, themes)"
 state = "done"
 acceptance_criteria = "1) FileTree supports generic sorting with header; ticket-viewer sorts by last-modified/created/title. 2) WgpuOverlay+effects extracted to viewer-api; ticket-viewer renders dependency graph with GPU pipeline. 3) Theme/effects system shared; ticket-viewer has theme presets and effect controls."
 component = "ticket-viewer"
+depends_on = ["02dea1fa-828e-4173-aed3-7a0e654e9d81", "08e3f042-f690-4d0e-907a-b4ffb9508e50", "12d3c38b-0172-49a3-9e42-ba2a5a9b8eb4", "1789cdfa-cd7e-45c4-a683-815b80c39970", "44d22e8f-bdc5-4268-b678-023dc0154c0f", "4e2b2b0b-9f56-4786-991c-8f10e653f4c3", "4f399974-0ad6-4da6-848a-954cccea4943", "80631f3c-4a75-491e-876a-8bf2a5e0ab4f", "d7971816-6f84-419e-abd8-0f84d5f7b82f", "d83f8e52-090e-42d7-9fcf-f389afdbb90c"]
 risk_level = "high"
 type = "tracker-improvement"
 workflow_stage = "plan"

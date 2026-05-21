@@ -3,6 +3,7 @@ created_at = "2026-05-02T21:37:47.871258700+00:00"
 title = "Epic: ticket-viewer UI polish — theme consistency, transparent buttons, shared crates, tiling panels"
 state = "new"
 component = "ticket-viewer"
+depends_on = ["01932eb7-54e5-441b-87bc-db3013a0882c", "0b7da330-a38d-49e5-853c-cf1d40633b6f", "15ee34c6-60d9-487a-aba0-cffeb435c031", "19383fed-b739-4d10-b097-cf09a616348e", "2b3a6e2e-4911-4b33-a3a9-9ace11f26637", "367335ee-22bd-4cde-aa6a-312e80702c19", "3e069173-179f-4d4c-97bd-ecade44956f1", "3e79be12-cf02-4976-9d66-23cafb3276eb", "4a228c24-d466-4782-9160-c492f727007a", "4f399974-0ad6-4da6-848a-954cccea4943", "80b4b77f-3fd6-4fab-98ab-028c6f6d6ef6", "8672684c-da0a-4e45-9b7d-0ce6c6d4182a", "8ea2d687-ca80-4631-9a9b-583bed22c4ca", "92964ada-4ab5-4fe1-ab29-5bfd55583ad2", "9d0c7931-3fab-4176-a209-d1b4dafc904c", "a4d0f88f-8b04-48b4-afae-7d16566997ae", "a889ec06-62f0-4933-a313-c74eb0c896ce", "af19b0f6-b6b4-48fb-8b70-09a70f4868f8", "b21604c1-cefe-4479-ae48-b56c9a985dd0", "b594864a-008c-423d-bf86-df940ed9dc54", "b8ae615d-ea03-4d63-bcce-01ab0b0942b3", "c2f04936-8871-4ee6-9b08-febe671fba2f", "dc83b7b4-4b0f-4732-9163-488ef0c6bcc4", "dd80a182-8d0d-4439-bb59-668b9e6a5672", "e14f893f-042d-45cc-b748-f48860a640c5", "f00204fc-f33f-4cd6-9b5f-395071f4e118", "f121b24b-61b0-41b4-9567-8ffc2417d7cb"]
 priority = "high"
 risk_level = "medium"
 type = "tracker-improvement"

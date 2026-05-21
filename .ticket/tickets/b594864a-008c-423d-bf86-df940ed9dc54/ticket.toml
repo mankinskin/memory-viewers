@@ -4,6 +4,7 @@ title = "Impl: state styling baseline and per-workspace UI state persistence"
 state = "done"
 acceptance_criteria = "Distinct styles for open/in-progress/review/validating/blocked/done and persisted filters/layout per workspace"
 component = "ticket-viewer"
+depends_on = ["02dea1fa-828e-4173-aed3-7a0e654e9d81", "08e3f042-f690-4d0e-907a-b4ffb9508e50"]
 execution_wave = "2"
 interview_file_type = "interview"
 interview_files = { answers = "assets/interviews/answers.md", questions = "assets/interviews/questions.md" }

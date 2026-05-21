@@ -4,6 +4,7 @@ title = "Port: Dependency graph — DOM Element Graph via HypergraphView pipelin
 state = "done"
 acceptance_criteria = "Port the DOM Element Graph from log-viewer HypergraphView pipeline to ticket-viewer; ticket nodes rendered as real DOM elements (HTML/CSS TicketCard components) positioned by force-directed or hierarchical layout algorithm; edges drawn as WebGPU canvas lines connecting DOM element anchor points (not SVG shapes); interactive: click node to open ticket, drag to reposition, pan/zoom via canvas transform; GPU compositing layer consistent with WgpuOverlay architecture (GPU canvas behind DOM); state-colored node borders; layout recalculates on edge changes via SSE; reference: log-viewer HypergraphView is the most mature implementation — study its DOM-to-GPU pipeline and layout engine; this replaces the cancelled SVG fallback — there is no SVG-based dependency graph. NOTE: SVG graphs are reserved for inline markdown rendering as machine-readable visual glyphs."
 component = "ticket-viewer"
+depends_on = ["44d22e8f-bdc5-4268-b678-023dc0154c0f"]
 priority = "critical"
 risk_level = "high"
 type = "tracker-improvement"

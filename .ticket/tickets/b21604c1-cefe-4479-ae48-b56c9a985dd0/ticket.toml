@@ -4,6 +4,7 @@ title = "Feature: Batch operations — multi-select, queue, bulk apply, filter-b
 state = "done"
 acceptance_criteria = "Multi-select via checkboxes in TicketTree; batch action bar with bulk state transition, field update, close/cancel; queue model with sequential apply and progress indicator; filter-result bulk updates; transactional batch via ticket-api batch command; optimistic UI with per-ticket status feedback"
 component = "ticket-viewer"
+depends_on = ["3e79be12-cf02-4976-9d66-23cafb3276eb", "8034efd8-e165-4798-afe1-3445026345d9"]
 priority = "high"
 risk_level = "medium"
 type = "tracker-improvement"

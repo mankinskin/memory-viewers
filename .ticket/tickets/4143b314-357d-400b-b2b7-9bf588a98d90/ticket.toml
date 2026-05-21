@@ -4,6 +4,7 @@ title = "Feature: State transition UI — visual state machine with advance/undo
 state = "done"
 acceptance_criteria = "Visual state badge showing current state; dropdown or button row showing valid next transitions from schema; click advances state via PATCH /api/tickets/{id}; undo button reverts last transition; required_states constraint displayed visually (e.g. grayed-out close button with tooltip when required states not yet visited); error display when server rejects transition; schema-driven (reads allowed transitions from schema endpoint); optimistic update with gate per interview decision"
 component = "ticket-viewer"
+depends_on = ["189a6068-7ccc-4daf-808e-6b0b82e97ef5", "69abd1c7-15a9-4d56-8156-0f09ff90783f"]
 priority = "high"
 risk_level = "medium"
 type = "tracker-improvement"

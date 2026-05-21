@@ -4,6 +4,7 @@ title = "Design: ticket-viewer UX wireframes + interaction spec"
 state = "done"
 acceptance_criteria = "Wireframes for tree/file/graph views, workspace switch UX, state styling baseline, and node interaction flows approved"
 component = "ticket-viewer"
+depends_on = ["91e22471-4895-4fcf-bab2-63efd7d9262d"]
 design_status = "review_ready"
 doc_category = "design"
 execution_wave = "0"

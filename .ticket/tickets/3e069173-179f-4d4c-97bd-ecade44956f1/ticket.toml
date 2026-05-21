@@ -4,6 +4,7 @@ title = "Feature: Ticket creation form with type selection and required fields"
 state = "done"
 acceptance_criteria = "New ticket dialog/panel with type selector populated from schema endpoint (189a6068 must be complete first); dynamic required and optional field inputs rendered from schema definition; title, description (markdown textarea from 9d0c7931 component), priority, component fields; auto-save draft to localStorage while composing (cleared on submit/cancel); POST to /api/tickets on submit; validation errors shown inline; redirect to new ticket on success; template support: pre-fill from existing ticket or predefined templates"
 component = "ticket-viewer"
+depends_on = ["189a6068-7ccc-4daf-808e-6b0b82e97ef5", "69abd1c7-15a9-4d56-8156-0f09ff90783f"]
 priority = "critical"
 risk_level = "medium"
 type = "tracker-improvement"
