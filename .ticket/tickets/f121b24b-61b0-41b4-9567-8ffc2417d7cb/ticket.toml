@@ -1,7 +1,7 @@
 id = "f121b24b-61b0-41b4-9567-8ffc2417d7cb"
 created_at = "2026-05-12T15:24:14.673465700+00:00"
 title = "[ticket-viewer] Feature: keyboard navigation in explorer + quick-search"
-state = "in-review"
+state = "in-implementation"
 acceptance_criteria = "Sidebar tree and quick-search support Up/Down focus movement and Enter activation without stealing input focus; browser coverage added"
 component = "ticket-viewer"
 priority = "high"
