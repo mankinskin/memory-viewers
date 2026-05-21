@@ -42,6 +42,11 @@ interface TicketsResponse {
   items?: TicketListItem[];
 }
 
+interface WorkspacesResponse {
+  active_workspace?: string;
+  workspaces?: Array<{ name: string; label?: string }>;
+}
+
 interface TicketHistoryResponse {
   entries?: Array<unknown>;
 }
@@ -50,11 +55,14 @@ interface SeededViewerFixture {
   tempDir: string;
   url: string;
   viewer: ChildProcessWithoutNullStreams;
+  parentWorkspace: string;
+  parentWorkspaceLabel: string;
   parentTicketId: string;
   parentTitle: string;
   parentDescriptionSnippet: string;
   childTicketId: string;
   childWorkspace: string;
+  childWorkspaceLabel: string;
   childTitle: string;
   childDescriptionSnippet: string;
 }
@@ -199,7 +207,8 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
   const parentBodyPath = path.join(tempDir, 'parent-description.md');
   const childBodyPath = path.join(tempDir, 'child-description.md');
   const childAssetPath = path.join(tempDir, 'child-asset.md');
-  const childWorkspace = 'child';
+  const parentWorkspaceLabel = path.basename(parentDir);
+  const childWorkspaceLabel = 'child';
   const parentTitle = 'Seeded parent ticket';
   const childTitle = 'Seeded child ticket';
   const parentDescriptionSnippet = 'Default workspace root for mixed-workspace validation.';
@@ -210,6 +219,19 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
   await fs.writeFile(parentBodyPath, `# Parent ticket\n\n${parentDescriptionSnippet}\n`);
   await fs.writeFile(childBodyPath, `# Child ticket\n\n${childDescriptionSnippet}\n`);
   await fs.writeFile(childAssetPath, '# Asset\n\nMixed-workspace asset payload.\n');
+
+  await runTicketCli<unknown>([
+    'init',
+    '--json',
+    '--index-root',
+    parentDir,
+  ]);
+  await runTicketCli<unknown>([
+    'init',
+    '--json',
+    '--index-root',
+    childDir,
+  ]);
 
   const parentTicket = await runTicketCli<CreatePayload>([
     'create',
@@ -254,7 +276,7 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
     '--index-root',
     parentDir,
     '--label',
-    childWorkspace,
+    childWorkspaceLabel,
     childTicketsDir,
   ]);
 
@@ -266,16 +288,39 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
   ]);
 
   const { url, viewer } = await startSeededViewer(parentDir);
+  const workspaceResponse = await fetch(`${url}/api/workspaces`);
+  expect(
+    workspaceResponse.ok,
+    'seeded workspace list must respond',
+  ).toBe(true);
+  const workspaces = (await workspaceResponse.json()) as WorkspacesResponse;
+  const parentWorkspace =
+    workspaces.active_workspace ?? workspaces.workspaces?.[0]?.name;
+  expect(
+    parentWorkspace,
+    'seeded parent workspace should resolve to a canonical workspace id',
+  ).toBeTruthy();
+  const childWorkspaceInfo = workspaces.workspaces?.find(
+    (workspace) => workspace.name !== parentWorkspace,
+  );
+  const childWorkspace = childWorkspaceInfo?.name;
+  expect(
+    childWorkspace,
+    'seeded child workspace should resolve to a canonical workspace id',
+  ).toBeTruthy();
 
   return {
     tempDir,
     url,
     viewer,
+    parentWorkspace: parentWorkspace!,
+    parentWorkspaceLabel,
     parentTicketId: parentTicket.id,
     parentTitle,
     parentDescriptionSnippet,
     childTicketId: childTicket.id,
-    childWorkspace,
+    childWorkspace: childWorkspace!,
+    childWorkspaceLabel: childWorkspaceInfo?.label ?? childWorkspaceLabel,
     childTitle,
     childDescriptionSnippet,
   };
@@ -315,7 +360,7 @@ test('root route follows mixed-workspace ticket refs for history and file action
 
   const ticketsResponse = await expectJson<TicketsResponse>(
     await page.request.get(
-      `${currentFixture.url}/api/tickets?workspace=default&limit=200`,
+      `${currentFixture.url}/api/tickets?workspace=${encodeURIComponent(currentFixture.parentWorkspace)}&limit=200`,
     ),
     'seeded ticket list must respond',
   );
@@ -389,6 +434,38 @@ test('root route follows mixed-workspace ticket refs for history and file action
     ),
   );
   await expect(page).not.toHaveURL(/\/workspace\/default/);
+});
+
+test('workspace route shows the display label while retaining the canonical workspace id', async ({ page }) => {
+  test.setTimeout(120_000);
+
+  expect(fixture, 'seeded viewer fixture must be ready').not.toBeNull();
+  const currentFixture = fixture!;
+  const escapedBaseUrl = escapeRegex(currentFixture.url);
+  const escapedWorkspace = escapeRegex(currentFixture.childWorkspace);
+
+  await page.goto(
+    `${currentFixture.url}/workspace/${encodeURIComponent(currentFixture.childWorkspace)}`,
+    { waitUntil: 'domcontentloaded' },
+  );
+  await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
+    state: 'visible',
+    timeout: TICKET_VIEWER.readyTimeout,
+  });
+
+  await expect(page).toHaveURL(
+    new RegExp(`^${escapedBaseUrl}/workspace/${escapedWorkspace}(?:#.*)?$`),
+  );
+  await expect(page.locator('.header-title').first()).toHaveText(
+    currentFixture.childWorkspaceLabel,
+  );
+  if (currentFixture.childWorkspace !== currentFixture.childWorkspaceLabel) {
+    await expect(page.locator('.header-subtitle').first()).toHaveText(
+      currentFixture.childWorkspace,
+    );
+  } else {
+    await expect(page.locator('.header-subtitle')).toHaveCount(0);
+  }
 });
 
 test('root route swaps content panel body when clicking different ticket rows', async ({ page }) => {

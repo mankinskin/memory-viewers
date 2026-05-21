@@ -37,6 +37,18 @@ impl TicketRef {
 #[derive(Debug, Clone, Deserialize)]
 pub struct WorkspaceInfo {
     pub name: String,
+    #[serde(default)]
+    pub label: String,
+}
+
+impl WorkspaceInfo {
+    pub fn display_label(&self) -> String {
+        if self.label.trim().is_empty() {
+            return self.name.clone();
+        }
+
+        self.label.clone()
+    }
 }
 
 #[derive(Debug, Clone, Deserialize)]
@@ -44,6 +56,18 @@ pub struct WorkspacesResponse {
     #[serde(default)]
     pub active_workspace: String,
     pub workspaces: Vec<WorkspaceInfo>,
+}
+
+impl WorkspacesResponse {
+    pub fn label_for_name(
+        &self,
+        workspace_name: &str,
+    ) -> Option<String> {
+        self.workspaces
+            .iter()
+            .find(|workspace| workspace.name == workspace_name)
+            .map(WorkspaceInfo::display_label)
+    }
 }
 
 // ── Ticket ────────────────────────────────────────────────────────────────────

@@ -66,6 +66,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut tickets: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
     let mut loading: Signal<bool> = use_signal(|| true);
     let mut list_error: Signal<Option<String>> = use_signal(|| None);
+    let mut workspace_label: Signal<String> = use_signal(|| workspace.clone());
     let mut selected_ticket = store.open_ticket;
     let mut graph_content_ticket: Signal<Option<TicketRef>> =
         use_signal(|| None);
@@ -98,6 +99,24 @@ pub fn TicketListPage(workspace: String) -> Element {
         use_signal(|| None);
     let mut detail_panel_override: Signal<Option<bool>> = use_signal(|| None);
     let mut graph_panel_override: Signal<Option<bool>> = use_signal(|| None);
+
+    {
+        let workspace = workspace.clone();
+        use_effect(move || {
+            let workspace = workspace.clone();
+            workspace_label.set(workspace.clone());
+            spawn(async move {
+                let backend = HttpTicketBackend::new(None);
+                if let Ok(response) = backend.list_workspaces().await {
+                    workspace_label.set(
+                        response
+                            .label_for_name(&workspace)
+                            .unwrap_or(workspace),
+                    );
+                }
+            });
+        });
+    }
 
     use_sse(workspace.clone(), tickets, refresh_counter, silent_refresh);
 
@@ -216,6 +235,9 @@ pub fn TicketListPage(workspace: String) -> Element {
         *sidebar_collapsed.read(),
     );
     let selected_ticket_ref = selected_ticket.read().clone();
+    let workspace_title = workspace_label.read().clone();
+    let workspace_subtitle =
+        (workspace_title != workspace).then(|| workspace.clone());
 
     rsx! {
         SearchBar {
@@ -238,7 +260,8 @@ pub fn TicketListPage(workspace: String) -> Element {
                         }
                     }),
                     icon: Some(rsx! { "🎫" }),
-                    title: Some(workspace.clone()),
+                    title: Some(workspace_title),
+                    subtitle: workspace_subtitle,
                     on_theme_toggle: Some(EventHandler::new(move |_| {
                         let next = !*show_theme_settings.read();
                         show_theme_settings.set(next);
