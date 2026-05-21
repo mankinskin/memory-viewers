@@ -71,11 +71,12 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
                 let backend = HttpTicketBackend::new(None);
                 match backend.get_subgraph(&workspace, &root_id, 4).await {
                     Ok(response) => {
-                        let active_workspace = if response.active_workspace.is_empty() {
-                            workspace.clone()
-                        } else {
-                            response.active_workspace.clone()
-                        };
+                        let active_workspace =
+                            if response.active_workspace.is_empty() {
+                                workspace.clone()
+                            } else {
+                                response.active_workspace.clone()
+                            };
                         layout.set(Some(GraphLayout::build(
                             &active_workspace,
                             response.nodes,

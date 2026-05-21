@@ -16,9 +16,9 @@ mod tree;
 
 use dioxus::prelude::*;
 use percent_encoding::{
+    utf8_percent_encode,
     AsciiSet,
     CONTROLS,
-    utf8_percent_encode,
 };
 
 pub use detail::SpecDetailPage;
@@ -42,9 +42,7 @@ const SPEC_ID_PATH_ENCODE_SET: &AsciiSet = &CONTROLS
 
 pub const DEFAULT_SPEC_VIEW: &str = "body";
 
-pub fn canonical_spec_view(
-    view: Option<&str>,
-) -> &'static str {
+pub fn canonical_spec_view(view: Option<&str>) -> &'static str {
     match view {
         Some("sections") => "sections",
         Some("coderefs") | Some("code-refs") => "coderefs",
@@ -54,14 +52,20 @@ pub fn canonical_spec_view(
 }
 
 pub fn is_canonical_spec_detail_view(view: Option<&str>) -> bool {
-    matches!(view, None | Some("sections") | Some("coderefs") | Some("health"))
+    matches!(
+        view,
+        None | Some("sections") | Some("coderefs") | Some("health")
+    )
 }
 
 pub fn is_spec_detail_view_available(
     _spec_id: &str,
     view: &str,
 ) -> bool {
-    matches!(canonical_spec_view(Some(view)), "body" | "sections" | "coderefs" | "health")
+    matches!(
+        canonical_spec_view(Some(view)),
+        "body" | "sections" | "coderefs" | "health"
+    )
 }
 
 #[derive(Clone, Routable, Debug, PartialEq)]
@@ -77,10 +81,7 @@ pub enum Route {
     SpecGraphPage {},
 
     #[route("/specs/:id?:view")]
-    SpecDetailPage {
-        id: String,
-        view: Option<String>,
-    },
+    SpecDetailPage { id: String, view: Option<String> },
 }
 
 impl Route {

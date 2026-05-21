@@ -9,11 +9,13 @@ use viewer_api_dioxus::{
     SidebarSearch,
 };
 
-use crate::search_syntax::{
-    SEARCH_INPUT_PLACEHOLDER,
-    SEARCH_SYNTAX_HINT,
+use crate::{
+    search_syntax::{
+        SEARCH_INPUT_PLACEHOLDER,
+        SEARCH_SYNTAX_HINT,
+    },
+    types::TicketFileEntry,
 };
-use crate::types::TicketFileEntry;
 
 use super::{
     header::render_filter_controls,
@@ -192,11 +194,15 @@ fn resolve_focused_ticket(
     }
 
     current_focus
-        .filter(|id| displayed_ticket_ids.iter().any(|candidate| candidate == id))
+        .filter(|id| {
+            displayed_ticket_ids.iter().any(|candidate| candidate == id)
+        })
         .map(ToString::to_string)
         .or_else(|| {
             selected_id
-                .filter(|id| displayed_ticket_ids.iter().any(|candidate| candidate == id))
+                .filter(|id| {
+                    displayed_ticket_ids.iter().any(|candidate| candidate == id)
+                })
                 .map(ToString::to_string)
         })
         .or_else(|| displayed_ticket_ids.first().cloned())

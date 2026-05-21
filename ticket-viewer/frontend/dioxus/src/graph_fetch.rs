@@ -328,11 +328,12 @@ impl GraphFetchService {
             futures_util::future::Either::Left((fetch_result, _)) =>
                 match fetch_result {
                     Ok(resp) => {
-                        let active_workspace = if resp.active_workspace.is_empty() {
-                            workspace.to_string()
-                        } else {
-                            resp.active_workspace.clone()
-                        };
+                        let active_workspace =
+                            if resp.active_workspace.is_empty() {
+                                workspace.to_string()
+                            } else {
+                                resp.active_workspace.clone()
+                            };
                         Ok(GraphLayout::build(
                             &active_workspace,
                             resp.nodes,

@@ -442,10 +442,12 @@ fn set_selected_node_zoom_factor(
     mut store: SpecGraphStore,
     value: f32,
 ) {
-    store.selected_node_zoom_factor.set(value.clamp(
-        SELECTED_NODE_ZOOM_FACTOR_MIN,
-        SELECTED_NODE_ZOOM_FACTOR_MAX,
-    ));
+    store.selected_node_zoom_factor.set(
+        value.clamp(
+            SELECTED_NODE_ZOOM_FACTOR_MIN,
+            SELECTED_NODE_ZOOM_FACTOR_MAX,
+        ),
+    );
 }
 
 fn set_auto_layout_selected_node(

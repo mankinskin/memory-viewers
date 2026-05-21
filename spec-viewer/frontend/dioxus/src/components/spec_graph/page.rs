@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 use viewer_api_dioxus::{
-    graph3d::camera::frame_distance,
-    graph3d::CameraMode,
+    graph3d::{
+        camera::frame_distance,
+        CameraMode,
+    },
     Camera,
     CameraCommand,
     Layout3D,
@@ -212,10 +214,8 @@ fn use_layout_sync(
             return;
         };
 
-        let frustum_context = current_frustum_layout_context(
-            store,
-            viewport_insets,
-        );
+        let frustum_context =
+            current_frustum_layout_context(store, viewport_insets);
         let generation = *store.layout_generation.read();
         let needs_rebuild = current_layout.peek().is_none()
             || generation != *applied_layout_generation.peek()
@@ -284,9 +284,7 @@ fn canonical_frustum_layout_camera(camera: Camera) -> Camera {
 }
 
 #[cfg(target_arch = "wasm32")]
-fn current_viewport_size(
-    viewport_insets: [f32; 4],
-) -> Option<(f32, f32)> {
+fn current_viewport_size(viewport_insets: [f32; 4]) -> Option<(f32, f32)> {
     let window = web_sys::window()?;
     let width = window.inner_width().ok()?.as_f64()? as f32
         - viewport_insets[0]
@@ -298,9 +296,7 @@ fn current_viewport_size(
 }
 
 #[cfg(not(target_arch = "wasm32"))]
-fn current_viewport_size(
-    _viewport_insets: [f32; 4],
-) -> Option<(f32, f32)> {
+fn current_viewport_size(_viewport_insets: [f32; 4]) -> Option<(f32, f32)> {
     None
 }
 
@@ -407,12 +403,11 @@ fn selection_camera_request(
             .find(|node| node.id == selected_node_id)?;
         let distance = if zoom_to_selected_node {
             (framed_distance
-                / selected_node_zoom_factor
-                    .clamp(
-                        SELECTED_NODE_ZOOM_FACTOR_MIN,
-                        SELECTED_NODE_ZOOM_FACTOR_MAX,
-                    ))
-                .clamp(6.0, 120.0)
+                / selected_node_zoom_factor.clamp(
+                    SELECTED_NODE_ZOOM_FACTOR_MIN,
+                    SELECTED_NODE_ZOOM_FACTOR_MAX,
+                ))
+            .clamp(6.0, 120.0)
         } else {
             current_camera
                 .map(|camera| camera.distance)
@@ -437,7 +432,6 @@ fn selection_camera_request(
         distance: frame_distance(radius),
     })
 }
-
 
 fn current_node_view_transform(store: SpecGraphStore) -> NodeViewTransform {
     let algo = *store.committed_algo.read();

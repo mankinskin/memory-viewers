@@ -1,8 +1,10 @@
 use dioxus::prelude::*;
 use viewer_api_dioxus::Node3D;
 
-use crate::components::spec_markdown_surface::SpecMarkdownSurface;
-use crate::types::SpecGraphNode;
+use crate::{
+    components::spec_markdown_surface::SpecMarkdownSurface,
+    types::SpecGraphNode,
+};
 
 use super::view::{
     metric_text,

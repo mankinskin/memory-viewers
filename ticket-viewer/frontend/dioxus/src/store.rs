@@ -257,8 +257,8 @@ impl TicketListStore {
 }
 
 fn read_hash_ticket_ref(default_workspace: &str) -> Option<TicketRef> {
-    let ticket_id = get_hash_param("ticket-id")
-        .or_else(|| get_hash_param("id"))?;
+    let ticket_id =
+        get_hash_param("ticket-id").or_else(|| get_hash_param("id"))?;
     let workspace = get_hash_param("ticket-workspace")
         .unwrap_or_else(|| default_workspace.to_string());
 

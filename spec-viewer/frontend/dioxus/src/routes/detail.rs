@@ -88,12 +88,14 @@ pub fn SpecDetailPage(
 
     let id_for_view_memory = id.clone();
     let active_tab_for_view_memory = active_tab.clone();
-    use_effect(use_reactive!(|id_for_view_memory, active_tab_for_view_memory| {
-        navigation_store.remember_spec_view(
-            &id_for_view_memory,
-            &active_tab_for_view_memory,
-        );
-    }));
+    use_effect(use_reactive!(
+        |id_for_view_memory, active_tab_for_view_memory| {
+            navigation_store.remember_spec_view(
+                &id_for_view_memory,
+                &active_tab_for_view_memory,
+            );
+        }
+    ));
 
     let nav_tabs = nav;
     let id_for_tabs = id.clone();

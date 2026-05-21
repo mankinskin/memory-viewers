@@ -28,7 +28,8 @@ pub fn TicketListRootPage() -> Element {
         let backend = backend.clone();
         spawn(async move {
             match backend.list_workspaces().await {
-                Ok(response) => workspace.set(resolve_active_workspace(&response)),
+                Ok(response) =>
+                    workspace.set(resolve_active_workspace(&response)),
                 Err(error) => load_error.set(Some(error)),
             }
         });
@@ -56,7 +57,10 @@ fn resolve_active_workspace(response: &WorkspacesResponse) -> Option<String> {
         return Some(response.active_workspace.clone());
     }
 
-    response.workspaces.first().map(|workspace| workspace.name.clone())
+    response
+        .workspaces
+        .first()
+        .map(|workspace| workspace.name.clone())
 }
 
 // ── Route enum ────────────────────────────────────────────────────────────────

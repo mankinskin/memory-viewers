@@ -40,10 +40,8 @@ pub(super) fn layout_force(
         && frustum_context.is_some()
         && params.frustum_gravity > 0.0;
     let extra_frustum_iterations = if frustum_gravity_active {
-        (params.frustum_gravity
-            * params.frustum_settle.max(0.0)
-            * 60.0)
-            .round() as u32
+        (params.frustum_gravity * params.frustum_settle.max(0.0) * 60.0).round()
+            as u32
     } else {
         0
     };
@@ -212,12 +210,8 @@ fn apply_frustum_gravity(
     let tan_half_fov = (CAMERA_FOV * 0.5).tan().max(0.001);
     let aspect = context.aspect.max(0.6);
     let mut basis = CameraBasis::from_context(context);
-    basis.eye = frustum_gravity_virtual_eye(
-        positions,
-        &basis,
-        tan_half_fov,
-        aspect,
-    );
+    basis.eye =
+        frustum_gravity_virtual_eye(positions, &basis, tan_half_fov, aspect);
     let mut ndc_positions = Vec::with_capacity(positions.len());
     let mut min_ndc_x = f32::MAX;
     let mut max_ndc_x = f32::MIN;
@@ -361,8 +355,9 @@ fn apply_projected_overlap_repulsion(
                 continue;
             }
 
-            let avg_depth =
-                ((camera_positions[i][2] + camera_positions[j][2]) * 0.5).max(0.1);
+            let avg_depth = ((camera_positions[i][2] + camera_positions[j][2])
+                * 0.5)
+                .max(0.1);
             if overlap_x < overlap_y {
                 let direction = if dx >= 0.0 { 1.0 } else { -1.0 };
                 let push_camera = screen_px_to_camera_x(
@@ -373,7 +368,8 @@ fn apply_projected_overlap_repulsion(
                     aspect,
                 ) * strength;
                 for axis in 0..3 {
-                    let world_push = basis.right[axis] * push_camera * direction;
+                    let world_push =
+                        basis.right[axis] * push_camera * direction;
                     displacement[i][axis] -= world_push;
                     displacement[j][axis] += world_push;
                 }
@@ -413,7 +409,8 @@ fn relax_projected_clearance(
         let mut had_overlap = false;
 
         for i in 0..ndc_positions.len() {
-            let camera_i = ndc_to_camera(ndc_positions[i], *depth, tan_half_fov, aspect);
+            let camera_i =
+                ndc_to_camera(ndc_positions[i], *depth, tan_half_fov, aspect);
             let screen_i = ndc_to_screen_pixels(
                 ndc_positions[i],
                 viewport_width,
@@ -422,8 +419,12 @@ fn relax_projected_clearance(
             let half_i = projected_card_half_extents_px(camera_i);
 
             for j in (i + 1)..ndc_positions.len() {
-                let camera_j =
-                    ndc_to_camera(ndc_positions[j], *depth, tan_half_fov, aspect);
+                let camera_j = ndc_to_camera(
+                    ndc_positions[j],
+                    *depth,
+                    tan_half_fov,
+                    aspect,
+                );
                 let screen_j = ndc_to_screen_pixels(
                     ndc_positions[j],
                     viewport_width,
@@ -485,9 +486,8 @@ fn relax_projected_clearance(
                 pixel_offset[1].clamp(-96.0, 96.0) * 2.0 / viewport_height;
             ndc_position[0] += ndc_delta_x;
             ndc_position[1] += ndc_delta_y;
-            max_adjustment = max_adjustment
-                .max(ndc_delta_x.abs())
-                .max(ndc_delta_y.abs());
+            max_adjustment =
+                max_adjustment.max(ndc_delta_x.abs()).max(ndc_delta_y.abs());
         }
         recenter_ndc_positions(ndc_positions);
 
@@ -601,7 +601,8 @@ fn frustum_gravity_virtual_eye(
 
     let required_depth_x =
         max_right / (FRUSTUM_FILL_RATIO * tan_half_fov * aspect).max(0.001);
-    let required_depth_y = max_up / (FRUSTUM_FILL_RATIO * tan_half_fov).max(0.001);
+    let required_depth_y =
+        max_up / (FRUSTUM_FILL_RATIO * tan_half_fov).max(0.001);
     let virtual_distance = required_depth_x
         .max(required_depth_y)
         .max((-min_forward).max(0.0) + 1.0)
@@ -717,10 +718,9 @@ fn ndc_to_camera(
 }
 
 fn normalise(vector: [f32; 3]) -> [f32; 3] {
-    let length = (vector[0] * vector[0]
-        + vector[1] * vector[1]
-        + vector[2] * vector[2])
-        .sqrt();
+    let length =
+        (vector[0] * vector[0] + vector[1] * vector[1] + vector[2] * vector[2])
+            .sqrt();
     if length < 1e-6 {
         return [0.0, 0.0, 1.0];
     }
@@ -930,7 +930,8 @@ mod tests {
             viewport_width: 1280.0,
             viewport_height: 720.0,
         };
-        let positions = vec![[0.0, 0.0, 0.0], [1.2, -0.8, 0.6], [-0.9, 0.5, -1.1]];
+        let positions =
+            vec![[0.0, 0.0, 0.0], [1.2, -0.8, 0.6], [-0.9, 0.5, -1.1]];
         let mut displacement = vec![[0.0_f32; 3]; positions.len()];
 
         apply_frustum_gravity(
@@ -999,7 +1000,8 @@ mod tests {
 
         for &position in positions {
             let camera_position = world_to_camera_space(position, &basis);
-            let ndc = camera_to_ndc(camera_position, tan_half_fov, context.aspect);
+            let ndc =
+                camera_to_ndc(camera_position, tan_half_fov, context.aspect);
             screen_positions.push(ndc_to_screen_pixels(
                 ndc,
                 context.viewport_width,
@@ -1011,8 +1013,10 @@ mod tests {
         let mut max_overlap = 0.0_f32;
         for i in 0..screen_positions.len() {
             for j in (i + 1)..screen_positions.len() {
-                let dx = (screen_positions[j][0] - screen_positions[i][0]).abs();
-                let dy = (screen_positions[j][1] - screen_positions[i][1]).abs();
+                let dx =
+                    (screen_positions[j][0] - screen_positions[i][0]).abs();
+                let dy =
+                    (screen_positions[j][1] - screen_positions[i][1]).abs();
                 let overlap_x = half_extents[i][0]
                     + half_extents[j][0]
                     + FRUSTUM_EDGE_GUTTER_X_PX

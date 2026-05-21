@@ -59,8 +59,8 @@ fn render_ticket_entry(
     let title = ticket.title.clone().unwrap_or_else(|| "Untitled".into());
     let state = ticket.state.clone().unwrap_or_else(|| "new".into());
     let is_selected = props.selected_id.as_deref() == Some(ticket_id.as_str());
-    let is_keyboard_focused = focused_ticket_id.read().as_deref()
-        == Some(ticket_id.as_str());
+    let is_keyboard_focused =
+        focused_ticket_id.read().as_deref() == Some(ticket_id.as_str());
     let is_checked = props.selected_ids.contains(&ticket_id);
     let is_expanded = expanded_ids.read().contains(&ticket_key);
     let dot_color = crate::types::state_accent(Some(&state));
@@ -324,7 +324,9 @@ fn toggle_ticket_expansion(
             .list_ticket_files(&ticket_ref.workspace, &ticket_ref.id)
             .await
         {
-            file_cache.write().insert(ticket_key.clone(), response.files);
+            file_cache
+                .write()
+                .insert(ticket_key.clone(), response.files);
         }
         loading_files.write().remove(&ticket_key);
     });

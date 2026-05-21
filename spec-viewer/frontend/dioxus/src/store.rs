@@ -216,8 +216,9 @@ impl SpecGraphStore {
             camera_mode: use_signal(CameraMode::default),
             center_camera_on_selected_node: use_signal(|| false),
             zoom_to_selected_node: use_signal(|| false),
-            selected_node_zoom_factor:
-                use_signal(|| SELECTED_NODE_ZOOM_FACTOR_DEFAULT),
+            selected_node_zoom_factor: use_signal(|| {
+                SELECTED_NODE_ZOOM_FACTOR_DEFAULT
+            }),
             auto_layout_selected_node: use_signal(|| false),
             committed_algo: use_signal(|| LayoutAlgorithm::ForceDirected),
             committed_params: use_signal(LayoutParams::default),

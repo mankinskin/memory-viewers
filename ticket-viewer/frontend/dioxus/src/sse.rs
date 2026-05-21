@@ -247,13 +247,8 @@ pub fn use_sse(
             *h = Some(SseHandle {
                 es,
                 _listeners: vec![
-                    l_upsert,
-                    l_delete,
-                    l_snapshot,
-                    l_edge_up,
-                    l_edge_del,
-                    l_open,
-                    l_error,
+                    l_upsert, l_delete, l_snapshot, l_edge_up, l_edge_del,
+                    l_open, l_error,
                 ],
             });
         });

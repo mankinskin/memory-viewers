@@ -1,7 +1,9 @@
 use dioxus::prelude::*;
 
-use crate::layout::LayoutMode;
-use crate::types::TicketRef;
+use crate::{
+    layout::LayoutMode,
+    types::TicketRef,
+};
 
 use viewer_api_dioxus::Projection;
 

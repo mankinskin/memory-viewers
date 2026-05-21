@@ -14,10 +14,7 @@ pub fn TicketDetailPage(
 
     use_effect(move || {
         update_hash_params(
-            &[
-                ("ticket-workspace", &workspace),
-                ("ticket-id", &ticket_id),
-            ],
+            &[("ticket-workspace", &workspace), ("ticket-id", &ticket_id)],
             &["id"],
         );
         nav.replace(Route::TicketListRootPage {});

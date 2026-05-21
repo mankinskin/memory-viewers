@@ -11,7 +11,10 @@ use viewer_api_dioxus::{
     Sidebar,
 };
 
-use crate::{components::spec_tree::SpecTree, types::SpecSummary};
+use crate::{
+    components::spec_tree::SpecTree,
+    types::SpecSummary,
+};
 
 use super::{
     super::Route,

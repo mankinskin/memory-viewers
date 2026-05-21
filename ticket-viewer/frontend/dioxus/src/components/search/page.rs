@@ -51,12 +51,10 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
     let search_err: Signal<Option<String>> = use_signal(|| None);
     let mut state_filter: Signal<Option<String>> = use_signal(|| None);
     let mut type_filter: Signal<Option<String>> = use_signal(|| None);
-    let recents: Signal<Vec<String>> =
-        use_signal(|| load_recent(&workspace));
+    let recents: Signal<Vec<String>> = use_signal(|| load_recent(&workspace));
     let mut hovered_recent: Signal<Option<usize>> = use_signal(|| None);
     let mut hovered_result: Signal<Option<usize>> = use_signal(|| None);
-    let keydown_listener: Signal<Option<EventListener>> =
-        use_signal(|| None);
+    let keydown_listener: Signal<Option<EventListener>> = use_signal(|| None);
     let nav = use_navigator();
 
     use_open_shortcut_listener(
@@ -97,7 +95,8 @@ pub fn SearchBar(props: SearchBarProps) -> Element {
             }
         } else {
             let current_result = *hovered_result.read();
-            let next_result = normalize_hover_index(current_result, filtered_len);
+            let next_result =
+                normalize_hover_index(current_result, filtered_len);
             if current_result != next_result {
                 hovered_result.set(next_result);
             }

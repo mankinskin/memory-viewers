@@ -288,7 +288,9 @@ fn render_content_panel(
     let fields = tickets
         .read()
         .iter()
-        .find(|ticket| ticket.resolved_ticket_ref(&active_workspace) == content_ticket)
+        .find(|ticket| {
+            ticket.resolved_ticket_ref(&active_workspace) == content_ticket
+        })
         .map(|ticket| ticket.fields.clone())
         .unwrap_or(serde_json::Value::Object(Default::default()));
 

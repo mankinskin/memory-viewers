@@ -69,7 +69,8 @@ impl TicketSummary {
         &self,
         active_workspace: &str,
     ) -> TicketRef {
-        if !self.ticket_ref.workspace.is_empty() && !self.ticket_ref.id.is_empty()
+        if !self.ticket_ref.workspace.is_empty()
+            && !self.ticket_ref.id.is_empty()
         {
             return self.ticket_ref.clone();
         }
@@ -101,7 +102,8 @@ impl TicketDetail {
         &self,
         active_workspace: &str,
     ) -> TicketRef {
-        if !self.ticket_ref.workspace.is_empty() && !self.ticket_ref.id.is_empty()
+        if !self.ticket_ref.workspace.is_empty()
+            && !self.ticket_ref.id.is_empty()
         {
             return self.ticket_ref.clone();
         }
@@ -185,7 +187,8 @@ impl GraphNodeItem {
         &self,
         active_workspace: &str,
     ) -> TicketRef {
-        if !self.ticket_ref.workspace.is_empty() && !self.ticket_ref.id.is_empty()
+        if !self.ticket_ref.workspace.is_empty()
+            && !self.ticket_ref.id.is_empty()
         {
             return self.ticket_ref.clone();
         }

@@ -163,7 +163,8 @@ pub fn TicketListPage(workspace: String) -> Element {
         use_effect(move || {
             let tickets = tickets.read();
             for ticket in tickets.iter().take(PREFETCH_N) {
-                let ticket_ref = ticket.resolved_ticket_ref(&workspace_prefetch);
+                let ticket_ref =
+                    ticket.resolved_ticket_ref(&workspace_prefetch);
                 service.ensure_fetched(&ticket_ref.workspace, &ticket_ref.id);
             }
         });
