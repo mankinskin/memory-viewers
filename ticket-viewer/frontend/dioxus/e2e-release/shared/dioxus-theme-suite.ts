@@ -15,20 +15,39 @@ export function registerDioxusThemeSuite(viewer: ViewerConfig): void {
       await expect(page.locator('#webgpu-canvas')).toBeAttached({ timeout: 5_000 });
     });
 
-    test('theme settings palette button opens and closes the theme settings panel', async ({ page }) => {
+    test('theme settings palette button opens and closes the theme settings panel', async ({ page }, testInfo) => {
       test.setTimeout(90_000);
 
       await gotoAndWaitForViewer(page, viewer);
 
-      const themeBtn = page.getByRole('button', { name: 'Theme settings' });
+      const themeBtn = page.getByRole('button', { name: 'Theme settings', exact: true });
       await expect(themeBtn).toBeVisible({ timeout: 30_000 });
 
-      const panel = page.locator('.theme-settings');
+      const dialog = page.locator('.modal-backdrop[role="dialog"][aria-label="Theme settings"]');
+      const panel = page.locator('.theme-settings.glass-panel');
       await expect(panel).not.toBeVisible();
 
       await themeBtn.click();
+      await expect(dialog).toBeVisible({ timeout: 5_000 });
       await expect(panel).toBeVisible({ timeout: 5_000 });
       await expect(panel.locator('.glass-panel__title')).toContainText('Theme Settings');
+
+      const backdropStyles = await dialog.evaluate((element) => {
+        const styles = getComputedStyle(element as HTMLElement);
+        return {
+          backgroundColor: styles.backgroundColor,
+          position: styles.position,
+          zIndex: styles.zIndex,
+        };
+      });
+      expect(backdropStyles.position).toBe('fixed');
+      expect(backdropStyles.zIndex).not.toBe('auto');
+      expect(backdropStyles.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+
+      await testInfo.attach(`${viewer.name}-theme-settings-panel`, {
+        body: await panel.screenshot(),
+        contentType: 'image/png',
+      });
 
       await panel.locator('button[aria-label="Close theme settings"]').click();
       await expect(panel).not.toBeVisible({ timeout: 5_000 });

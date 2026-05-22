@@ -4,6 +4,12 @@ The spec-viewer's theme settings panel **MUST** conform to the canonical spec
 [`viewer-api/theme-settings`](../viewer-api/theme-settings) — same layout, same 17 sections,
 same controls, same persistence keys.
 
+## Open/close contract
+
+- Clicking the header `Theme settings` action MUST open a visible modal overlay, not just mount the panel in the DOM.
+- The overlay MUST use `.modal-backdrop[role="dialog"][aria-label="Theme settings"]` with fixed positioning, a non-transparent backdrop tint, and a centered `.modal-panel.theme-settings-modal` container.
+- The underlying spec-viewer page MUST remain visibly dimmed behind the modal while the theme settings panel is open.
+
 ## Viewer-specific overrides
 
 _None._ The spec-viewer conforms to the canonical defaults verbatim:
@@ -24,10 +30,15 @@ persisted to `viewer-api-gpu-enabled` localStorage.
 
 ## Implementation pointers
 
-- Panel lives in `tools/viewer/viewer-api/frontend/dioxus/src/components/theme_settings.rs`
+- Panel lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/components/theme_settings.rs`
   (shared component, mounted by the spec-viewer's settings page).
 - Store factory: `ThemeStore::new()` in
-  `tools/viewer/viewer-api/frontend/dioxus/src/store/theme.rs` with
+  `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/store/theme.rs` with
   `gpu_enabled: true` default.
-- CSS: `tools/viewer/spec-viewer/frontend/dioxus/public/viewer-api.css` — kept in sync with
-  the shared copy under `tools/viewer/viewer-api/frontend/dioxus/public/`.
+- The spec-viewer Trunk shell in `memory-viewers/spec-viewer/frontend/dioxus/index.html` MUST load the shared `modal.css` bundle in addition to `glass-panel.css` and `theme-settings.css`.
+- Shared modal CSS lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/public/css/modal.css`.
+
+## Validation
+
+- `npm run test:e2e:release -- e2e-release/viewer-api-primitives.spec.ts -g "P5.4 Overlay: theme settings open in a role=dialog modal-backdrop"` in `memory-viewers/spec-viewer/frontend/dioxus`
+- The focused Playwright test MUST attach a screenshot of `.theme-settings.glass-panel` so the open-state is visually reviewable in addition to DOM assertions.

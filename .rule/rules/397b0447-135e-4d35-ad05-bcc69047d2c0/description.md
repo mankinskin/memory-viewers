@@ -7,6 +7,8 @@
 - Record the browser window or display resolution used for manual visual validation whenever layout, rendering, or responsive behavior could affect the result.
 - **Write Playwright end-to-end tests** for all browser-facing features and server interface changes.
   When executing browser-hosted frontend checks, first try the MCP Playwright/browser tools. Fall back to repo-local Playwright commands only when the MCP surface is unavailable or cannot cover the scenario.
+  Capture screenshots during Playwright verification for UI-facing changes so the rendered state is visually confirmed, not inferred only from DOM assertions.
+  For modals, overlays, drawers, popovers, menus, and similar transient surfaces, include at least one screenshot with the surface open and, when useful, a before/after pair.
   Shared managed-viewer suites live under `memory-viewers/viewer-api/viewer-api/frontend/dioxus/e2e/shared/`.
   Spec-viewer release E2E lives under `memory-viewers/spec-viewer/frontend/dioxus/`; run it with `npm run test:e2e:release`.
   Ticket-viewer release E2E lives under `memory-viewers/ticket-viewer/frontend/dioxus/`; run it with `npm run test:e2e:release`.

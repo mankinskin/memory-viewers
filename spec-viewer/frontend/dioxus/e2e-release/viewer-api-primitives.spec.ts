@@ -18,17 +18,34 @@ test.describe('spec-viewer — shared detail-shell primitives', () => {
     await expect(page.getByRole('button', { name: 'Theme settings' })).toBeVisible();
   });
 
-  test('P5.4 Overlay: theme settings open in a role=dialog modal-backdrop', async ({ page }) => {
+  test('P5.4 Overlay: theme settings open in a role=dialog modal-backdrop', async ({ page }, testInfo) => {
     test.setTimeout(60_000);
     await gotoAndWaitForViewer(page, SPEC_VIEWER);
 
-    await page.getByRole('button', { name: 'Theme settings' }).click();
+    await page.getByRole('button', { name: 'Theme settings', exact: true }).click();
 
     const dialog = page.locator('.modal-backdrop[role="dialog"][aria-label="Theme settings"]');
     await expect(dialog).toBeVisible({ timeout: 10_000 });
 
-    const panel = page.locator('.modal-panel.theme-settings-modal');
+    const panel = page.locator('.theme-settings.glass-panel');
     await expect(panel).toBeVisible();
+
+    const backdropStyles = await dialog.evaluate((element) => {
+      const styles = getComputedStyle(element as HTMLElement);
+      return {
+        backgroundColor: styles.backgroundColor,
+        position: styles.position,
+        zIndex: styles.zIndex,
+      };
+    });
+    expect(backdropStyles.position).toBe('fixed');
+    expect(backdropStyles.zIndex).not.toBe('auto');
+    expect(backdropStyles.backgroundColor).not.toBe('rgba(0, 0, 0, 0)');
+
+    await testInfo.attach('spec-viewer-theme-settings-panel', {
+      body: await panel.screenshot(),
+      contentType: 'image/png',
+    });
 
     await panel.locator('button', { hasText: '✕' }).first().click();
     await expect(panel).not.toBeVisible({ timeout: 5_000 });
