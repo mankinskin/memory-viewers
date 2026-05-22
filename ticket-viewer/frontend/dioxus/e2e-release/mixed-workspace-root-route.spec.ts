@@ -1,4 +1,4 @@
-import { expect, test, type APIResponse, type Page } from '@playwright/test';
+import { expect, test, type APIResponse, type Page, type Response } from '@playwright/test';
 import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -80,6 +80,23 @@ function escapeRegex(value: string): string {
 async function expectJson<T>(response: APIResponse, message: string): Promise<T> {
   expect(response.ok(), message).toBe(true);
   return (await response.json()) as T;
+}
+
+function matchesWorkspaceRequest(
+  response: Response,
+  pathSuffix: string,
+  workspace: string,
+  expectedSearchParams: Record<string, string> = {},
+): boolean {
+  const url = new URL(response.url());
+  return (
+    response.request().method() === 'GET' &&
+    url.pathname.endsWith(pathSuffix) &&
+    url.searchParams.get('workspace') === workspace &&
+    Object.entries(expectedSearchParams).every(
+      ([key, value]) => url.searchParams.get(key) === value,
+    )
+  );
 }
 
 async function resolveTicketViewerBin(): Promise<string> {
@@ -378,10 +395,10 @@ test('root route follows mixed-workspace ticket refs for history and file action
   await expect(ticketButton).toContainText(currentFixture.childTitle);
 
   const historyResponsePromise = page.waitForResponse((response) => {
-    return (
-      response.request().method() === 'GET' &&
-      response.url().includes(`/api/tickets/${currentFixture.childTicketId}/history?`) &&
-      response.url().includes(`workspace=${encodeURIComponent(currentFixture.childWorkspace)}`)
+    return matchesWorkspaceRequest(
+      response,
+      `/api/tickets/${currentFixture.childTicketId}/history`,
+      currentFixture.childWorkspace,
     );
   });
   await ticketButton.click();
@@ -408,10 +425,10 @@ test('root route follows mixed-workspace ticket refs for history and file action
 
   const row = page.getByTestId(`ticket-tree-row-${currentFixture.childTicketId}`);
   const filesResponsePromise = page.waitForResponse((response) => {
-    return (
-      response.request().method() === 'GET' &&
-      response.url().includes(`/api/tickets/${currentFixture.childTicketId}/files?`) &&
-      response.url().includes(`workspace=${encodeURIComponent(currentFixture.childWorkspace)}`)
+    return matchesWorkspaceRequest(
+      response,
+      `/api/tickets/${currentFixture.childTicketId}/files`,
+      currentFixture.childWorkspace,
     );
   });
   await row.locator('button').first().click();
@@ -503,9 +520,8 @@ test('root route swaps content panel body when clicking different ticket rows', 
   );
 });
 
-test.fixme('asset file click should trigger owning-workspace asset request', async ({ page }) => {
+test('asset file click should trigger owning-workspace asset request', async ({ page }) => {
   test.setTimeout(120_000);
-  test.fixme(true, 'Known issue: clicking an expanded asset row does not update selected_file or trigger /asset fetch.');
 
   expect(fixture, 'seeded viewer fixture must be ready').not.toBeNull();
   const currentFixture = fixture!;
@@ -519,10 +535,10 @@ test.fixme('asset file click should trigger owning-workspace asset request', asy
   const row = page.getByTestId(`ticket-tree-row-${currentFixture.childTicketId}`);
   const rowEntry = row.locator('xpath=..');
   const filesResponsePromise = page.waitForResponse((response) => {
-    return (
-      response.request().method() === 'GET' &&
-      response.url().includes(`/api/tickets/${currentFixture.childTicketId}/files?`) &&
-      response.url().includes(`workspace=${encodeURIComponent(currentFixture.childWorkspace)}`)
+    return matchesWorkspaceRequest(
+      response,
+      `/api/tickets/${currentFixture.childTicketId}/files`,
+      currentFixture.childWorkspace,
     );
   });
   await row.locator('button').first().click();
@@ -540,4 +556,18 @@ test.fixme('asset file click should trigger owning-workspace asset request', asy
     `ticket-tree-file-${currentFixture.childTicketId}-${asset!.name}`,
   );
   await expect(assetButton).toBeVisible();
+
+  const assetResponsePromise = page.waitForResponse((response) => {
+    return matchesWorkspaceRequest(
+      response,
+      `/api/tickets/${currentFixture.childTicketId}/asset`,
+      currentFixture.childWorkspace,
+      { path: asset!.path },
+    );
+  });
+  await assetButton.click();
+  const assetResponse = await assetResponsePromise;
+  expect(assetResponse.ok(), 'mixed-workspace asset request must succeed').toBe(true);
+  await expect(page.getByTestId('ticket-content')).toContainText('Mixed-workspace asset payload.');
+  await expect(page.getByTestId('tab-description')).toHaveText(asset!.name);
 });

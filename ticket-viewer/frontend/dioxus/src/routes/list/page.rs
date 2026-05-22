@@ -83,6 +83,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut refresh_counter: Signal<u32> = use_signal(|| 0);
     let mut silent_refresh: Signal<bool> = use_signal(|| false);
     let mut list_request_seq: Signal<u64> = use_signal(|| 0);
+    let mut workspace_label_request_seq: Signal<u64> = use_signal(|| 0);
     let mut view_mode: Signal<String> = use_signal(|| "split".to_string());
     let mut graph_layout_mode: Signal<LayoutMode> =
         use_signal(LayoutMode::default);
@@ -105,9 +106,17 @@ pub fn TicketListPage(workspace: String) -> Element {
         use_effect(move || {
             let workspace = workspace.clone();
             workspace_label.set(workspace.clone());
+            let request_seq = workspace_label_request_seq.with_mut(|value| {
+                *value += 1;
+                *value
+            });
             spawn(async move {
+                let workspace_label_request_seq = workspace_label_request_seq;
                 let backend = HttpTicketBackend::new(None);
                 if let Ok(response) = backend.list_workspaces().await {
+                    if *workspace_label_request_seq.peek() != request_seq {
+                        return;
+                    }
                     workspace_label.set(
                         response
                             .label_for_name(&workspace)
