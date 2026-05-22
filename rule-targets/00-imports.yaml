@@ -1,0 +1,3 @@
+imports:
+- ../memory-api/rule-targets
+- ../viewer-api/rule-targets

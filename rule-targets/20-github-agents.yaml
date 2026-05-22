@@ -1,0 +1,17 @@
+folders:
+- name: .github
+  folders:
+  - name: agents
+    files:
+    - name: roast.agent.md
+      target:
+        name: memory-viewers-agent-roast
+        repo_scope: memory-viewers
+        file_kind: .agent
+        path_scope: .github/agents/roast.agent.md
+    - name: ticket-refinement.agent.md
+      target:
+        name: memory-viewers-agent-ticket-refinement
+        repo_scope: memory-viewers
+        file_kind: .agent
+        path_scope: .github/agents/ticket-refinement.agent.md
