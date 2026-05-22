@@ -65,6 +65,13 @@ interface SeededViewerFixture {
   childWorkspaceLabel: string;
   childTitle: string;
   childDescriptionSnippet: string;
+  childAssetSnippet: string;
+  secondChildTicketId: string;
+  secondChildWorkspace: string;
+  secondChildWorkspaceLabel: string;
+  secondChildTitle: string;
+  secondChildDescriptionSnippet: string;
+  secondChildAssetSnippet: string;
 }
 
 let fixture: SeededViewerFixture | null = null;
@@ -218,24 +225,36 @@ async function stopSeededViewer(viewer: ChildProcessWithoutNullStreams): Promise
 async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ticket-viewer-mixed-'));
   const parentDir = path.join(tempDir, 'parent');
-  const childDir = path.join(parentDir, 'child');
+  const childDir = path.join(parentDir, 'alpha', 'shared');
+  const secondChildDir = path.join(parentDir, 'beta', 'shared');
   const parentTicketsDir = path.join(parentDir, 'tickets');
   const childTicketsDir = path.join(childDir, 'tickets');
+  const secondChildTicketsDir = path.join(secondChildDir, 'tickets');
   const parentBodyPath = path.join(tempDir, 'parent-description.md');
   const childBodyPath = path.join(tempDir, 'child-description.md');
+  const secondChildBodyPath = path.join(tempDir, 'second-child-description.md');
   const childAssetPath = path.join(tempDir, 'child-asset.md');
+  const secondChildAssetPath = path.join(tempDir, 'second-child-asset.md');
   const parentWorkspaceLabel = path.basename(parentDir);
-  const childWorkspaceLabel = 'child';
+  const childWorkspaceLabel = 'shared';
+  const secondChildWorkspaceLabel = 'shared';
   const parentTitle = 'Seeded parent ticket';
-  const childTitle = 'Seeded child ticket';
+  const childTitle = 'Seeded first shared ticket';
+  const secondChildTitle = 'Seeded second shared ticket';
   const parentDescriptionSnippet = 'Default workspace root for mixed-workspace validation.';
-  const childDescriptionSnippet = 'Mixed-workspace ticket body used by Playwright validation.';
+  const childDescriptionSnippet = 'First shared-workspace ticket body used by Playwright validation.';
+  const secondChildDescriptionSnippet = 'Second shared-workspace ticket body used by Playwright validation.';
+  const childAssetSnippet = 'Mixed-workspace asset payload from the first shared workspace.';
+  const secondChildAssetSnippet = 'Mixed-workspace asset payload from the second shared workspace.';
 
   await fs.mkdir(parentTicketsDir, { recursive: true });
   await fs.mkdir(childTicketsDir, { recursive: true });
+  await fs.mkdir(secondChildTicketsDir, { recursive: true });
   await fs.writeFile(parentBodyPath, `# Parent ticket\n\n${parentDescriptionSnippet}\n`);
   await fs.writeFile(childBodyPath, `# Child ticket\n\n${childDescriptionSnippet}\n`);
-  await fs.writeFile(childAssetPath, '# Asset\n\nMixed-workspace asset payload.\n');
+  await fs.writeFile(secondChildBodyPath, `# Second child ticket\n\n${secondChildDescriptionSnippet}\n`);
+  await fs.writeFile(childAssetPath, `# Asset\n\n${childAssetSnippet}\n`);
+  await fs.writeFile(secondChildAssetPath, `# Asset\n\n${secondChildAssetSnippet}\n`);
 
   await runTicketCli<unknown>([
     'init',
@@ -248,6 +267,12 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
     '--json',
     '--index-root',
     childDir,
+  ]);
+  await runTicketCli<unknown>([
+    'init',
+    '--json',
+    '--index-root',
+    secondChildDir,
   ]);
 
   const parentTicket = await runTicketCli<CreatePayload>([
@@ -276,6 +301,19 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
     childBodyPath,
   ]);
 
+  const secondChildTicket = await runTicketCli<CreatePayload>([
+    'create',
+    '--json',
+    '--index-root',
+    secondChildDir,
+    '--type',
+    'tracker-improvement',
+    '--title',
+    secondChildTitle,
+    '--body-file',
+    secondChildBodyPath,
+  ]);
+
   await runTicketCli<unknown>([
     'attach',
     '--json',
@@ -288,13 +326,34 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
   ]);
 
   await runTicketCli<unknown>([
+    'attach',
+    '--json',
+    '--index-root',
+    secondChildDir,
+    secondChildTicket.id,
+    secondChildAssetPath,
+    '--as',
+    'notes.md',
+  ]);
+
+  await runTicketCli<unknown>([
     'add-root',
     '--json',
     '--index-root',
     parentDir,
     '--label',
-    childWorkspaceLabel,
+    'shared-alpha',
     childTicketsDir,
+  ]);
+
+  await runTicketCli<unknown>([
+    'add-root',
+    '--json',
+    '--index-root',
+    parentDir,
+    '--label',
+    'shared-beta',
+    secondChildTicketsDir,
   ]);
 
   await runTicketCli<unknown>([
@@ -317,14 +376,56 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
     parentWorkspace,
     'seeded parent workspace should resolve to a canonical workspace id',
   ).toBeTruthy();
-  const childWorkspaceInfo = workspaces.workspaces?.find(
-    (workspace) => workspace.name !== parentWorkspace,
+  const sharedWorkspaceInfos = (workspaces.workspaces ?? []).filter(
+    (workspace) => workspace.name !== parentWorkspace && workspace.label === childWorkspaceLabel,
   );
+  expect(
+    sharedWorkspaceInfos,
+    'seeded viewer should expose both duplicate-basename child workspaces',
+  ).toHaveLength(2);
+
+  let childWorkspaceInfo: { name: string; label?: string } | undefined;
+  let secondChildWorkspaceInfo: { name: string; label?: string } | undefined;
+
+  for (const workspace of sharedWorkspaceInfos) {
+    expect(
+      workspace.name.startsWith('shared--'),
+      'duplicate-basename child workspaces should use canonical shared-- ids',
+    ).toBe(true);
+
+    const ticketListResponse = await fetch(
+      `${url}/api/tickets?workspace=${encodeURIComponent(workspace.name)}&limit=200`,
+    );
+    expect(
+      ticketListResponse.ok,
+      `seeded ticket list for ${workspace.name} must respond`,
+    ).toBe(true);
+
+    const ticketList = (await ticketListResponse.json()) as TicketsResponse;
+    const listedIds = new Set((ticketList.items ?? []).map((ticket) => ticket.id));
+
+    if (listedIds.has(childTicket.id)) {
+      childWorkspaceInfo = workspace;
+    }
+    if (listedIds.has(secondChildTicket.id)) {
+      secondChildWorkspaceInfo = workspace;
+    }
+  }
+
   const childWorkspace = childWorkspaceInfo?.name;
   expect(
     childWorkspace,
-    'seeded child workspace should resolve to a canonical workspace id',
+    'seeded first shared workspace should resolve to a canonical workspace id',
   ).toBeTruthy();
+  const secondChildWorkspace = secondChildWorkspaceInfo?.name;
+  expect(
+    secondChildWorkspace,
+    'seeded second shared workspace should resolve to a canonical workspace id',
+  ).toBeTruthy();
+  expect(
+    childWorkspace,
+    'duplicate-basename child workspaces must not collapse onto the same canonical id',
+  ).not.toBe(secondChildWorkspace);
 
   return {
     tempDir,
@@ -340,6 +441,14 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
     childWorkspaceLabel: childWorkspaceInfo?.label ?? childWorkspaceLabel,
     childTitle,
     childDescriptionSnippet,
+    childAssetSnippet,
+    secondChildTicketId: secondChildTicket.id,
+    secondChildWorkspace: secondChildWorkspace!,
+    secondChildWorkspaceLabel:
+      secondChildWorkspaceInfo?.label ?? secondChildWorkspaceLabel,
+    secondChildTitle,
+    secondChildDescriptionSnippet,
+    secondChildAssetSnippet,
   };
 }
 
@@ -485,6 +594,181 @@ test('workspace route shows the display label while retaining the canonical work
   }
 });
 
+test('colliding workspace routes keep list and follow-up requests pinned to canonical ids', async ({ page }) => {
+  test.setTimeout(120_000);
+
+  expect(fixture, 'seeded viewer fixture must be ready').not.toBeNull();
+  const currentFixture = fixture!;
+  const escapedBaseUrl = escapeRegex(currentFixture.url);
+  const sharedWorkspaces = [
+    {
+      workspace: currentFixture.childWorkspace,
+      label: currentFixture.childWorkspaceLabel,
+      ticketId: currentFixture.childTicketId,
+      title: currentFixture.childTitle,
+      descriptionSnippet: currentFixture.childDescriptionSnippet,
+      assetSnippet: currentFixture.childAssetSnippet,
+    },
+    {
+      workspace: currentFixture.secondChildWorkspace,
+      label: currentFixture.secondChildWorkspaceLabel,
+      ticketId: currentFixture.secondChildTicketId,
+      title: currentFixture.secondChildTitle,
+      descriptionSnippet: currentFixture.secondChildDescriptionSnippet,
+      assetSnippet: currentFixture.secondChildAssetSnippet,
+    },
+  ] as const;
+
+  for (const workspaceFixture of sharedWorkspaces) {
+    const otherWorkspace = sharedWorkspaces.find(
+      (candidate) => candidate.workspace !== workspaceFixture.workspace,
+    );
+    expect(
+      workspaceFixture.workspace.startsWith('shared--'),
+      'duplicate-basename workspace routes must use canonical shared-- ids',
+    ).toBe(true);
+
+    const listResponsePromise = page.waitForResponse((response) => {
+      return matchesWorkspaceRequest(
+        response,
+        '/api/tickets',
+        workspaceFixture.workspace,
+      );
+    });
+
+    await page.goto(
+      `${currentFixture.url}/workspace/${encodeURIComponent(workspaceFixture.workspace)}`,
+      { waitUntil: 'domcontentloaded' },
+    );
+    await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
+      state: 'visible',
+      timeout: TICKET_VIEWER.readyTimeout,
+    });
+
+    const listResponse = await listResponsePromise;
+    expect(
+      listResponse.ok(),
+      `workspace list request for ${workspaceFixture.workspace} must succeed`,
+    ).toBe(true);
+
+    await expect(page).toHaveURL(
+      new RegExp(
+        `^${escapedBaseUrl}/workspace/${escapeRegex(workspaceFixture.workspace)}(?:#.*)?$`,
+      ),
+    );
+    await expect(page.locator('.header-title').first()).toHaveText(
+      workspaceFixture.label,
+    );
+    await expect(page.locator('.header-subtitle').first()).toHaveText(
+      workspaceFixture.workspace,
+    );
+
+    const ticketButton = page.getByTestId(
+      `ticket-tree-ticket-${workspaceFixture.ticketId}`,
+    );
+    await expect(ticketButton).toBeVisible({ timeout: 30_000 });
+    await expect(ticketButton).toContainText(workspaceFixture.title);
+
+    const detailResponsePromise = page.waitForResponse((response) => {
+      return matchesWorkspaceRequest(
+        response,
+        `/api/tickets/${workspaceFixture.ticketId}`,
+        workspaceFixture.workspace,
+      );
+    });
+    const historyResponsePromise = page.waitForResponse((response) => {
+      return matchesWorkspaceRequest(
+        response,
+        `/api/tickets/${workspaceFixture.ticketId}/history`,
+        workspaceFixture.workspace,
+      );
+    });
+
+    await ticketButton.click();
+
+    const [detailResponse, historyResponse] = await Promise.all([
+      detailResponsePromise,
+      historyResponsePromise,
+    ]);
+    expect(
+      detailResponse.ok(),
+      `ticket detail request for ${workspaceFixture.workspace} must succeed`,
+    ).toBe(true);
+    expect(
+      historyResponse.ok(),
+      `ticket history request for ${workspaceFixture.workspace} must succeed`,
+    ).toBe(true);
+
+    await expect(page).toHaveURL(
+      new RegExp(
+        `^${escapedBaseUrl}/workspace/${escapeRegex(workspaceFixture.workspace)}#(?=.*ticket-id=${workspaceFixture.ticketId})(?=.*ticket-workspace=${workspaceFixture.workspace}).*$`,
+      ),
+    );
+    await expect(page.getByTestId('desc-markdown')).toContainText(
+      workspaceFixture.descriptionSnippet,
+    );
+    if (otherWorkspace) {
+      await expect(page.getByTestId('desc-markdown')).not.toContainText(
+        otherWorkspace.descriptionSnippet,
+      );
+    }
+
+    const row = page.getByTestId(`ticket-tree-row-${workspaceFixture.ticketId}`);
+    const rowEntry = row.locator('xpath=..');
+    const filesResponsePromise = page.waitForResponse((response) => {
+      return matchesWorkspaceRequest(
+        response,
+        `/api/tickets/${workspaceFixture.ticketId}/files`,
+        workspaceFixture.workspace,
+      );
+    });
+
+    await row.locator('button').first().click();
+    const filesResponse = await filesResponsePromise;
+    expect(
+      filesResponse.ok(),
+      `ticket files request for ${workspaceFixture.workspace} must succeed`,
+    ).toBe(true);
+
+    const fileList = await expectJson<TicketFilesResponse>(
+      filesResponse,
+      `ticket files for ${workspaceFixture.workspace} must parse`,
+    );
+    const asset = (fileList.files ?? []).find((file) => file.path !== 'description.md');
+    expect(asset, `ticket asset for ${workspaceFixture.workspace} should exist`).toBeTruthy();
+
+    const assetButton = rowEntry.getByTestId(
+      `ticket-tree-file-${workspaceFixture.ticketId}-${asset!.name}`,
+    );
+    await expect(assetButton).toBeVisible();
+
+    const assetResponsePromise = page.waitForResponse((response) => {
+      return matchesWorkspaceRequest(
+        response,
+        `/api/tickets/${workspaceFixture.ticketId}/asset`,
+        workspaceFixture.workspace,
+        { path: asset!.path },
+      );
+    });
+
+    await assetButton.click();
+    const assetResponse = await assetResponsePromise;
+    expect(
+      assetResponse.ok(),
+      `ticket asset request for ${workspaceFixture.workspace} must succeed`,
+    ).toBe(true);
+
+    await expect(page.getByTestId('ticket-content')).toContainText(
+      workspaceFixture.assetSnippet,
+    );
+    if (otherWorkspace) {
+      await expect(page.getByTestId('ticket-content')).not.toContainText(
+        otherWorkspace.assetSnippet,
+      );
+    }
+  }
+});
+
 test('root route swaps content panel body when clicking different ticket rows', async ({ page }) => {
   test.setTimeout(120_000);
 
@@ -568,6 +852,6 @@ test('asset file click should trigger owning-workspace asset request', async ({ 
   await assetButton.click();
   const assetResponse = await assetResponsePromise;
   expect(assetResponse.ok(), 'mixed-workspace asset request must succeed').toBe(true);
-  await expect(page.getByTestId('ticket-content')).toContainText('Mixed-workspace asset payload.');
+  await expect(page.getByTestId('ticket-content')).toContainText(currentFixture.childAssetSnippet);
   await expect(page.getByTestId('tab-description')).toHaveText(asset!.name);
 });
