@@ -1,4 +1,4 @@
-import { expect, test, type APIResponse, type Page, type Response } from '@playwright/test';
+import { expect, test, type APIResponse, type Page, type Response, type TestInfo } from '@playwright/test';
 import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -87,6 +87,17 @@ function escapeRegex(value: string): string {
 async function expectJson<T>(response: APIResponse, message: string): Promise<T> {
   expect(response.ok(), message).toBe(true);
   return (await response.json()) as T;
+}
+
+async function attachScreenshot(
+  page: Page,
+  testInfo: TestInfo,
+  name: string,
+): Promise<void> {
+  await testInfo.attach(name, {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  });
 }
 
 function matchesWorkspaceRequest(
@@ -802,6 +813,71 @@ test('root route swaps content panel body when clicking different ticket rows', 
       `^${escapedBaseUrl}/#(?=.*ticket-id=${currentFixture.childTicketId})(?=.*ticket-workspace=${currentFixture.childWorkspace}).*$`,
     ),
   );
+});
+
+test('content mode renders an integrated ticket document and keeps asset context inline', async ({ page }, testInfo) => {
+  test.setTimeout(120_000);
+
+  expect(fixture, 'seeded viewer fixture must be ready').not.toBeNull();
+  const currentFixture = fixture!;
+
+  await gotoAndWaitForSeededViewer(page, currentFixture.url);
+
+  const childButton = page.getByTestId(`ticket-tree-ticket-${currentFixture.childTicketId}`);
+  await expect(childButton).toBeVisible({ timeout: 30_000 });
+  await childButton.click();
+
+  await page.getByRole('button', { name: 'Content' }).click();
+
+  await expect(page.getByTestId('tab-description')).toHaveText('Document');
+  await expect(page.getByTestId('ticket-document-header')).toContainText(currentFixture.childTitle);
+  await expect(page.getByTestId('ticket-document-metadata')).toContainText(currentFixture.childWorkspace);
+  await expect(page.getByTestId('ticket-document-metadata')).toContainText(currentFixture.childTicketId);
+  await expect(page.getByTestId('desc-markdown')).toContainText(currentFixture.childDescriptionSnippet);
+  await expect(page.getByTestId('ticket-detail-panel')).toHaveCount(0);
+
+  const row = page.getByTestId(`ticket-tree-row-${currentFixture.childTicketId}`);
+  const rowEntry = row.locator('xpath=..');
+  const filesResponsePromise = page.waitForResponse((response) => {
+    return matchesWorkspaceRequest(
+      response,
+      `/api/tickets/${currentFixture.childTicketId}/files`,
+      currentFixture.childWorkspace,
+    );
+  });
+  await row.locator('button').first().click();
+  const filesResponse = await filesResponsePromise;
+  expect(filesResponse.ok(), 'mixed-workspace file list request must succeed').toBe(true);
+
+  const fileList = await expectJson<TicketFilesResponse>(
+    filesResponse,
+    'mixed-workspace file list JSON must parse',
+  );
+  const asset = (fileList.files ?? []).find((file) => file.path !== 'description.md');
+  expect(asset, 'seeded child ticket should expose a non-description asset').toBeTruthy();
+
+  const assetButton = rowEntry.getByTestId(
+    `ticket-tree-file-${currentFixture.childTicketId}-${asset!.name}`,
+  );
+  await expect(assetButton).toBeVisible();
+
+  const assetResponsePromise = page.waitForResponse((response) => {
+    return matchesWorkspaceRequest(
+      response,
+      `/api/tickets/${currentFixture.childTicketId}/asset`,
+      currentFixture.childWorkspace,
+      { path: asset!.path },
+    );
+  });
+  await assetButton.click();
+  const assetResponse = await assetResponsePromise;
+  expect(assetResponse.ok(), 'mixed-workspace asset request must succeed').toBe(true);
+
+  await expect(page.getByTestId('ticket-document-asset-banner')).toContainText(asset!.name);
+  await expect(page.getByTestId('ticket-document-header')).toContainText(currentFixture.childTitle);
+  await expect(page.getByTestId('ticket-content')).toContainText(currentFixture.childAssetSnippet);
+
+  await attachScreenshot(page, testInfo, 'mixed-workspace-integrated-document');
 });
 
 test('asset file click should trigger owning-workspace asset request', async ({ page }) => {

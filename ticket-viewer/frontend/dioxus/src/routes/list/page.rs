@@ -95,9 +95,9 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut workspace_label_request_seq: Signal<u64> = use_signal(|| 0);
     let mut view_mode: Signal<String> = use_signal(|| "split".to_string());
     let mut graph_layout_mode: Signal<LayoutMode> =
-        use_signal(LayoutMode::default);
+        use_signal(|| LayoutMode::Hierarchical3D);
     let mut graph_projection: Signal<Projection> =
-        use_signal(Projection::default);
+        use_signal(|| Projection::Orthographic);
     let mut graph_panel_width: Signal<f64> = use_signal(|| 320.0_f64);
     let mut detail_panel_width: Signal<f64> = use_signal(|| 240.0_f64);
     let mut selected_file: Signal<Option<(TicketRef, String)>> =

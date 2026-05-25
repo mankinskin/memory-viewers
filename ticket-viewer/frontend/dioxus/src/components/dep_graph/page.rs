@@ -60,16 +60,14 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
 
     {
         let workspace_fetch = workspace.clone();
-        let root_fetch = root_id.clone();
         use_effect(move || {
             let _trigger = fetch_trigger();
             let workspace = workspace_fetch.clone();
-            let root_id = root_fetch.clone();
             let mut layout = layout;
             let mut load_error = load_error;
             spawn(async move {
                 let backend = HttpTicketBackend::new(None);
-                match backend.get_subgraph(&workspace, &root_id, 4).await {
+                match backend.get_workspace_graph(&workspace).await {
                     Ok(response) => {
                         let active_workspace =
                             if response.active_workspace.is_empty() {

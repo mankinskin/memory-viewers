@@ -29,7 +29,7 @@ pub(super) fn content_tab_label(
     is_description: bool,
 ) -> String {
     if is_description {
-        return "Description".to_string();
+        return "Document".to_string();
     }
 
     asset_path

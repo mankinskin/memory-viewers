@@ -1,5 +1,8 @@
-import { expect, test, type Page } from '@playwright/test';
-import { TICKET_VIEWER } from './shared/viewers';
+import { expect, test, type Page, type TestInfo } from '@playwright/test';
+import {
+  gotoAndWaitForViewer,
+  TICKET_VIEWER,
+} from './shared/viewers';
 
 test.use({
   headless: false,
@@ -31,15 +34,69 @@ interface GraphEdge {
 }
 
 interface CandidateSelection {
+  workspace: string;
   rootId: string;
+  rootTitle: string;
   childId: string;
   childTitle: string;
   childComponent: string;
 }
 
-async function getTicketComponent(page: Page, id: string): Promise<string> {
+interface WorkspacesResponse {
+  active_workspace?: string;
+  workspaces?: Array<{ name?: string }>;
+}
+
+async function attachScreenshot(
+  page: Page,
+  testInfo: TestInfo,
+  name: string,
+): Promise<void> {
+  await testInfo.attach(name, {
+    body: await page.screenshot({ fullPage: true }),
+    contentType: 'image/png',
+  });
+}
+
+async function openCandidateTicket(
+  page: Page,
+  candidate: CandidateSelection,
+): Promise<void> {
+  await page.goto(`${TICKET_VIEWER.url}/workspace/${candidate.workspace}`, {
+    waitUntil: 'domcontentloaded',
+  });
+  await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
+    state: 'visible',
+    timeout: TICKET_VIEWER.readyTimeout,
+  });
+
+  const searchBox = page.getByRole('textbox').first();
+  await searchBox.fill(`id:${candidate.rootId}`);
+
+  const rootTicketButton = page.getByTestId(`ticket-tree-ticket-${candidate.rootId}`);
+  await expect(rootTicketButton).toBeVisible({ timeout: 30_000 });
+  await rootTicketButton.click();
+}
+
+async function resolveActiveWorkspace(page: Page): Promise<string> {
+  await gotoAndWaitForViewer(page, TICKET_VIEWER);
+
+  const resp = await page.request.get(`${TICKET_VIEWER.url}/api/workspaces`);
+  expect(resp.ok(), 'workspace list API must respond').toBe(true);
+
+  const body = (await resp.json()) as WorkspacesResponse;
+  const workspace = body.active_workspace ?? body.workspaces?.[0]?.name;
+  expect(workspace, 'viewer must expose at least one workspace').toBeTruthy();
+  return workspace!;
+}
+
+async function getTicketComponent(
+  page: Page,
+  workspace: string,
+  id: string,
+): Promise<string> {
   const resp = await page.request.get(
-    `${TICKET_VIEWER.url}/api/tickets/${id}?workspace=default`,
+    `${TICKET_VIEWER.url}/api/tickets/${id}?workspace=${workspace}`,
   );
   if (!resp.ok()) {
     return '';
@@ -49,20 +106,22 @@ async function getTicketComponent(page: Page, id: string): Promise<string> {
 }
 
 async function findGraphSelectionCandidate(page: Page): Promise<CandidateSelection> {
+  const workspace = await resolveActiveWorkspace(page);
+
   const listResp = await page.request.get(
-    `${TICKET_VIEWER.url}/api/tickets?workspace=default&limit=500`,
+    `${TICKET_VIEWER.url}/api/tickets?workspace=${workspace}&limit=500`,
   );
   expect(listResp.ok(), 'ticket list API must respond').toBe(true);
 
   const listBody = await listResp.json();
   const items: TicketListItem[] = listBody?.items ?? [];
-  expect(items.length, 'workspace `default` must contain tickets').toBeGreaterThan(0);
+  expect(items.length, `workspace \`${workspace}\` must contain tickets`).toBeGreaterThan(0);
 
   for (const item of items) {
-    const rootComponent = await getTicketComponent(page, item.id);
+    const rootComponent = await getTicketComponent(page, workspace, item.id);
 
     const graphResp = await page.request.get(
-      `${TICKET_VIEWER.url}/api/graph/subgraph?workspace=default&root=${item.id}&depth=1`,
+      `${TICKET_VIEWER.url}/api/graph/subgraph?workspace=${workspace}&root=${item.id}&depth=1`,
     );
     if (!graphResp.ok()) {
       continue;
@@ -83,7 +142,7 @@ async function findGraphSelectionCandidate(page: Page): Promise<CandidateSelecti
     );
 
     for (const childId of directChildIds) {
-      const childComponent = await getTicketComponent(page, childId);
+      const childComponent = await getTicketComponent(page, workspace, childId);
       if (!childComponent || childComponent === rootComponent) {
         continue;
       }
@@ -91,7 +150,9 @@ async function findGraphSelectionCandidate(page: Page): Promise<CandidateSelecti
       const childNode = nodes.find((node) => node.id === childId);
       const childTitle = childNode?.title?.trim() || childId;
       return {
+        workspace,
         rootId: item.id,
+        rootTitle: item.title?.trim() || item.id,
         childId,
         childTitle,
         childComponent,
@@ -108,25 +169,7 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
 
     const candidate = await findGraphSelectionCandidate(page);
 
-    await page.goto(`${TICKET_VIEWER.url}/workspace/default`, {
-      waitUntil: 'domcontentloaded',
-    });
-    await page.evaluate(
-      ({ key, id }) => {
-        const raw = localStorage.getItem(key);
-        const obj = raw ? JSON.parse(raw) : {};
-        obj.open_ticket_id = id;
-        localStorage.setItem(key, JSON.stringify(obj));
-      },
-      { key: 'ticket-viewer:default:ui', id: candidate.rootId },
-    );
-    await page.goto(`${TICKET_VIEWER.url}/workspace/default#id=${candidate.rootId}`, {
-      waitUntil: 'domcontentloaded',
-    });
-    await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
-      state: 'visible',
-      timeout: TICKET_VIEWER.readyTimeout,
-    });
+    await openCandidateTicket(page, candidate);
 
     const detailPanel = page.getByTestId('ticket-detail-panel');
     const componentField = page.getByTestId('ticket-detail-field-component');
@@ -134,7 +177,8 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
     await expect(componentField).toBeVisible();
     await expect(componentField).not.toContainText(candidate.childComponent);
 
-    await expect(page.locator('#graph3d-container')).toBeAttached({ timeout: 30_000 });
+    await page.getByRole('button', { name: /^Graph$/ }).first().click();
+    await expect(page.locator('#graph3d-container')).toBeVisible({ timeout: 30_000 });
     await page.waitForFunction(
       (childTitle) => {
         const root = document.getElementById('graph3d-container');
@@ -157,11 +201,80 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
     await expect(childNode).toBeVisible();
     await childNode.click();
 
+    await page.getByRole('button', { name: /^Split$/ }).first().click();
+    await expect(detailPanel).toBeVisible();
+    await expect(componentField).toBeVisible();
     await expect(componentField).toContainText(candidate.childComponent, { timeout: 20_000 });
-    await expect(page).toHaveURL(
-      new RegExp(
-        `#(?=.*(?:id|ticket-id)=${candidate.rootId})(?:(?=.*ticket-workspace=default).*)?$`,
-      ),
+    await expect
+      .poll(() => {
+        const currentUrl = new URL(page.url());
+        const hashParams = new URLSearchParams(currentUrl.hash.slice(1));
+        return {
+          pathname: currentUrl.pathname,
+          ticketId: hashParams.get('ticket-id') ?? hashParams.get('id'),
+        };
+      })
+      .toEqual({
+        pathname: `/workspace/${candidate.workspace}`,
+        ticketId: candidate.rootId,
+      });
+  });
+
+  test('graph mode defaults to hierarchical isometric controls and preserves top-to-bottom depth ordering', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+
+    const candidate = await findGraphSelectionCandidate(page);
+
+    await openCandidateTicket(page, candidate);
+
+    await page.getByRole('button', { name: /^Graph$/ }).first().click();
+    await expect(page.locator('#graph3d-container')).toBeVisible({ timeout: 30_000 });
+
+    await page.waitForFunction(
+      ({ rootTitle, childTitle }) => {
+        const root = document.getElementById('graph3d-container');
+        if (!root) {
+          return false;
+        }
+        const text = Array.from(root.querySelectorAll('[data-node-idx]'))
+          .filter((node) => (node as HTMLElement).style.display !== 'none')
+          .map((node) => node.textContent || '');
+        return text.some((value) => value.includes(rootTitle)) &&
+          text.some((value) => value.includes(childTitle));
+      },
+      { rootTitle: candidate.rootTitle, childTitle: candidate.childTitle },
+      { timeout: 30_000 },
     );
+
+    const rootNode = page
+      .locator('#graph3d-container [data-node-idx]:visible')
+      .filter({ hasText: candidate.rootTitle })
+      .first();
+    const childNode = page
+      .locator('#graph3d-container [data-node-idx]:visible')
+      .filter({ hasText: candidate.childTitle })
+      .first();
+
+    await expect(rootNode).toBeVisible();
+    await expect(childNode).toBeVisible();
+
+    const rootBox = await rootNode.boundingBox();
+    const childBox = await childNode.boundingBox();
+    expect(rootBox, 'root graph node must expose a screen box').not.toBeNull();
+    expect(childBox, 'child graph node must expose a screen box').not.toBeNull();
+    expect(
+      childBox!.y,
+      'child node should render below the root in the default hierarchy view',
+    ).toBeGreaterThan(rootBox!.y + 10);
+
+    await page.getByTitle('Graph settings').click();
+    const hierarchicalButton = page.getByRole('button', { name: 'Hierarchical 3D' });
+    const orthographicButton = page.getByRole('button', { name: 'Orthographic' });
+    await expect(hierarchicalButton).toBeVisible();
+    await expect(orthographicButton).toBeVisible();
+    await expect(hierarchicalButton).toHaveAttribute('style', /#93bbff|79,140,255/);
+    await expect(orthographicButton).toHaveAttribute('style', /#93bbff|79,140,255/);
+
+    await attachScreenshot(page, testInfo, 'graph-default-isometric-layout');
   });
 });

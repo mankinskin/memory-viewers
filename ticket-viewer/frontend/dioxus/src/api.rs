@@ -182,6 +182,17 @@ impl TicketBackend for HttpTicketBackend {
         .await
     }
 
+    async fn get_workspace_graph(
+        &self,
+        workspace: &str,
+    ) -> Result<GraphSubgraphResponse, String> {
+        self.fetch(&format!(
+            "/api/graph/workspace?workspace={}",
+            enc(workspace),
+        ))
+        .await
+    }
+
     async fn get_workflow_next(
         &self,
         workspace: &str,

@@ -36,6 +36,11 @@ pub trait TicketBackend {
         depth: u32,
     ) -> impl std::future::Future<Output = Result<GraphSubgraphResponse, String>>;
 
+    fn get_workspace_graph(
+        &self,
+        workspace: &str,
+    ) -> impl std::future::Future<Output = Result<GraphSubgraphResponse, String>>;
+
     fn get_workflow_next(
         &self,
         workspace: &str,

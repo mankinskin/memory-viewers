@@ -4,11 +4,16 @@
 //! Within each row nodes are ordered by priority (critical → none) then title.
 //! The resulting layout has larger / parent tickets at the top and smaller /
 //! leaf tickets at the bottom, matching the conventional dependency-tree view.
+//! Ticket-viewer then adds only a small Z stagger so the default graph reads
+//! as a mostly planar isometric diagram instead of a deep 3-D cluster.
 //!
 //! Used by `graph3d::Layout3D::from_2d()` to compute initial node positions
 //! before 3D projection.
 
-use std::collections::HashMap;
+use std::{
+    cmp::Ordering,
+    collections::HashMap,
+};
 
 use crate::types::{
     GraphEdgeItem,
@@ -142,22 +147,38 @@ impl GraphLayout {
         layout
     }
 
-    /// Place nodes in a 3-D hierarchical layout:
-    ///
-    /// * Y axis: `depth * LAYER_SPACING` — deeper dependencies are lower.
-    /// * XZ plane: nodes in each layer start on an evenly-spaced circle,
-    ///   then a force simulation clusters connected nodes while spreading
-    ///   same-layer siblings apart.
+    /// Place nodes in a hierarchical layout that strongly prefers a flat X/Y
+    /// reading order with only a small bounded Z stagger for depth cues.
     fn hierarchical_layout(&mut self) {
         // Vertical gap between depth layers (dependency hierarchy).
-        const LAYER_SPACING: f64 = 300.0;
-        // Minimum inter-node arc spacing on the initial placement circle.
-        const COL_SPACING: f64 = 360.0;
+        const LAYER_SPACING: f64 = 320.0;
+        // Minimum horizontal gap between nodes in the same depth layer.
+        const COL_SPACING: f64 = 320.0;
+        // Small bounded Z offsets so the default camera reads as isometric
+        // without turning each layer into a deep overlapping stack.
+        const Z_STAGGER: f64 = 36.0;
 
         // Group node indices by depth.
         let mut by_depth: HashMap<usize, Vec<usize>> = HashMap::new();
         for (i, node) in self.nodes.iter().enumerate() {
             by_depth.entry(node.depth).or_default().push(i);
+        }
+
+        let id_to_idx: HashMap<&str, usize> = self
+            .nodes
+            .iter()
+            .enumerate()
+            .map(|(i, node)| (node.id.as_str(), i))
+            .collect();
+        let mut parents_by_child: HashMap<usize, Vec<usize>> = HashMap::new();
+        for edge in &self.edges {
+            let Some(&from_idx) = id_to_idx.get(edge.from.as_str()) else {
+                continue;
+            };
+            let Some(&to_idx) = id_to_idx.get(edge.to.as_str()) else {
+                continue;
+            };
+            parents_by_child.entry(to_idx).or_default().push(from_idx);
         }
 
         let mut depths: Vec<usize> = by_depth.keys().copied().collect();
@@ -166,35 +187,77 @@ impl GraphLayout {
         for depth in depths {
             let indices = by_depth.get_mut(&depth).unwrap();
 
-            // Sort within the layer: priority then title for a stable seed.
-            indices.sort_by(|&a, &b| {
-                let pa = priority_order(self.nodes[a].priority.as_deref());
-                let pb = priority_order(self.nodes[b].priority.as_deref());
-                pa.cmp(&pb).then_with(|| {
-                    let ta = self.nodes[a].title.as_deref().unwrap_or("");
-                    let tb = self.nodes[b].title.as_deref().unwrap_or("");
-                    ta.cmp(tb)
+            let mut anchored: Vec<(usize, f64)> = indices
+                .iter()
+                .map(|&node_idx| {
+                    let anchor = parent_anchor(
+                        &self.nodes,
+                        &parents_by_child,
+                        node_idx,
+                    );
+                    (node_idx, anchor)
                 })
+                .collect();
+
+            // Keep siblings grouped by the X position of their already-placed
+            // parents so the hierarchy reads left-to-right within each layer.
+            anchored.sort_by(|(a_idx, a_anchor), (b_idx, b_anchor)| {
+                a_anchor
+                    .partial_cmp(b_anchor)
+                    .unwrap_or(Ordering::Equal)
+                    .then_with(|| {
+                        let pa = priority_order(
+                            self.nodes[*a_idx].priority.as_deref(),
+                        );
+                        let pb = priority_order(
+                            self.nodes[*b_idx].priority.as_deref(),
+                        );
+                        pa.cmp(&pb)
+                    })
+                    .then_with(|| {
+                        let ta =
+                            self.nodes[*a_idx].title.as_deref().unwrap_or("");
+                        let tb =
+                            self.nodes[*b_idx].title.as_deref().unwrap_or("");
+                        ta.cmp(tb)
+                    })
             });
 
-            let n = indices.len();
+            let n = anchored.len();
             let y = depth as f64 * LAYER_SPACING;
 
             if n == 1 {
-                // Single node: place at origin of its layer's XZ plane.
-                self.nodes[indices[0]].x = 0.0;
-                self.nodes[indices[0]].y = y;
-                self.nodes[indices[0]].z = 0.0;
+                let node_idx = anchored[0].0;
+                self.nodes[node_idx].x = anchored[0].1;
+                self.nodes[node_idx].y = y;
+                self.nodes[node_idx].z = 0.0;
             } else {
-                // Spread nodes evenly around a circle in XZ so the force
-                // simulation starts from a symmetric, uncrowded seed.
-                let radius = (n as f64 * COL_SPACING / std::f64::consts::TAU)
-                    .max(COL_SPACING);
-                for (slot, &node_idx) in indices.iter().enumerate() {
-                    let angle = std::f64::consts::TAU * slot as f64 / n as f64;
-                    self.nodes[node_idx].x = radius * angle.cos();
-                    self.nodes[node_idx].y = y;
-                    self.nodes[node_idx].z = radius * angle.sin();
+                let target_mean = anchored
+                    .iter()
+                    .map(|(_, anchor)| *anchor)
+                    .sum::<f64>()
+                    / n as f64;
+                let mut assigned: Vec<(usize, f64)> = Vec::with_capacity(n);
+                for (slot, (node_idx, anchor)) in anchored.iter().enumerate() {
+                    let x = match assigned.last() {
+                        Some((_, prev_x)) => anchor.max(*prev_x + COL_SPACING),
+                        None => *anchor,
+                    };
+                    assigned.push((*node_idx, x));
+
+                    self.nodes[*node_idx].x = x;
+                    self.nodes[*node_idx].y = y;
+                    self.nodes[*node_idx].z = layer_stagger(slot, Z_STAGGER);
+                }
+
+                let assigned_mean = assigned
+                    .iter()
+                    .map(|(_, x)| *x)
+                    .sum::<f64>()
+                    / n as f64;
+                let shift = target_mean - assigned_mean;
+                for (node_idx, _) in assigned {
+                    self.nodes[node_idx].x += shift;
                 }
             }
         }
@@ -202,14 +265,11 @@ impl GraphLayout {
         // Centre vertically around y = 0.
         self.centre_y();
 
-        // Refine XZ positions: connected nodes attract in the XZ plane while
-        // same-layer siblings repel.  Y is frozen throughout.
-        self.xz_force_refinement(200);
-
-        // Re-centre XZ after force spread.
+        // Re-centre after row placement and Z staggering.
         self.centre_xz();
     }
 
+    #[allow(dead_code)]
     /// XZ-plane force simulation that keeps depth-layer Y positions fixed.
     ///
     /// * Same-layer nodes repel each other in XZ to prevent crowding.
@@ -421,4 +481,28 @@ impl GraphLayout {
             self.nodes[i].y += self.nodes[i].vy * DT;
         }
     }
+}
+
+fn parent_anchor(
+    nodes: &[GraphNode],
+    parents_by_child: &HashMap<usize, Vec<usize>>,
+    node_idx: usize,
+) -> f64 {
+    let Some(parent_indices) = parents_by_child.get(&node_idx) else {
+        return 0.0;
+    };
+
+    let sum = parent_indices
+        .iter()
+        .map(|parent_idx| nodes[*parent_idx].x)
+        .sum::<f64>();
+    sum / parent_indices.len() as f64
+}
+
+fn layer_stagger(
+    slot: usize,
+    spacing: f64,
+) -> f64 {
+    const OFFSETS: [f64; 7] = [0.0, 1.0, -1.0, 2.0, -2.0, 3.0, -3.0];
+    OFFSETS[slot % OFFSETS.len()] * spacing
 }

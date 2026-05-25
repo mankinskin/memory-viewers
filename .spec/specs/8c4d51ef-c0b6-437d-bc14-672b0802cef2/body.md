@@ -1,0 +1,106 @@
+# Problem
+
+The ticket-viewer main layout still splits ticket reading across separate content and detail panels, while graph mode fetches a fixed-depth root-local subgraph and treats selection changes like graph replacements instead of focus changes. The result is a fragmented detail experience and a graph surface that does not scale to full-workspace navigation.
+
+# Goals
+
+- make the selected ticket read like one compact integrated document in the main layout
+- keep the workspace graph visible while selection changes move focus through the existing graph
+- make dependency hierarchy read cleanly with mostly planar isometric defaults
+- add node detail tiers so dense graphs stay legible when zoomed out
+
+# Requirements
+
+## Integrated ticket document
+
+- the primary reading surface combines title, key metadata, description, and contextual asset content
+- edit and history controls remain available without fragmenting the default reading experience into separate panels
+- the integrated document remains usable beside the graph in split mode and in content-only mode
+
+## Focused full-graph navigation
+
+- graph mode can render a workspace-scoped graph payload instead of only a fixed-depth root subgraph
+- switching selection changes focus, pan, and emphasis within the existing dataset rather than replacing the graph with a new local fetch
+- related nodes and edges are emphasized while distant unrelated regions can fade or cull enough to preserve readability
+
+## Layout defaults and settings
+
+- dependency hierarchy should read from parent to child consistently
+- default placement should prefer a mostly planar arrangement suitable for isometric viewing instead of deep overlapping stacks
+- graph settings should expose the main hierarchy and spacing parameters required to tune this view
+
+## Node level of detail
+
+- node rendering supports several detail tiers, from minimal particles or dots through compact and rich ticket presentations
+- zoom level, focus, and visibility budget can change which tier is used
+- focused nodes may remain richer than distant nodes at the same zoom level
+
+# Planned work
+
+Tracker: [05dae5fd [ticket-viewer][ticket-http][viewer-api] Improve main layout ticket documents and focused full-graph navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/05dae5fd-1a1d-4a64-be62-f29ca0771a4d/ticket.toml)
+
+1. [8f5d611f [ticket-viewer] Build integrated ticket document panel](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/8f5d611f-0033-423e-b2f6-17683feb8e34/ticket.toml)
+2. [60092819 [ticket-viewer] Fix graph layout defaults and isometric settings](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/60092819-f725-48ec-93f0-aba195ef81eb/ticket.toml)
+3. [397fa45b [ticket-http][ticket-viewer] Expose workspace graph payload for focused full-graph navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/397fa45b-a0bd-43d2-b430-2dfa44d80c5c/ticket.toml)
+4. [6e7a15c9 [ticket-viewer] Keep full workspace graph visible with focused navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/6e7a15c9-d8e6-4bbe-bb34-b83bd651896b/ticket.toml)
+5. [322ba030 [viewer-api][ticket-viewer] Add multi-level graph node detail rendering](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/322ba030-160c-41d3-8a12-42936ae92858/ticket.toml)
+
+# Implementation traceability
+
+Completed first slice: [8f5d611f [ticket-viewer] Build integrated ticket document panel](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/8f5d611f-0033-423e-b2f6-17683feb8e34/ticket.toml)
+
+- content mode now renders a single document-focused surface while the separate detail inspector remains available only in split mode
+- the integrated document header, metadata grid, and inline asset context live in [panels.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/panels.rs), [page.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_content/page.rs), and [render.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_content/render.rs)
+- focused browser coverage for the document surface and asset-context path lives in [mixed-workspace-root-route.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/mixed-workspace-root-route.spec.ts)
+
+Completed second slice: [60092819 [ticket-viewer] Fix graph layout defaults and isometric settings](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/60092819-f725-48ec-93f0-aba195ef81eb/ticket.toml)
+
+- the local graph layout in [layout.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/layout.rs) now places hierarchy layers as parent-anchored horizontal bands with fixed layer spacing and bounded z staggering instead of circular xz rings, so parent-to-child depth reads top-to-bottom with less overlap
+- graph defaults in [page.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/page.rs) and [graph3d.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph3d.rs) now start in hierarchical 3D with orthographic projection and a mostly planar isometric reset angle
+- focused graph browser coverage in [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now validates both detail-sidebar selection and the default hierarchical isometric layout using real sidebar ticket selection in mixed-workspace graphs
+- the remaining tickets stay planned for workspace graph payloads, focus navigation, and node LOD
+
+Completed third slice: [397fa45b [ticket-http][ticket-viewer] Expose workspace graph payload for focused full-graph navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/397fa45b-a0bd-43d2-b430-2dfa44d80c5c/ticket.toml)
+
+- [graph.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/tools/http/ticket-http/src/serve/handlers/graph.rs), [traversal.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/tools/http/ticket-http/src/serve/handlers/graph/traversal.rs), and [routes.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/tools/http/ticket-http/src/serve/routes.rs) now expose `/api/graph/workspace` and build a workspace-scoped graph payload that includes isolated local tickets, preserved edge metadata, and related cross-workspace nodes without truncating to a root-local depth window
+- [backend.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/api/backend.rs), [api.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/api.rs), [graph_fetch.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph_fetch.rs), [graph3d.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph3d.rs), and [page.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/components/dep_graph/page.rs) now fetch and cache graph data per workspace so focus changes can reuse one dataset instead of reloading a new root subgraph on every selection
+- focused browser coverage in [graph3d-fetch-error.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph3d-fetch-error.spec.ts) and [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now validates the workspace route in both failure and success paths
+- the remaining tickets stay planned for focus-navigation behavior on top of the workspace payload and for multi-level node detail rendering
+
+# Related specs
+
+- viewer-api Graph3D shared behavior: [viewer-api Graph3D](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/.spec/specs/4f14356f-c4bd-4554-be1e-35361de241da/body.md)
+- ticket-viewer shell layout baseline: [ticket-viewer shell](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.spec/specs/5650b307-27b0-48d0-b722-daa5e7fd30cf/body.md)
+
+# Validation status
+
+Completed for [8f5d611f [ticket-viewer] Build integrated ticket document panel](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/8f5d611f-0033-423e-b2f6-17683feb8e34/ticket.toml):
+
+- passed `cargo check --manifest-path memory-viewers/ticket-viewer/Cargo.toml`
+- passed `viewer-ctl prepare ticket-viewer`
+- passed `cargo build --manifest-path memory-viewers/ticket-viewer/Cargo.toml --release`
+- passed `npm run test:e2e:release -- mixed-workspace-root-route.spec.ts`
+- visual confirmation screenshot: [mixed-workspace-integrated-document](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/playwright-report-release/data/ed4faaf64512b0cb56518c5feb9d86f952942362.png)
+
+Completed for [60092819 [ticket-viewer] Fix graph layout defaults and isometric settings](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/60092819-f725-48ec-93f0-aba195ef81eb/ticket.toml):
+
+- passed `cargo check --manifest-path memory-viewers/ticket-viewer/Cargo.toml`
+- passed `npm run test:e2e:release -- graph-detail-sidebar.spec.ts -g "graph mode defaults to hierarchical isometric controls and preserves top-to-bottom depth ordering"`
+- passed `npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
+- visual confirmation screenshot: [graph-mode-isometric-layout](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/playwright-report-release/data/61f8fdc41d04e91a5f0386676858d0c531e6d637.png)
+
+Completed for [397fa45b [ticket-http][ticket-viewer] Expose workspace graph payload for focused full-graph navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/397fa45b-a0bd-43d2-b430-2dfa44d80c5c/ticket.toml):
+
+- passed `cargo test -p ticket-http workspace_graph_includes_isolated_local_and_cross_workspace_nodes -- --nocapture`
+- passed `cargo check --manifest-path memory-viewers/ticket-viewer/frontend/dioxus/Cargo.toml`
+- passed `cargo build --manifest-path memory-viewers/ticket-viewer/Cargo.toml --release`
+- passed `viewer-ctl install ticket-viewer`
+- passed `npm run test:e2e:release -- graph3d-fetch-error.spec.ts`
+- passed `npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
+
+# Ongoing validation plan
+
+- `cargo check --manifest-path memory-viewers/ticket-viewer/Cargo.toml`
+- `cargo check --manifest-path memory-viewers/viewer-api/viewer-api/Cargo.toml`
+- targeted ticket-viewer browser validation in an external Chromium-family browser for document, graph focus, and layout behavior
+- release Playwright coverage for each additional slice as layout, full-graph navigation, and LOD work lands

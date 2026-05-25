@@ -1,0 +1,12 @@
+id = "322ba030-160c-41d3-8a12-42936ae92858"
+created_at = "2026-05-25T11:48:36.984625+00:00"
+title = "[viewer-api][ticket-viewer] Add multi-level graph node detail rendering"
+state = "new"
+acceptance_criteria = "1. Graph nodes render through several distinct detail tiers instead of a single fixed card. 2. Zoomed-out graphs fall back to minimal representations that avoid unreadable text walls. 3. Zooming in restores progressively richer ticket content. 4. Focus or hover can keep the active node more informative than distant nodes at the same zoom level."
+component = "viewer-api"
+depends_on = ["60092819-f725-48ec-93f0-aba195ef81eb"]
+priority = "high"
+risk_level = "medium"
+spec_refs = "8c4d51ef-c0b6-437d-bc14-672b0802cef2"
+tags = "viewer-api,ticket-viewer,graph,lod,rendering"
+type = "tracker-improvement"

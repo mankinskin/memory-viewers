@@ -28,7 +28,7 @@ pub(super) fn render_selected_main_panel(
     selected_ticket: TicketRef,
     tickets: Signal<Vec<TicketSummary>>,
     mut graph_content_ticket: Signal<Option<TicketRef>>,
-    mut view_mode: Signal<String>,
+    view_mode: Signal<String>,
     graph_panel_collapsed: bool,
     detail_is_collapsed: bool,
     mut graph_layout_mode: Signal<LayoutMode>,
@@ -36,8 +36,8 @@ pub(super) fn render_selected_main_panel(
     mut graph_panel_width: Signal<f64>,
     mut detail_panel_width: Signal<f64>,
     selected_file: Signal<Option<(TicketRef, String)>>,
-    mut graph_panel_override: Signal<Option<bool>>,
-    mut detail_panel_override: Signal<Option<bool>>,
+    graph_panel_override: Signal<Option<bool>>,
+    detail_panel_override: Signal<Option<bool>>,
     window_width: Signal<u32>,
 ) -> Element {
     let view_mode_value = view_mode.read().clone();
@@ -103,7 +103,7 @@ pub(super) fn render_selected_main_panel(
                     selected_file,
                 )}
             }
-            if view_mode_value.as_str() != "graph" && !detail_is_collapsed {
+            if view_mode_value.as_str() == "split" && !detail_is_collapsed {
                 {
                     let detail_ticket = graph_content_ticket
                         .read()
@@ -127,7 +127,7 @@ pub(super) fn render_selected_main_panel(
                     }
                 }
             }
-            if view_mode_value.as_str() != "graph" && detail_is_collapsed {
+            if view_mode_value.as_str() == "split" && detail_is_collapsed {
                 {render_detail_strip(detail_panel_override, window_width)}
             }
         }
@@ -244,7 +244,7 @@ fn render_view_mode_bar(
                     if graph_panel_collapsed { "⬡ Graph ›" } else { "⬡ Graph ‹" }
                 }
             }
-            if view_mode_value != "graph" {
+            if view_mode_value == "split" {
                 button {
                     title: if detail_is_collapsed {
                         "Show details panel (auto-collapsed)"
@@ -275,6 +275,13 @@ fn render_content_panel(
         .read()
         .clone()
         .unwrap_or_else(|| selected_ticket.clone());
+    let content_summary = tickets
+        .read()
+        .iter()
+        .find(|ticket| {
+            ticket.resolved_ticket_ref(&active_workspace) == content_ticket
+        })
+        .cloned();
     let active_asset = selected_file
         .read()
         .as_ref()
@@ -285,12 +292,8 @@ fn render_content_panel(
         content_ticket.key(),
         active_asset.as_deref().unwrap_or("description.md")
     );
-    let fields = tickets
-        .read()
-        .iter()
-        .find(|ticket| {
-            ticket.resolved_ticket_ref(&active_workspace) == content_ticket
-        })
+    let fields = content_summary
+        .as_ref()
         .map(|ticket| ticket.fields.clone())
         .unwrap_or(serde_json::Value::Object(Default::default()));
 
@@ -302,6 +305,17 @@ fn render_content_panel(
                 workspace: content_ticket.workspace,
                 ticket_id: content_ticket.id,
                 fields,
+                ticket_title: content_summary.as_ref().and_then(|ticket| ticket.title.clone()),
+                ticket_state: content_summary.as_ref().and_then(|ticket| ticket.state.clone()),
+                ticket_type: content_summary.as_ref().and_then(|ticket| ticket.ticket_type.clone()),
+                created_at: content_summary.as_ref().map(|ticket| ticket.created_at.clone()),
+                updated_at: content_summary.as_ref().and_then(|ticket| {
+                    if ticket.updated_at.trim().is_empty() {
+                        None
+                    } else {
+                        Some(ticket.updated_at.clone())
+                    }
+                }),
                 asset_path: active_asset,
             }
         }

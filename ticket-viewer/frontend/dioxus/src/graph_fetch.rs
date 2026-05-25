@@ -45,13 +45,16 @@ const REQUEST_TIMEOUT_MS: u32 = 8_000;
 const MAX_CONCURRENT_FETCHES: usize = 3;
 const MAX_RETRIES: u8 = 1;
 
+pub(crate) fn workspace_cache_key(workspace: &str) -> String {
+    format!("workspace:{workspace}")
+}
+
 // ── Inner state ───────────────────────────────────────────────────────────────
 
 #[derive(Clone)]
 struct FetchJob {
     cache_key: String,
     workspace: String,
-    root_id: String,
 }
 
 #[derive(Clone)]
@@ -120,9 +123,9 @@ impl GraphFetchService {
     pub fn state_for(
         &self,
         workspace: &str,
-        root_id: &str,
+        _root_id: &str,
     ) -> GraphFetchState {
-        let cache_key = format!("{workspace}:{root_id}");
+        let cache_key = workspace_cache_key(workspace);
         if self.cache.get(&cache_key).is_some() {
             return GraphFetchState::Ready;
         }
@@ -142,15 +145,15 @@ impl GraphFetchService {
     pub fn retry(
         &self,
         workspace: &str,
-        root_id: &str,
+        _root_id: &str,
     ) {
-        let cache_key = format!("{workspace}:{root_id}");
+        let cache_key = workspace_cache_key(workspace);
         self.inner.borrow_mut().errors.remove(&cache_key);
-        self.ensure_fetched(workspace, root_id);
+        self.ensure_fetched(workspace, "");
     }
 
-    /// Ensure a graph layout for `(workspace, root_id)` will be available in
-    /// the shared cache.
+    /// Ensure a workspace-scoped graph layout will be available in the shared
+    /// cache.
     ///
     /// * Cache hit  → no-op (returns immediately).
     /// * In-flight  → no-op (another spawn is already working on it).
@@ -160,9 +163,9 @@ impl GraphFetchService {
     pub fn ensure_fetched(
         &self,
         workspace: &str,
-        root_id: &str,
+        _root_id: &str,
     ) {
-        let cache_key = format!("{workspace}:{root_id}");
+        let cache_key = workspace_cache_key(workspace);
 
         // Fast paths — no spawn needed.
         if self.cache.get(&cache_key).is_some() {
@@ -186,7 +189,6 @@ impl GraphFetchService {
             inner.queue.push_back(FetchJob {
                 cache_key: cache_key.clone(),
                 workspace: workspace.to_string(),
-                root_id: root_id.to_string(),
             });
         }
 
@@ -214,7 +216,7 @@ impl GraphFetchService {
             let mut svc = self.clone();
             spawn(async move {
                 let key = job.cache_key.clone();
-                match svc.fetch_with_retry(&job.workspace, &job.root_id).await {
+                match svc.fetch_with_retry(&job.workspace).await {
                     Ok(layout) => {
                         let n = layout.nodes.len();
                         svc.cache.insert(key.clone(), layout);
@@ -288,12 +290,11 @@ impl GraphFetchService {
     async fn fetch_with_retry(
         &self,
         workspace: &str,
-        root_id: &str,
     ) -> Result<GraphLayout, (String, u8)> {
         let mut last_error = String::from("unknown error");
 
         for attempt in 0..=MAX_RETRIES {
-            match Self::fetch_once_with_timeout(workspace, root_id).await {
+            match Self::fetch_once_with_timeout(workspace).await {
                 Ok(layout) => return Ok(layout),
                 Err(err) => {
                     last_error = err;
@@ -301,7 +302,6 @@ impl GraphFetchService {
                         tracing::warn!(
                             target: T,
                             workspace,
-                            root_id,
                             attempt = attempt + 1,
                             "retrying fetch after failure"
                         );
@@ -315,11 +315,10 @@ impl GraphFetchService {
 
     async fn fetch_once_with_timeout(
         workspace: &str,
-        root_id: &str,
     ) -> Result<GraphLayout, String> {
         let backend = HttpTicketBackend::new(None);
         let fetch_fut =
-            async move { backend.get_subgraph(workspace, root_id, 4).await };
+            async move { backend.get_workspace_graph(workspace).await };
         let timeout_fut = TimeoutFuture::new(REQUEST_TIMEOUT_MS);
         pin_mut!(fetch_fut);
         pin_mut!(timeout_fut);

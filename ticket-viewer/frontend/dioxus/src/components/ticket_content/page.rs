@@ -15,9 +15,10 @@ use super::{
         fields_to_toml,
     },
     render::{
-        render_description_panel,
+        render_document_panel,
         render_history_panel,
         render_tab_bar,
+        TicketDocumentContext,
         render_toml_panel,
     },
     Tab,
@@ -28,6 +29,11 @@ pub fn TicketContent(
     workspace: String,
     ticket_id: String,
     fields: serde_json::Value,
+    #[props(default)] ticket_title: Option<String>,
+    #[props(default)] ticket_state: Option<String>,
+    #[props(default)] ticket_type: Option<String>,
+    #[props(default)] created_at: Option<String>,
+    #[props(default)] updated_at: Option<String>,
     #[props(default)] asset_path: Option<String>,
 ) -> Element {
     let mut active_tab: Signal<Tab> = use_signal(|| Tab::Description);
@@ -35,9 +41,9 @@ pub fn TicketContent(
     let mut desc_text: Signal<Option<String>> = use_signal(|| None);
     let mut desc_error: Signal<Option<String>> = use_signal(|| None);
     let mut history_entries: Signal<Vec<HistoryEntry>> = use_signal(|| vec![]);
-    let mut history_refresh_key: Signal<u32> = use_signal(|| 0);
+    let history_refresh_key: Signal<u32> = use_signal(|| 0);
     let mut edit_draft: Signal<String> = use_signal(String::new);
-    let mut edit_pending: Signal<bool> = use_signal(|| false);
+    let edit_pending: Signal<bool> = use_signal(|| false);
     let mut edit_success: Signal<bool> = use_signal(|| false);
     let mut edit_error: Signal<Option<String>> = use_signal(|| None);
 
@@ -48,6 +54,16 @@ pub fn TicketContent(
     let content_tab_label =
         content_tab_label(asset_path.as_deref(), is_description);
     let show_edit_tab = is_description && HttpTicketBackend::has_auth_token();
+    let document_context = TicketDocumentContext {
+        workspace: workspace.clone(),
+        ticket_id: ticket_id.clone(),
+        title: ticket_title,
+        ticket_state,
+        ticket_type,
+        created_at,
+        updated_at,
+        fields: fields.clone(),
+    };
 
     {
         let workspace = workspace.clone();
@@ -135,6 +151,8 @@ pub fn TicketContent(
     let toml_text = fields_to_toml(&ticket_id, &fields);
     let body_style = if active_tab() == Tab::History {
         "flex: 1; overflow: hidden;"
+    } else if active_tab() == Tab::Description {
+        "flex: 1; overflow-y: auto;"
     } else {
         "flex: 1; overflow-y: auto; padding: 20px 24px;"
     };
@@ -163,7 +181,13 @@ pub fn TicketContent(
                 "data-testid": "ticket-content-body",
                 style: "{body_style}",
                 if active_tab() == Tab::Description {
-                    {render_description_panel(desc_loading(), desc_error(), desc_text(), asset_path.clone())}
+                    {render_document_panel(
+                        document_context.clone(),
+                        desc_loading(),
+                        desc_error(),
+                        desc_text(),
+                        asset_path.clone(),
+                    )}
                 }
                 if active_tab() == Tab::Toml {
                     {render_toml_panel(toml_text)}

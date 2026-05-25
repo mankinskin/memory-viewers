@@ -136,11 +136,11 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let svc: crate::graph_fetch::GraphFetchService =
         use_context::<crate::graph_fetch::GraphFetchService>();
     let cache: crate::GraphCache = use_context::<crate::GraphCache>();
-    let cache_key = format!("{workspace}:{root_id}");
+    let cache_key = crate::graph_fetch::workspace_cache_key(&workspace);
 
     // ── Camera command channel ────────────────────────────────────────────
-    // Fire a one-time camera reset the first time a layout loads for each
-    // root_id, and again whenever the layout mode changes.
+    // Fire a one-time camera reset the first time a layout is shown for each
+    // focused root_id, and again whenever the layout mode changes.
     let mut cam_cmd: Signal<Option<CameraCommand>> =
         use_hook(|| Signal::new(None));
     let mut cam_seq: Signal<u64> = use_hook(|| Signal::new(0_u64));
@@ -171,7 +171,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
 
     // Try to get the layout from the cache.  If absent, show the spinner.
     // GraphFetchService.ensure_fetched() was already called by TicketListPage
-    // when selected_id changed; we do NOT start a second fetch here.
+    // for the active workspace; we do NOT start a second fetch here.
     let (layout, ticket_refs_by_id) = match cache.get(&cache_key) {
         Some(layout) => {
             tracing::debug!(target: T, rid = %root_id, nodes = layout.nodes.len(), "cache_hit");
@@ -234,11 +234,13 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
             last_cam_mode.set(Some(layout_mode));
         }
         // Camera angle depends on layout mode:
-        // Hierarchical3D — angled view to show both Y depth and XZ spread.
-        // Flat2D — top-down so the 2-D layout reads like a flat diagram.
+        // Hierarchical3D — orthographic-friendly isometric framing so the
+        // hierarchy reads top-to-bottom while bounded Z offsets remain visible.
+        // Flat2D — a slightly steeper planar framing so the graph still reads
+        // as a diagram instead of a front-on horizontal wall.
         let (yaw, pitch) = match layout_mode {
-            LayoutMode::Hierarchical3D => (0.3_f32, 0.4_f32),
-            LayoutMode::Flat2D => (0.0_f32, 0.0_f32),
+            LayoutMode::Hierarchical3D => (0.78_f32, 0.62_f32),
+            LayoutMode::Flat2D => (0.78_f32, 0.72_f32),
         };
         cam_cmd.set(Some(CameraCommand::ResetTo { yaw, pitch }));
         let next_seq = *cam_seq.peek() + 1;
