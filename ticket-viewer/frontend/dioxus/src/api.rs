@@ -182,6 +182,43 @@ impl TicketBackend for HttpTicketBackend {
         .await
     }
 
+    async fn get_workflow_next(
+        &self,
+        workspace: &str,
+    ) -> Result<WorkflowNextResponse, String> {
+        self.fetch(&format!(
+            "/api/workflow/next?workspace={}&limit=50",
+            enc(workspace)
+        ))
+        .await
+    }
+
+    async fn get_workflow_blockers(
+        &self,
+        workspace: &str,
+        root: &str,
+    ) -> Result<WorkflowTreeResponse, String> {
+        self.fetch(&format!(
+            "/api/workflow/blockers?workspace={}&root={}",
+            enc(workspace),
+            enc(root),
+        ))
+        .await
+    }
+
+    async fn get_workflow_unblocked_by(
+        &self,
+        workspace: &str,
+        root: &str,
+    ) -> Result<WorkflowTreeResponse, String> {
+        self.fetch(&format!(
+            "/api/workflow/unblocked-by?workspace={}&root={}",
+            enc(workspace),
+            enc(root),
+        ))
+        .await
+    }
+
     async fn patch_ticket(
         &self,
         workspace: &str,

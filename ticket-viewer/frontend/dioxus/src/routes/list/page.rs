@@ -1,6 +1,7 @@
 use dioxus::prelude::*;
 
 use viewer_api_dioxus::{
+    FilterToggleButton,
     HamburgerIcon,
     Layout,
     LayoutMode,
@@ -21,6 +22,10 @@ use crate::{
         batch_panel::BatchPanel,
         search::SearchBar,
         ticket_tree::TicketTree,
+        workflow_explorer::{
+            WorkflowExplorer,
+            WorkflowSidebarMode,
+        },
     },
     routes::Route,
     sse::use_sse,
@@ -62,6 +67,10 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut sidebar_collapsed = use_signal(|| false);
     let mut mobile_sidebar_open = use_signal(|| false);
     let mut show_theme_settings = use_signal(|| false);
+    let mut workflow_mode: Signal<Option<WorkflowSidebarMode>> =
+        use_signal(|| None);
+    let mut workflow_root_ticket: Signal<Option<TicketRef>> =
+        use_signal(|| None);
 
     let mut tickets: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
     let mut loading: Signal<bool> = use_signal(|| true);
@@ -230,6 +239,8 @@ pub fn TicketListPage(workspace: String) -> Element {
     let ticket_count = tickets.read().len();
     let window_width_value = *window_width.read();
     let workspace_for_new = workspace.clone();
+    let selected_ticket_snapshot = selected_ticket.read().clone();
+    let workflow_mode_value = *workflow_mode.read();
     let detail_is_collapsed = detail_panel_override
         .read()
         .unwrap_or(window_width_value < DETAIL_COLLAPSE_PX);
@@ -243,7 +254,7 @@ pub fn TicketListPage(workspace: String) -> Element {
         *mobile_sidebar_open.read(),
         *sidebar_collapsed.read(),
     );
-    let selected_ticket_ref = selected_ticket.read().clone();
+    let selected_ticket_ref = selected_ticket_snapshot.clone();
     let workspace_title = workspace_label.read().clone();
     let workspace_subtitle =
         (workspace_title != workspace).then(|| workspace.clone());
@@ -278,46 +289,123 @@ pub fn TicketListPage(workspace: String) -> Element {
                 }
             },
             Sidebar {
-                title: "Tickets",
-                badge: if ticket_count > 0 { Some(ticket_count.to_string()) } else { None },
+                title: if workflow_mode_value.is_some() { "Workflow" } else { "Tickets" },
+                badge: if workflow_mode_value.is_none() && ticket_count > 0 { Some(ticket_count.to_string()) } else { None },
                 collapsed: *sidebar_collapsed.read(),
                 on_toggle: move |_| close_mobile_or_toggle_sidebar(mobile_sidebar_open, sidebar_collapsed),
                 mobile_open: Some(*mobile_sidebar_open.read()),
                 on_mobile_open_change: move |open| mobile_sidebar_open.set(open),
-                TicketTree {
-                    workspace: workspace.clone(),
-                    tickets: tickets.read().clone(),
-                    loading: *loading.read(),
-                    error: list_error.read().clone(),
-                    filter: filter.read().clone(),
-                    on_filter_change: move |value: String| filter.set(value),
-                    state_filter: state_filter.read().clone(),
-                    on_state_filter_change: move |value: String| state_filter.set(value),
-                    sort_key: sort_key.read().clone(),
-                    selected_id: selected_ticket.read().as_ref().map(|ticket| ticket.id.clone()),
-                    on_select: move |ticket_ref: TicketRef| {
-                        selected_ticket.set(Some(ticket_ref));
-                        mobile_sidebar_open.set(false);
-                    },
-                    on_select_file: move |(ticket_ref, path): (TicketRef, String)| handle_file_selection(
-                        ticket_ref,
-                        path,
-                        selected_ticket,
-                        selected_file,
-                        mobile_sidebar_open,
-                        view_mode,
-                    ),
-                    selected_file: selected_file.read().clone(),
-                    show_checkboxes: *show_checkboxes.read(),
-                    selected_ids: selected_ids.read().clone(),
-                    on_toggle_select: move |ticket_id: String| toggle_ticket_selection(ticket_id, selected_ids),
-                    on_select_all: move |checked: bool| apply_select_all(checked, tickets, selected_ids),
-                    on_new_ticket: move |_| {
-                        nav.push(Route::NewTicketPage {
-                            workspace: workspace_for_new.clone(),
-                        });
-                    },
-                    on_toggle_batch: move |_| toggle_batch_selection(show_checkboxes, selected_ids),
+                div {
+                    style: "display: flex; flex-direction: column; height: 100%; min-height: 0;",
+                    div {
+                        style: "
+                            padding: 0 12px 8px;
+                            border-bottom: 1px solid var(--border-subtle);
+                            display: flex;
+                            align-items: center;
+                            flex-wrap: wrap;
+                            gap: 4px;
+                        ",
+                        FilterToggleButton {
+                            test_id: "sidebar-mode-browse".to_string(),
+                            class: "chip".to_string(),
+                            active_class: "chip--active".to_string(),
+                            inactive_class: "chip--neutral".to_string(),
+                            active: workflow_mode_value.is_none(),
+                            onclick: move |_| workflow_mode.set(None),
+                            "Browse"
+                        }
+                        FilterToggleButton {
+                            test_id: "sidebar-mode-next".to_string(),
+                            class: "chip".to_string(),
+                            active_class: "chip--active".to_string(),
+                            inactive_class: "chip--neutral".to_string(),
+                            active: workflow_mode_value == Some(WorkflowSidebarMode::Next),
+                            onclick: move |_| workflow_mode.set(Some(WorkflowSidebarMode::Next)),
+                            "Next"
+                        }
+                        FilterToggleButton {
+                            test_id: "sidebar-mode-blockers".to_string(),
+                            class: "chip".to_string(),
+                            active_class: "chip--active".to_string(),
+                            inactive_class: "chip--neutral".to_string(),
+                            active: workflow_mode_value == Some(WorkflowSidebarMode::Blockers),
+                            onclick: move |_| {
+                                if let Some(ticket_ref) = selected_ticket.read().clone() {
+                                    workflow_root_ticket.set(Some(ticket_ref));
+                                }
+                                workflow_mode.set(Some(WorkflowSidebarMode::Blockers));
+                            },
+                            "Blockers"
+                        }
+                        FilterToggleButton {
+                            test_id: "sidebar-mode-unblocked-by".to_string(),
+                            class: "chip".to_string(),
+                            active_class: "chip--active".to_string(),
+                            inactive_class: "chip--neutral".to_string(),
+                            active: workflow_mode_value == Some(WorkflowSidebarMode::UnblockedBy),
+                            onclick: move |_| {
+                                if let Some(ticket_ref) = selected_ticket.read().clone() {
+                                    workflow_root_ticket.set(Some(ticket_ref));
+                                }
+                                workflow_mode.set(Some(WorkflowSidebarMode::UnblockedBy));
+                            },
+                            "Unblocked"
+                        }
+                    }
+                    if workflow_mode_value.is_none() {
+                        TicketTree {
+                            workspace: workspace.clone(),
+                            tickets: tickets.read().clone(),
+                            loading: *loading.read(),
+                            error: list_error.read().clone(),
+                            filter: filter.read().clone(),
+                            on_filter_change: move |value: String| filter.set(value),
+                            state_filter: state_filter.read().clone(),
+                            on_state_filter_change: move |value: String| state_filter.set(value),
+                            sort_key: sort_key.read().clone(),
+                            selected_id: selected_ticket.read().as_ref().map(|ticket| ticket.id.clone()),
+                            on_select: move |ticket_ref: TicketRef| {
+                                selected_ticket.set(Some(ticket_ref));
+                                mobile_sidebar_open.set(false);
+                            },
+                            on_select_file: move |(ticket_ref, path): (TicketRef, String)| handle_file_selection(
+                                ticket_ref,
+                                path,
+                                selected_ticket,
+                                selected_file,
+                                mobile_sidebar_open,
+                                view_mode,
+                            ),
+                            selected_file: selected_file.read().clone(),
+                            show_checkboxes: *show_checkboxes.read(),
+                            selected_ids: selected_ids.read().clone(),
+                            on_toggle_select: move |ticket_id: String| toggle_ticket_selection(ticket_id, selected_ids),
+                            on_select_all: move |checked: bool| apply_select_all(checked, tickets, selected_ids),
+                            on_new_ticket: move |_| {
+                                nav.push(Route::NewTicketPage {
+                                    workspace: workspace_for_new.clone(),
+                                });
+                            },
+                            on_toggle_batch: move |_| toggle_batch_selection(show_checkboxes, selected_ids),
+                        }
+                    } else if let Some(mode) = workflow_mode_value {
+                        WorkflowExplorer {
+                            workspace: workspace.clone(),
+                            mode,
+                            selected_ticket: selected_ticket_snapshot.clone(),
+                            root_ticket: workflow_root_ticket.read().clone(),
+                            on_select: move |ticket_ref: TicketRef| {
+                                selected_ticket.set(Some(ticket_ref));
+                                mobile_sidebar_open.set(false);
+                            },
+                            on_use_selected_root: move |_| {
+                                if let Some(ticket_ref) = selected_ticket.read().clone() {
+                                    workflow_root_ticket.set(Some(ticket_ref));
+                                }
+                            },
+                        }
+                    }
                 }
             }
             div {

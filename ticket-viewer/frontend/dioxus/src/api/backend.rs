@@ -36,6 +36,23 @@ pub trait TicketBackend {
         depth: u32,
     ) -> impl std::future::Future<Output = Result<GraphSubgraphResponse, String>>;
 
+    fn get_workflow_next(
+        &self,
+        workspace: &str,
+    ) -> impl std::future::Future<Output = Result<WorkflowNextResponse, String>>;
+
+    fn get_workflow_blockers(
+        &self,
+        workspace: &str,
+        root: &str,
+    ) -> impl std::future::Future<Output = Result<WorkflowTreeResponse, String>>;
+
+    fn get_workflow_unblocked_by(
+        &self,
+        workspace: &str,
+        root: &str,
+    ) -> impl std::future::Future<Output = Result<WorkflowTreeResponse, String>>;
+
     fn patch_ticket(
         &self,
         workspace: &str,
