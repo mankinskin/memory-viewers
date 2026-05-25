@@ -151,12 +151,12 @@ impl GraphLayout {
     /// reading order with only a small bounded Z stagger for depth cues.
     fn hierarchical_layout(&mut self) {
         // Vertical gap between depth layers (dependency hierarchy).
-        const LAYER_SPACING: f64 = 320.0;
+        const LAYER_SPACING: f64 = 280.0;
         // Minimum horizontal gap between nodes in the same depth layer.
-        const COL_SPACING: f64 = 320.0;
+        const COL_SPACING: f64 = 248.0;
         // Small bounded Z offsets so the default camera reads as isometric
         // without turning each layer into a deep overlapping stack.
-        const Z_STAGGER: f64 = 36.0;
+        const Z_STAGGER: f64 = 24.0;
 
         // Group node indices by depth.
         let mut by_depth: HashMap<usize, Vec<usize>> = HashMap::new();

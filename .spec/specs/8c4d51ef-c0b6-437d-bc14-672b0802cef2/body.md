@@ -45,6 +45,7 @@ Tracker: [05dae5fd [ticket-viewer][ticket-http][viewer-api] Improve main layout 
 4. [6e7a15c9 [ticket-viewer] Keep full workspace graph visible with focused navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/6e7a15c9-d8e6-4bbe-bb34-b83bd651896b/ticket.toml)
 5. [322ba030 [viewer-api][ticket-viewer] Add multi-level graph node detail rendering](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/322ba030-160c-41d3-8a12-42936ae92858/ticket.toml)
 6. [1f39ba8f [ticket-viewer] Add graph review E2E coverage](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/1f39ba8f-650b-417d-b664-1878f08af669/ticket.toml)
+7. [800f09ed [ticket-viewer][viewer-api] Tighten graph layout and enlarge rich nodes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/800f09ed-beb0-4a12-be93-1392e45eadb8/ticket.toml)
 
 # Implementation traceability
 
@@ -88,6 +89,12 @@ Completed sixth slice: [1f39ba8f [ticket-viewer] Add graph review E2E coverage](
 
 - [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now validates switching away from the default Hierarchical 3D plus Orthographic graph view and restoring it without losing the mounted graph or the top-to-bottom hierarchy ordering
 - the same release suite now zooms the Graph3D surface out before selecting a compact or minimal child node, proving smaller LOD tiers stay clickable and the selected node remains rich after focus changes and zooming back in
+
+Completed seventh slice: [800f09ed [ticket-viewer][viewer-api] Tighten graph layout and enlarge rich nodes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/800f09ed-beb0-4a12-be93-1392e45eadb8/ticket.toml)
+
+- [layout.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/layout.rs) now reduces the default hierarchy spacing and z stagger so the initial graph footprint stays tighter and the framed graph reads larger at the default camera
+- [data.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/data.rs) now increases the ticket minimal, compact, and rich LOD dimensions so ticket-viewer nodes render larger on the shared Graph3D surface
+- [graph3d.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph3d.rs) now renders a taller, more cubic rich card with multi-line title content and denser compact metadata so high-LOD nodes reveal more ticket information
 
 # Related specs
 
@@ -133,6 +140,10 @@ Completed for [322ba030 [viewer-api][ticket-viewer] Add multi-level graph node d
 - passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
 
 Completed for [1f39ba8f [ticket-viewer] Add graph review E2E coverage](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/1f39ba8f-650b-417d-b664-1878f08af669/ticket.toml):
+
+- passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
+
+Completed for [800f09ed [ticket-viewer][viewer-api] Tighten graph layout and enlarge rich nodes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/800f09ed-beb0-4a12-be93-1392e45eadb8/ticket.toml):
 
 - passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
 

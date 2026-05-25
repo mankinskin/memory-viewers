@@ -337,7 +337,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                 class: "{card_class}",
                                 "data-node-idx": "{idx}",
                                 "data-node-id": "{node_id}",
-                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 260px; height: 56px; box-sizing: border-box; border: 1px solid var(--graph-node-border, rgba(200,200,200,0.35)); border-left: 3px solid {color}; border-radius: 7px; background: var(--graph-node-surface, rgba(30,30,40,0.92)); backdrop-filter: blur(2px); padding: 9px 11px; cursor: pointer; overflow: hidden; font-family: sans-serif; color: var(--graph-node-text, #e8e8f0); box-shadow: var(--graph-node-shadow, 0 3px 12px rgba(0,0,0,0.6)); transition: opacity 160ms ease, filter 160ms ease, box-shadow 160ms ease; {focus_style}",
+                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 212px; height: 132px; box-sizing: border-box; border: 1px solid color-mix(in srgb, {color} 35%, var(--graph-node-border, rgba(200,200,200,0.35))); border-top: 3px solid {color}; border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, {color} 10%, var(--graph-node-surface, rgba(30,30,40,0.92))) 0%, var(--graph-node-surface, rgba(30,30,40,0.94)) 100%); backdrop-filter: blur(6px); padding: 12px; cursor: pointer; overflow: hidden; font-family: sans-serif; color: var(--graph-node-text, #e8e8f0); box-shadow: var(--graph-node-shadow, 0 10px 24px rgba(0,0,0,0.42)); transition: opacity 160ms ease, filter 160ms ease, box-shadow 160ms ease; {focus_style}",
                                 onclick: move |evt: Event<MouseData>| {
                                     evt.stop_propagation();
                                     on_select.call(ticket_ref_click.clone());
@@ -345,19 +345,25 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                 div {
                                     "data-node-detail-tier": "rich",
                                     "data-node-detail-display": "block",
-                                    style: "display: block;",
+                                    style: "display: flex; flex-direction: column; justify-content: space-between; gap: 10px; height: 100%;",
                                     div {
-                                        style: "font-size: 13px; font-weight: 600; color: var(--graph-node-text, #e8e8f0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                                        span {
+                                            style: "display: inline-flex; align-items: center; align-self: flex-start; padding: 4px 8px; border-radius: 999px; background: color-mix(in srgb, {color} 18%, rgba(255,255,255,0.06)); border: 1px solid color-mix(in srgb, {color} 32%, rgba(255,255,255,0.12)); font-size: 10px; color: {color}; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase;",
+                                            "{state_str}"
+                                        }
+                                    }
+                                    div {
+                                        style: "font-size: 13px; line-height: 1.32; font-weight: 650; color: var(--graph-node-text, #e8e8f0); overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; word-break: break-word;",
                                         "{title}"
                                     }
                                     div {
-                                        style: "display: flex; align-items: center; gap: 6px; margin-top: 4px;",
-                                        span {
-                                            style: "font-size: 11px; color: {color}; font-weight: 500;",
-                                            "{state_str}"
+                                        style: "display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: auto;",
+                                        div {
+                                            style: "font-size: 10px; color: var(--graph-node-muted-text, #9aa0ac); letter-spacing: 0.05em; text-transform: uppercase;",
+                                            "Ticket"
                                         }
                                         span {
-                                            style: "font-size: 10px; color: var(--graph-node-muted-text, #888);",
+                                            style: "display: inline-flex; align-items: center; padding: 3px 7px; border-radius: 999px; background: rgba(255,255,255,0.06); color: var(--graph-node-text, #e8e8f0); font-size: 10px; font-weight: 600; letter-spacing: 0.04em;",
                                             "{short_id}"
                                         }
                                     }
@@ -365,20 +371,24 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                 div {
                                     "data-node-detail-tier": "compact",
                                     "data-node-detail-display": "flex",
-                                    style: "display: none; align-items: center; gap: 8px; height: 100%;",
-                                    span {
-                                        style: "width: 8px; height: 8px; border-radius: 999px; background: {color}; flex-shrink: 0;",
+                                    style: "display: none; flex-direction: column; justify-content: center; align-items: stretch; gap: 6px; width: 100%; height: 100%;",
+                                    div {
+                                        style: "display: flex; align-items: center; justify-content: space-between; gap: 8px;",
+                                        span {
+                                            style: "display: inline-flex; width: 10px; height: 10px; border-radius: 999px; background: {color}; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.12);",
+                                        }
+                                        span {
+                                            style: "font-size: 9px; color: var(--graph-node-muted-text, #9aa0ac); text-transform: uppercase; letter-spacing: 0.06em;",
+                                            "{state_str}"
+                                        }
                                     }
                                     div {
-                                        style: "min-width: 0; display: flex; flex-direction: column; gap: 2px;",
-                                        div {
-                                            style: "font-size: 11px; font-weight: 600; color: var(--graph-node-text, #e8e8f0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
-                                            "{title}"
-                                        }
-                                        div {
-                                            style: "font-size: 9px; color: var(--graph-node-muted-text, #888); text-transform: uppercase; letter-spacing: 0.04em;",
-                                            "{short_id}"
-                                        }
+                                        style: "font-size: 11px; font-weight: 650; color: var(--graph-node-text, #e8e8f0); line-height: 1.28; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word;",
+                                        "{title}"
+                                    }
+                                    div {
+                                        style: "font-size: 9px; color: var(--graph-node-muted-text, #888); text-transform: uppercase; letter-spacing: 0.05em;",
+                                        "{short_id}"
                                     }
                                 }
                                 div {
@@ -386,7 +396,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                     "data-node-detail-display": "flex",
                                     style: "display: none; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 100%;",
                                     span {
-                                        style: "width: 10px; height: 10px; border-radius: 999px; background: {color}; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.12);",
+                                        style: "width: 12px; height: 12px; border-radius: 999px; background: {color}; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.12);",
                                     }
                                     span {
                                         style: "font-size: 10px; font-weight: 700; color: var(--graph-node-text, #e8e8f0); letter-spacing: 0.08em; text-transform: uppercase;",
