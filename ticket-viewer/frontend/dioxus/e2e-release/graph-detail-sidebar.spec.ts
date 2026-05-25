@@ -47,6 +47,8 @@ interface WorkspacesResponse {
   workspaces?: Array<{ name?: string }>;
 }
 
+const GRAPH_ACTIVE_STYLE = /#93bbff|79,140,255/;
+
 async function attachScreenshot(
   page: Page,
   testInfo: TestInfo,
@@ -127,6 +129,74 @@ async function graphLodMetrics(
       minimalNodes,
     };
   }, selectedId);
+}
+
+async function graphHierarchyMetrics(
+  page: Page,
+  rootId: string,
+  childId: string,
+): Promise<null | {
+  visibleNodeCount: number;
+  rootX: number;
+  rootY: number;
+  childX: number;
+  childY: number;
+}> {
+  return page.evaluate(({ activeRootId, activeChildId }) => {
+    const container = document.getElementById('graph3d-container');
+    if (!container) {
+      return null;
+    }
+
+    const visibleNodes = Array.from(container.querySelectorAll('[data-node-id]')).filter((node) => {
+      const element = node as HTMLElement;
+      return element.style.display !== 'none';
+    }) as HTMLElement[];
+    const rootNode = visibleNodes.find((node) => node.dataset.nodeId === activeRootId);
+    const childNode = visibleNodes.find((node) => node.dataset.nodeId === activeChildId);
+    if (!rootNode || !childNode) {
+      return null;
+    }
+
+    const rootRect = rootNode.getBoundingClientRect();
+    const childRect = childNode.getBoundingClientRect();
+    return {
+      visibleNodeCount: visibleNodes.length,
+      rootX: rootRect.x,
+      rootY: rootRect.y,
+      childX: childRect.x,
+      childY: childRect.y,
+    };
+  }, { activeRootId: rootId, activeChildId: childId });
+}
+
+async function graphNodeLod(
+  page: Page,
+  nodeId: string,
+): Promise<string | null> {
+  return page.evaluate((activeNodeId) => {
+    const container = document.getElementById('graph3d-container');
+    if (!container) {
+      return null;
+    }
+
+    const node = Array.from(container.querySelectorAll('[data-node-id]')).find((candidate) => {
+      const element = candidate as HTMLElement;
+      return element.style.display !== 'none' && element.dataset.nodeId === activeNodeId;
+    }) as HTMLElement | undefined;
+    return node?.getAttribute('data-node-lod') ?? null;
+  }, nodeId);
+}
+
+async function zoomGraph(
+  page: Page,
+  deltaY: number,
+  repetitions: number,
+): Promise<void> {
+  await page.locator('#graph3d-container').hover();
+  for (let repeatIndex = 0; repeatIndex < repetitions; repeatIndex += 1) {
+    await page.mouse.wheel(0, deltaY);
+  }
 }
 
 async function resolveActiveWorkspace(page: Page): Promise<string> {
@@ -428,15 +498,38 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
       visibleNodeCount: expect.any(Number),
     });
 
-    const rootMetrics = await graphLodMetrics(page, candidate.rootId);
-    expect(rootMetrics, 'root graph node should expose LOD metrics').not.toBeNull();
+    const initialMetrics = await graphLodMetrics(page, candidate.rootId);
+    expect(initialMetrics, 'root graph node should expose LOD metrics').not.toBeNull();
     expect(
-      rootMetrics!.collapsedNodes,
+      initialMetrics!.collapsedNodes,
       'workspace graph should collapse at least one non-selected visible node to a smaller LOD tier',
+    ).toBeGreaterThan(0);
+
+    await zoomGraph(page, 480, 6);
+
+    await expect.poll(() => graphLodMetrics(page, candidate.rootId), {
+      timeout: 20_000,
+    }).toMatchObject({
+      selectedLod: 'rich',
+      visibleNodeCount: expect.any(Number),
+    });
+
+    const zoomedOutMetrics = await graphLodMetrics(page, candidate.rootId);
+    expect(zoomedOutMetrics, 'zoomed-out root graph node should expose LOD metrics').not.toBeNull();
+    expect(
+      zoomedOutMetrics!.collapsedNodes,
+      'zooming out should keep at least one non-selected visible node in a smaller LOD tier',
     ).toBeGreaterThan(0);
 
     const childNode = page.locator(`#graph3d-container [data-node-id="${candidate.childId}"]`).first();
     await expect(childNode).toBeVisible();
+
+    const zoomedOutChildLod = await graphNodeLod(page, candidate.childId);
+    expect(
+      zoomedOutChildLod === 'compact' || zoomedOutChildLod === 'minimal',
+      'zoomed-out child node should remain interactive while rendered in a smaller LOD tier',
+    ).toBe(true);
+
     await childNode.click();
 
     await expect.poll(() => graphLodMetrics(page, candidate.childId), {
@@ -452,6 +545,22 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
       childMetrics!.collapsedNodes,
       'after selection, other visible nodes should still use smaller compact or minimal tiers',
     ).toBeGreaterThan(0);
+
+    await zoomGraph(page, -480, 4);
+
+    await expect.poll(() => graphLodMetrics(page, candidate.childId), {
+      timeout: 20_000,
+    }).toMatchObject({
+      selectedLod: 'rich',
+      visibleNodeCount: expect.any(Number),
+    });
+
+    const zoomedInMetrics = await graphLodMetrics(page, candidate.childId);
+    expect(zoomedInMetrics, 'zoomed-in child graph node should expose LOD metrics').not.toBeNull();
+    expect(
+      zoomedInMetrics!.minimalNodes,
+      'zooming back in should not increase the number of minimal visible nodes',
+    ).toBeLessThanOrEqual(zoomedOutMetrics!.minimalNodes);
 
     await attachScreenshot(page, testInfo, 'graph-node-lod-tiers');
   });
@@ -508,9 +617,77 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
     const orthographicButton = page.getByRole('button', { name: 'Orthographic' });
     await expect(hierarchicalButton).toBeVisible();
     await expect(orthographicButton).toBeVisible();
-    await expect(hierarchicalButton).toHaveAttribute('style', /#93bbff|79,140,255/);
-    await expect(orthographicButton).toHaveAttribute('style', /#93bbff|79,140,255/);
+    await expect(hierarchicalButton).toHaveAttribute('style', GRAPH_ACTIVE_STYLE);
+    await expect(orthographicButton).toHaveAttribute('style', GRAPH_ACTIVE_STYLE);
 
     await attachScreenshot(page, testInfo, 'graph-default-isometric-layout');
+  });
+
+  test('graph settings can switch away from and restore the default layout and projection', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+
+    const candidate = await findGraphSelectionCandidate(page);
+
+    await openCandidateTicket(page, candidate);
+
+    await page.getByRole('button', { name: /^Graph$/ }).first().click();
+    await expect(page.locator('#graph3d-container')).toBeVisible({ timeout: 30_000 });
+
+    await expect.poll(() => graphHierarchyMetrics(page, candidate.rootId, candidate.childId), {
+      timeout: 30_000,
+    }).toMatchObject({
+      visibleNodeCount: expect.any(Number),
+    });
+
+    const defaultMetrics = await graphHierarchyMetrics(page, candidate.rootId, candidate.childId);
+    expect(defaultMetrics, 'default graph layout should expose root and child positions').not.toBeNull();
+    expect(
+      defaultMetrics!.childY,
+      'default hierarchical view should render the child below the root',
+    ).toBeGreaterThan(defaultMetrics!.rootY + 10);
+
+    await page.getByTitle('Graph settings').click();
+
+    const hierarchicalButton = page.getByRole('button', { name: 'Hierarchical 3D' });
+    const flatButton = page.getByRole('button', { name: 'Flat 2D' });
+    const perspectiveButton = page.getByRole('button', { name: 'Perspective' });
+    const orthographicButton = page.getByRole('button', { name: 'Orthographic' });
+
+    await expect(hierarchicalButton).toHaveAttribute('style', GRAPH_ACTIVE_STYLE);
+    await expect(orthographicButton).toHaveAttribute('style', GRAPH_ACTIVE_STYLE);
+
+    await flatButton.click();
+    await perspectiveButton.click();
+
+    await expect(flatButton).toHaveAttribute('style', GRAPH_ACTIVE_STYLE);
+    await expect(perspectiveButton).toHaveAttribute('style', GRAPH_ACTIVE_STYLE);
+
+    const switchedMetrics = await graphHierarchyMetrics(page, candidate.rootId, candidate.childId);
+    expect(switchedMetrics, 'graph should stay mounted after switching layout and projection').not.toBeNull();
+    expect(
+      switchedMetrics!.visibleNodeCount,
+      'root and child nodes should remain visible after switching away from defaults',
+    ).toBeGreaterThanOrEqual(2);
+
+    await hierarchicalButton.click();
+    await orthographicButton.click();
+
+    await expect(hierarchicalButton).toHaveAttribute('style', GRAPH_ACTIVE_STYLE);
+    await expect(orthographicButton).toHaveAttribute('style', GRAPH_ACTIVE_STYLE);
+
+    await expect.poll(() => graphHierarchyMetrics(page, candidate.rootId, candidate.childId), {
+      timeout: 20_000,
+    }).toMatchObject({
+      visibleNodeCount: expect.any(Number),
+    });
+
+    const restoredMetrics = await graphHierarchyMetrics(page, candidate.rootId, candidate.childId);
+    expect(restoredMetrics, 'restored default graph layout should expose root and child positions').not.toBeNull();
+    expect(
+      restoredMetrics!.childY,
+      'restoring the default layout should preserve top-to-bottom hierarchy ordering',
+    ).toBeGreaterThan(restoredMetrics!.rootY + 10);
+
+    await attachScreenshot(page, testInfo, 'graph-restored-default-layout');
   });
 });

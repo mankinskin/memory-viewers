@@ -44,6 +44,7 @@ Tracker: [05dae5fd [ticket-viewer][ticket-http][viewer-api] Improve main layout 
 3. [397fa45b [ticket-http][ticket-viewer] Expose workspace graph payload for focused full-graph navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/397fa45b-a0bd-43d2-b430-2dfa44d80c5c/ticket.toml)
 4. [6e7a15c9 [ticket-viewer] Keep full workspace graph visible with focused navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/6e7a15c9-d8e6-4bbe-bb34-b83bd651896b/ticket.toml)
 5. [322ba030 [viewer-api][ticket-viewer] Add multi-level graph node detail rendering](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/322ba030-160c-41d3-8a12-42936ae92858/ticket.toml)
+6. [1f39ba8f [ticket-viewer] Add graph review E2E coverage](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/1f39ba8f-650b-417d-b664-1878f08af669/ticket.toml)
 
 # Implementation traceability
 
@@ -82,6 +83,11 @@ Completed fifth slice: [322ba030 [viewer-api][ticket-viewer] Add multi-level gra
 - [graph3d.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph3d.rs) now exposes stable `data-node-id` selectors and rich, compact, and minimal ticket card variants so the shared renderer can degrade dense graphs without unreadable text walls while keeping the active node informative
 - [Cargo.toml](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/Cargo.toml) now enables the minimal host-side `web-sys` features required for `dioxus-web` history compilation during focused `cargo test` runs of the shared viewer-api Dioxus crate
 - focused browser coverage in [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now validates both focused recentering/dimming and the new LOD behavior that keeps the active node rich while collapsing other visible nodes
+
+Completed sixth slice: [1f39ba8f [ticket-viewer] Add graph review E2E coverage](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/1f39ba8f-650b-417d-b664-1878f08af669/ticket.toml)
+
+- [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now validates switching away from the default Hierarchical 3D plus Orthographic graph view and restoring it without losing the mounted graph or the top-to-bottom hierarchy ordering
+- the same release suite now zooms the Graph3D surface out before selecting a compact or minimal child node, proving smaller LOD tiers stay clickable and the selected node remains rich after focus changes and zooming back in
 
 # Related specs
 
@@ -124,6 +130,10 @@ Completed for [6e7a15c9 [ticket-viewer] Keep full workspace graph visible with f
 Completed for [322ba030 [viewer-api][ticket-viewer] Add multi-level graph node detail rendering](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/322ba030-160c-41d3-8a12-42936ae92858/ticket.toml):
 
 - passed `cargo test --manifest-path memory-viewers/viewer-api/viewer-api/frontend/dioxus/Cargo.toml node_detail_`
+- passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
+
+Completed for [1f39ba8f [ticket-viewer] Add graph review E2E coverage](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/1f39ba8f-650b-417d-b664-1878f08af669/ticket.toml):
+
 - passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
 
 # Ongoing validation plan
