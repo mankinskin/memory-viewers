@@ -21,6 +21,8 @@ The ticket-viewer main layout still splits ticket reading across separate conten
 
 - graph mode can render a workspace-scoped graph payload instead of only a fixed-depth root subgraph
 - switching selection changes focus, pan, and emphasis within the existing dataset rather than replacing the graph with a new local fetch
+- reapplying the same graph payload preserves user-adjusted node positions instead of snapping back to the backend layout
+- switching focused nodes retargets the camera without resetting the user-adjusted zoom level
 - related nodes and edges are emphasized while distant unrelated regions can fade or cull enough to preserve readability
 
 ## Layout defaults and settings
@@ -46,6 +48,7 @@ Tracker: [05dae5fd [ticket-viewer][ticket-http][viewer-api] Improve main layout 
 5. [322ba030 [viewer-api][ticket-viewer] Add multi-level graph node detail rendering](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/322ba030-160c-41d3-8a12-42936ae92858/ticket.toml)
 6. [1f39ba8f [ticket-viewer] Add graph review E2E coverage](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/1f39ba8f-650b-417d-b664-1878f08af669/ticket.toml)
 7. [800f09ed [ticket-viewer][viewer-api] Tighten graph layout and enlarge rich nodes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/800f09ed-beb0-4a12-be93-1392e45eadb8/ticket.toml)
+8. [d1d38010 [ticket-viewer][viewer-api] Preserve graph layout and camera across same-graph refreshes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/.ticket/tickets/d1d38010-08b8-4a06-ad2b-0bbed453c941/ticket.toml)
 
 # Implementation traceability
 
@@ -95,6 +98,13 @@ Completed seventh slice: [800f09ed [ticket-viewer][viewer-api] Tighten graph lay
 - [layout.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/layout.rs) now reduces the default hierarchy spacing and z stagger so the initial graph footprint stays tighter and the framed graph reads larger at the default camera
 - [data.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/data.rs) now increases the ticket minimal, compact, and rich LOD dimensions so ticket-viewer nodes render larger on the shared Graph3D surface
 - [graph3d.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph3d.rs) now renders a taller, more cubic rich card with multi-line title content and denser compact metadata so high-LOD nodes reveal more ticket information
+
+Completed eighth slice: [d1d38010 [ticket-viewer][viewer-api] Preserve graph layout and camera across same-graph refreshes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/.ticket/tickets/d1d38010-08b8-4a06-ad2b-0bbed453c941/ticket.toml)
+
+- [mod.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/mod.rs) now preserves dragged node coordinates when the mounted graph receives a same-topology layout refresh without a layout-mode change, so workspace graph re-renders and focus changes keep the local arrangement instead of animating back to backend coordinates
+- the same shared sync path now retargets selection autofocus with the current camera distance instead of reframing the graph, so focus changes preserve the user's zoom level while still panning toward the active node
+- [render.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/render.rs) now mirrors the live camera distance onto the graph container as a data attribute, giving the browser regression a stable zoom probe
+- [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now drags a node, zooms the shared graph, changes focus inside the mounted graph, and asserts both the relative node offsets and camera distance stay stable
 
 # Related specs
 
@@ -146,6 +156,12 @@ Completed for [1f39ba8f [ticket-viewer] Add graph review E2E coverage](C:/Users/
 Completed for [800f09ed [ticket-viewer][viewer-api] Tighten graph layout and enlarge rich nodes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/800f09ed-beb0-4a12-be93-1392e45eadb8/ticket.toml):
 
 - passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
+
+Completed for [d1d38010 [ticket-viewer][viewer-api] Preserve graph layout and camera across same-graph refreshes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/.ticket/tickets/d1d38010-08b8-4a06-ad2b-0bbed453c941/ticket.toml):
+
+- passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts -g "dragged graph layout and camera zoom persist when focus changes inside the same graph"`
+- passed `cargo test --manifest-path memory-viewers/viewer-api/viewer-api/frontend/dioxus/Cargo.toml preserve_same_topology_layout -- --nocapture`
+- passed `cargo test --manifest-path memory-viewers/viewer-api/viewer-api/frontend/dioxus/Cargo.toml selection_focus_goal_preserves_distance -- --nocapture`
 
 # Ongoing validation plan
 

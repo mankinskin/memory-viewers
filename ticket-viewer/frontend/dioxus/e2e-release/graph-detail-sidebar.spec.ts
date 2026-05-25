@@ -42,6 +42,16 @@ interface CandidateSelection {
   childComponent: string;
 }
 
+interface GraphNodeMetrics {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  centerX: number;
+  centerY: number;
+  lod: string | null;
+}
+
 interface WorkspacesResponse {
   active_workspace?: string;
   workspaces?: Array<{ name?: string }>;
@@ -170,6 +180,52 @@ async function graphHierarchyMetrics(
   }, { activeRootId: rootId, activeChildId: childId });
 }
 
+async function graphNodeMetrics(
+  page: Page,
+  nodeId: string,
+): Promise<GraphNodeMetrics | null> {
+  return page.evaluate((activeNodeId) => {
+    const container = document.getElementById('graph3d-container');
+    if (!container) {
+      return null;
+    }
+
+    const node = Array.from(container.querySelectorAll('[data-node-id]')).find((candidate) => {
+      const element = candidate as HTMLElement;
+      return element.style.display !== 'none' && element.dataset.nodeId === activeNodeId;
+    }) as HTMLElement | undefined;
+    if (!node) {
+      return null;
+    }
+
+    const rect = node.getBoundingClientRect();
+    return {
+      x: rect.x,
+      y: rect.y,
+      width: rect.width,
+      height: rect.height,
+      centerX: rect.x + rect.width / 2,
+      centerY: rect.y + rect.height / 2,
+      lod: node.getAttribute('data-node-lod'),
+    };
+  }, nodeId);
+}
+
+async function graphCameraDistance(page: Page): Promise<number | null> {
+  return page.evaluate(() => {
+    const container = document.getElementById('graph3d-container');
+    if (!container) {
+      return null;
+    }
+    const distance = container.getAttribute('data-camera-distance');
+    if (!distance) {
+      return null;
+    }
+    const parsed = Number.parseFloat(distance);
+    return Number.isFinite(parsed) ? parsed : null;
+  });
+}
+
 async function graphNodeLod(
   page: Page,
   nodeId: string,
@@ -197,6 +253,25 @@ async function zoomGraph(
   for (let repeatIndex = 0; repeatIndex < repetitions; repeatIndex += 1) {
     await page.mouse.wheel(0, deltaY);
   }
+}
+
+async function dragGraphNode(
+  page: Page,
+  nodeId: string,
+  deltaX: number,
+  deltaY: number,
+): Promise<void> {
+  const metrics = await graphNodeMetrics(page, nodeId);
+  expect(metrics, `graph node ${nodeId} should expose drag metrics`).not.toBeNull();
+
+  await page.mouse.move(metrics!.centerX, metrics!.centerY);
+  await page.mouse.down();
+  await page.mouse.move(
+    metrics!.centerX + deltaX,
+    metrics!.centerY + deltaY,
+    { steps: 12 },
+  );
+  await page.mouse.up();
 }
 
 async function resolveActiveWorkspace(page: Page): Promise<string> {
@@ -563,6 +638,89 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
     ).toBeLessThanOrEqual(zoomedOutMetrics!.minimalNodes);
 
     await attachScreenshot(page, testInfo, 'graph-node-lod-tiers');
+  });
+
+  test('dragged graph layout and camera zoom persist when focus changes inside the same graph', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+
+    const candidate = await findGraphSelectionCandidate(page);
+
+    await openCandidateTicket(page, candidate);
+
+    await page.getByRole('button', { name: /^Graph$/ }).first().click();
+    await expect(page.locator('#graph3d-container')).toBeVisible({ timeout: 30_000 });
+
+    await expect.poll(() => graphNodeMetrics(page, candidate.rootId), {
+      timeout: 30_000,
+    }).not.toBeNull();
+    await expect.poll(() => graphNodeMetrics(page, candidate.childId), {
+      timeout: 30_000,
+    }).not.toBeNull();
+
+    const childBeforeDrag = await graphNodeMetrics(page, candidate.childId);
+    expect(childBeforeDrag, 'child graph node should expose drag metrics before movement').not.toBeNull();
+
+    await dragGraphNode(page, candidate.childId, 120, 60);
+
+    await expect.poll(async () => {
+      const metrics = await graphNodeMetrics(page, candidate.childId);
+      if (!metrics || !childBeforeDrag) {
+        return 0;
+      }
+      return Math.hypot(
+        metrics.centerX - childBeforeDrag.centerX,
+        metrics.centerY - childBeforeDrag.centerY,
+      );
+    }, {
+      timeout: 20_000,
+    }).toBeGreaterThan(40);
+
+    await zoomGraph(page, 480, 4);
+
+    const rootBeforeFocus = await graphNodeMetrics(page, candidate.rootId);
+    const childBeforeFocus = await graphNodeMetrics(page, candidate.childId);
+    const cameraDistanceBeforeFocus = await graphCameraDistance(page);
+    expect(rootBeforeFocus, 'root graph node should remain visible after dragging and zooming').not.toBeNull();
+    expect(childBeforeFocus, 'dragged child graph node should remain visible after zooming').not.toBeNull();
+    expect(cameraDistanceBeforeFocus, 'graph container should expose current camera distance').not.toBeNull();
+
+    const childNode = page.locator(`#graph3d-container [data-node-id="${candidate.childId}"]`).first();
+    await expect(childNode).toBeVisible();
+    await childNode.click();
+
+    await expect.poll(() => graphLodMetrics(page, candidate.childId), {
+      timeout: 20_000,
+    }).toMatchObject({
+      selectedLod: 'rich',
+      visibleNodeCount: expect.any(Number),
+    });
+
+    const rootAfterFocus = await graphNodeMetrics(page, candidate.rootId);
+    const childAfterFocus = await graphNodeMetrics(page, candidate.childId);
+    const cameraDistanceAfterFocus = await graphCameraDistance(page);
+    expect(rootAfterFocus, 'root node should remain visible after focus change').not.toBeNull();
+    expect(childAfterFocus, 'dragged child node should remain visible after focus change').not.toBeNull();
+    expect(cameraDistanceAfterFocus, 'camera distance should still be exposed after focus change').not.toBeNull();
+
+    const deltaBeforeFocusX = childBeforeFocus!.centerX - rootBeforeFocus!.centerX;
+    const deltaBeforeFocusY = childBeforeFocus!.centerY - rootBeforeFocus!.centerY;
+    const deltaAfterFocusX = childAfterFocus!.centerX - rootAfterFocus!.centerX;
+    const deltaAfterFocusY = childAfterFocus!.centerY - rootAfterFocus!.centerY;
+
+    expect(
+      Math.abs(deltaAfterFocusX - deltaBeforeFocusX),
+      'same-graph focus changes should preserve the dragged horizontal node offset',
+    ).toBeLessThan(24);
+    expect(
+      Math.abs(deltaAfterFocusY - deltaBeforeFocusY),
+      'same-graph focus changes should preserve the dragged vertical node offset',
+    ).toBeLessThan(24);
+    expect(
+      Math.abs(cameraDistanceAfterFocus! - cameraDistanceBeforeFocus!),
+      'focus changes should preserve the user-adjusted camera zoom distance',
+    ).toBeLessThan(0.25);
+
+    await attachScreenshot(page, testInfo, 'graph-persisted-layout-and-zoom');
   });
 
   test('graph mode defaults to hierarchical isometric controls and preserves top-to-bottom depth ordering', async ({ page }, testInfo) => {
