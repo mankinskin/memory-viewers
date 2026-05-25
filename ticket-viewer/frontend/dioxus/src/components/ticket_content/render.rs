@@ -24,6 +24,14 @@ pub(super) struct TicketDocumentContext {
     pub fields: serde_json::Value,
 }
 
+#[derive(Clone, PartialEq)]
+struct DocumentFieldRow {
+    key: String,
+    label: String,
+    value: String,
+    wide: bool,
+}
+
 pub(super) fn render_tab_bar(
     mut active_tab: Signal<Tab>,
     content_tab_label: String,
@@ -104,9 +112,18 @@ pub(super) fn render_document_panel(
     let risk_level = field_value(&document.fields, "risk_level");
     let tags = field_value(&document.fields, "tags");
     let spec_refs = field_value(&document.fields, "spec_refs");
-    let dependency_summary = dependency_summary(&document.fields);
-    let created_at = compact_timestamp(document.created_at.as_deref());
-    let updated_at = compact_timestamp(document.updated_at.as_deref());
+    let dependency_ids = field_value(&document.fields, "depends_on");
+    let created_at = document
+        .created_at
+        .clone()
+        .or_else(|| field_value(&document.fields, "created_at"));
+    let updated_at = document
+        .updated_at
+        .clone()
+        .or_else(|| field_value(&document.fields, "updated_at"));
+    let created_at = compact_timestamp(created_at.as_deref());
+    let updated_at = compact_timestamp(updated_at.as_deref());
+    let extra_fields = additional_field_rows(&document.fields);
 
     let mut chips: Vec<(String, String)> = Vec::new();
     if let Some(value) = state.clone() {
@@ -141,7 +158,7 @@ pub(super) fn render_document_panel(
     if let Some(value) = spec_refs {
         metadata_rows.push(("Specs".to_string(), value));
     }
-    if let Some(value) = dependency_summary {
+    if let Some(value) = dependency_ids {
         metadata_rows.push(("Depends on".to_string(), value));
     }
 
@@ -151,6 +168,7 @@ pub(super) fn render_document_panel(
                 "data-testid": "ticket-document",
                 style: document_panel_style(),
                 {render_document_header(ticket_title, chips, metadata_rows, state, asset_path.as_deref())}
+                {render_document_fields(extra_fields)}
                 div {
                     "data-testid": "desc-loading",
                     style: document_body_style(),
@@ -166,6 +184,7 @@ pub(super) fn render_document_panel(
                 "data-testid": "ticket-document",
                 style: document_panel_style(),
                 {render_document_header(ticket_title, chips, metadata_rows, state, asset_path.as_deref())}
+                {render_document_fields(extra_fields)}
                 div {
                     "data-testid": "desc-error",
                     style: "{document_body_style()} color: #f87171; font-size: 13px;",
@@ -186,6 +205,7 @@ pub(super) fn render_document_panel(
                 "data-testid": "ticket-document",
                 style: document_panel_style(),
                 {render_document_header(ticket_title, chips, metadata_rows, state, asset_path.as_deref())}
+                {render_document_fields(extra_fields)}
                 if let Some(path) = asset_path.clone().filter(|path| path != "description.md") {
                     div {
                         "data-testid": "ticket-document-asset-banner",
@@ -214,12 +234,44 @@ pub(super) fn render_document_panel(
             "data-testid": "ticket-document",
             style: document_panel_style(),
             {render_document_header(ticket_title, chips, metadata_rows, state, asset_path.as_deref())}
+            {render_document_fields(extra_fields)}
             div {
                 style: document_body_style(),
                 em {
                     "data-testid": "desc-empty",
                     style: "color: #6b7280; font-size: 13px;",
                     "No content found."
+                }
+            }
+        }
+    }
+}
+
+fn render_document_fields(fields: Vec<DocumentFieldRow>) -> Element {
+    if fields.is_empty() {
+        return rsx! { Fragment {} };
+    }
+
+    rsx! {
+        div {
+            "data-testid": "ticket-document-fields",
+            style: "margin: 0 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;",
+            for field in fields {
+                div {
+                    key: "{field.key}",
+                    style: if field.wide {
+                        "grid-column: 1 / -1; padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--bg-secondary) 74%, transparent); min-width: 0;"
+                    } else {
+                        "padding: 14px 16px; border-radius: 14px; border: 1px solid var(--border-subtle); background: color-mix(in srgb, var(--bg-secondary) 74%, transparent); min-width: 0;"
+                    },
+                    div {
+                        style: "font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 6px;",
+                        "{field.label}"
+                    }
+                    div {
+                        style: "font-size: 13px; color: var(--text-primary); line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere;",
+                        "{field.value}"
+                    }
                 }
             }
         }
@@ -303,6 +355,141 @@ fn render_document_header(
     }
 }
 
+fn additional_field_rows(fields: &serde_json::Value) -> Vec<DocumentFieldRow> {
+    let Some(map) = fields.as_object() else {
+        return Vec::new();
+    };
+
+    let mut entries: Vec<(&String, &serde_json::Value)> = map
+        .iter()
+        .filter(|(key, _)| !is_header_field(key.as_str()))
+        .collect();
+    entries.sort_by(|(left, _), (right, _)| {
+        field_priority(left.as_str())
+            .cmp(&field_priority(right.as_str()))
+            .then_with(|| left.cmp(right))
+    });
+
+    entries
+        .into_iter()
+        .filter_map(|(key, value)| {
+            let formatted = field_detail_value(value)?;
+            let wide = formatted.contains('\n') || formatted.len() > 140;
+            Some(DocumentFieldRow {
+                key: key.clone(),
+                label: field_label(key),
+                value: formatted,
+                wide,
+            })
+        })
+        .collect()
+}
+
+fn is_header_field(key: &str) -> bool {
+    matches!(
+        key,
+        "title"
+            | "state"
+            | "type"
+            | "priority"
+            | "component"
+            | "risk_level"
+            | "created_at"
+            | "updated_at"
+            | "tags"
+            | "spec_refs"
+            | "depends_on"
+    )
+}
+
+fn field_priority(key: &str) -> usize {
+    match key {
+        "acceptance_criteria" => 0,
+        "implementation_summary" => 1,
+        "validation_summary" => 2,
+        "workflow_stage" => 3,
+        "phase" => 4,
+        "doc_category" => 5,
+        "release_target" => 6,
+        "release_version" => 7,
+        "rollout_stage" => 8,
+        "execution_wave" => 9,
+        "parallel_track" => 10,
+        "impl_status" => 11,
+        _ => 100,
+    }
+}
+
+fn field_label(key: &str) -> String {
+    match key {
+        "acceptance_criteria" => "Acceptance Criteria".to_string(),
+        "implementation_summary" => "Implementation Summary".to_string(),
+        "validation_summary" => "Validation Summary".to_string(),
+        "workflow_stage" => "Workflow Stage".to_string(),
+        "doc_category" => "Doc Category".to_string(),
+        "release_target" => "Release Target".to_string(),
+        "release_version" => "Release Version".to_string(),
+        "rollout_stage" => "Rollout Stage".to_string(),
+        "execution_wave" => "Execution Wave".to_string(),
+        "parallel_track" => "Parallel Track".to_string(),
+        "impl_status" => "Implementation Status".to_string(),
+        _ => key
+            .split('_')
+            .filter(|segment| !segment.is_empty())
+            .map(|segment| {
+                let mut chars = segment.chars();
+                match chars.next() {
+                    Some(first) => {
+                        let mut word = first.to_uppercase().collect::<String>();
+                        word.push_str(chars.as_str());
+                        word
+                    },
+                    None => String::new(),
+                }
+            })
+            .collect::<Vec<String>>()
+            .join(" "),
+    }
+}
+
+fn field_detail_value(value: &serde_json::Value) -> Option<String> {
+    match value {
+        serde_json::Value::String(text) => {
+            let trimmed = text.trim();
+            if trimmed.is_empty() {
+                None
+            } else {
+                Some(trimmed.to_string())
+            }
+        },
+        serde_json::Value::Bool(flag) => Some(flag.to_string()),
+        serde_json::Value::Number(number) => Some(number.to_string()),
+        serde_json::Value::Array(items) => {
+            if items.is_empty() {
+                return None;
+            }
+
+            let simple_values: Vec<String> = items
+                .iter()
+                .filter_map(value_to_string)
+                .collect();
+            if simple_values.len() == items.len() {
+                Some(simple_values.join("\n"))
+            } else {
+                serde_json::to_string_pretty(value).ok()
+            }
+        },
+        serde_json::Value::Object(map) => {
+            if map.is_empty() {
+                None
+            } else {
+                serde_json::to_string_pretty(value).ok()
+            }
+        },
+        serde_json::Value::Null => None,
+    }
+}
+
 fn field_value(
     fields: &serde_json::Value,
     key: &str,
@@ -346,22 +533,6 @@ fn value_to_string(value: &serde_json::Value) -> Option<String> {
         },
         serde_json::Value::Bool(flag) => Some(flag.to_string()),
         serde_json::Value::Number(number) => Some(number.to_string()),
-        _ => None,
-    }
-}
-
-fn dependency_summary(fields: &serde_json::Value) -> Option<String> {
-    match fields.get("depends_on") {
-        Some(serde_json::Value::Array(items)) if !items.is_empty() => {
-            Some(format!(
-                "{} linked ticket{}",
-                items.len(),
-                if items.len() == 1 { "" } else { "s" }
-            ))
-        },
-        Some(serde_json::Value::String(text)) if !text.trim().is_empty() => {
-            Some(text.trim().to_string())
-        },
         _ => None,
     }
 }

@@ -50,8 +50,9 @@ Tracker: [05dae5fd [ticket-viewer][ticket-http][viewer-api] Improve main layout 
 Completed first slice: [8f5d611f [ticket-viewer] Build integrated ticket document panel](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/8f5d611f-0033-423e-b2f6-17683feb8e34/ticket.toml)
 
 - content mode now renders a single document-focused surface while the separate detail inspector remains available only in split mode
-- the integrated document header, metadata grid, and inline asset context live in [panels.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/panels.rs), [page.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_content/page.rs), and [render.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_content/render.rs)
-- focused browser coverage for the document surface and asset-context path lives in [mixed-workspace-root-route.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/mixed-workspace-root-route.spec.ts)
+- the integrated document header, metadata grid, generic extra-field section, and inline asset context live in [panels.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/panels.rs), [page.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_content/page.rs), and [render.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_content/render.rs)
+- the integrated document now resolves selected-ticket summaries by id, prefers the resolved owning ticket reference for mixed-workspace document fetches, and rehydrates both the document surface and the TOML tab from fetched ticket detail fields in [panels.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/panels.rs), [page.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_content/page.rs), and [render.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_content/render.rs), so mixed-workspace tickets keep their title, key metadata, and remaining top-level ticket.toml fields inline instead of requiring the raw TOML tab
+- focused browser coverage for the document surface, extra seeded field rendering, and asset-context path lives in [mixed-workspace-root-route.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/mixed-workspace-root-route.spec.ts)
 
 Completed second slice: [60092819 [ticket-viewer] Fix graph layout defaults and isometric settings](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/60092819-f725-48ec-93f0-aba195ef81eb/ticket.toml)
 
@@ -67,6 +68,21 @@ Completed third slice: [397fa45b [ticket-http][ticket-viewer] Expose workspace g
 - focused browser coverage in [graph3d-fetch-error.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph3d-fetch-error.spec.ts) and [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now validates the workspace route in both failure and success paths
 - the remaining tickets stay planned for focus-navigation behavior on top of the workspace payload and for multi-level node detail rendering
 
+Completed fourth slice: [6e7a15c9 [ticket-viewer] Keep full workspace graph visible with focused navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/6e7a15c9-d8e6-4bbe-bb34-b83bd651896b/ticket.toml)
+
+- [page.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/page.rs) and [panels.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/panels.rs) now keep a stable graph root per workspace while focused selection changes only the active node inside the mounted graph
+- [mod.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/mod.rs) now applies shared `selection_auto_focus` camera retargeting so selection changes pan toward the active node without remounting or refetching the dataset
+- [graph3d.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph3d.rs) now dims unrelated nodes around the focused context and exposes stable `data-node-id` selectors so focus changes can be asserted against the still-mounted workspace graph
+- focused browser coverage in [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now validates that graph selection recenters the active node, dims unrelated visible nodes, and keeps the main ticket route stable
+
+Completed fifth slice: [322ba030 [viewer-api][ticket-viewer] Add multi-level graph node detail rendering](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/322ba030-160c-41d3-8a12-42936ae92858/ticket.toml)
+
+- [data.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/data.rs) now defines rich, compact, and minimal node detail tiers plus tier-specific dimensions chosen from projected pixel scale and focus state
+- [render.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/render.rs) now applies the selected tier per frame, resizes the card footprint, and toggles the matching pre-rendered node detail DOM blocks
+- [graph3d.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph3d.rs) now exposes stable `data-node-id` selectors and rich, compact, and minimal ticket card variants so the shared renderer can degrade dense graphs without unreadable text walls while keeping the active node informative
+- [Cargo.toml](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/Cargo.toml) now enables the minimal host-side `web-sys` features required for `dioxus-web` history compilation during focused `cargo test` runs of the shared viewer-api Dioxus crate
+- focused browser coverage in [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now validates both focused recentering/dimming and the new LOD behavior that keeps the active node rich while collapsing other visible nodes
+
 # Related specs
 
 - viewer-api Graph3D shared behavior: [viewer-api Graph3D](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/.spec/specs/4f14356f-c4bd-4554-be1e-35361de241da/body.md)
@@ -80,6 +96,8 @@ Completed for [8f5d611f [ticket-viewer] Build integrated ticket document panel](
 - passed `viewer-ctl prepare ticket-viewer`
 - passed `cargo build --manifest-path memory-viewers/ticket-viewer/Cargo.toml --release`
 - passed `npm run test:e2e:release -- mixed-workspace-root-route.spec.ts`
+- passed `cargo check --manifest-path memory-viewers/ticket-viewer/frontend/dioxus/Cargo.toml`
+- passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- mixed-workspace-root-route.spec.ts -g "content mode renders an integrated ticket document and keeps asset context inline"`
 - visual confirmation screenshot: [mixed-workspace-integrated-document](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/playwright-report-release/data/ed4faaf64512b0cb56518c5feb9d86f952942362.png)
 
 Completed for [60092819 [ticket-viewer] Fix graph layout defaults and isometric settings](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/60092819-f725-48ec-93f0-aba195ef81eb/ticket.toml):
@@ -97,6 +115,16 @@ Completed for [397fa45b [ticket-http][ticket-viewer] Expose workspace graph payl
 - passed `viewer-ctl install ticket-viewer`
 - passed `npm run test:e2e:release -- graph3d-fetch-error.spec.ts`
 - passed `npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
+
+Completed for [6e7a15c9 [ticket-viewer] Keep full workspace graph visible with focused navigation](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/6e7a15c9-d8e6-4bbe-bb34-b83bd651896b/ticket.toml):
+
+- passed `cargo check --manifest-path memory-viewers/ticket-viewer/frontend/dioxus/Cargo.toml`
+- passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
+
+Completed for [322ba030 [viewer-api][ticket-viewer] Add multi-level graph node detail rendering](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/322ba030-160c-41d3-8a12-42936ae92858/ticket.toml):
+
+- passed `cargo test --manifest-path memory-viewers/viewer-api/viewer-api/frontend/dioxus/Cargo.toml node_detail_`
+- passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
 
 # Ongoing validation plan
 

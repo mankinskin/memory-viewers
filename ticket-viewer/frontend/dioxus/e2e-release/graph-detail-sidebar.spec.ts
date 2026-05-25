@@ -78,6 +78,57 @@ async function openCandidateTicket(
   await rootTicketButton.click();
 }
 
+async function graphLodMetrics(
+  page: Page,
+  selectedId: string,
+): Promise<null | {
+  selectedLod: string | null;
+  visibleNodeCount: number;
+  collapsedNodes: number;
+  compactNodes: number;
+  minimalNodes: number;
+}> {
+  return page.evaluate((activeNodeId) => {
+    const container = document.getElementById('graph3d-container');
+    if (!container) {
+      return null;
+    }
+
+    const visibleNodes = Array.from(container.querySelectorAll('[data-node-id]')).filter((node) => {
+      const element = node as HTMLElement;
+      return element.style.display !== 'none';
+    }) as HTMLElement[];
+    const selectedNode = visibleNodes.find((node) => node.dataset.nodeId === activeNodeId);
+    if (!selectedNode) {
+      return null;
+    }
+
+    let compactNodes = 0;
+    let minimalNodes = 0;
+    let collapsedNodes = 0;
+    for (const node of visibleNodes) {
+      const lod = node.getAttribute('data-node-lod');
+      if (lod === 'compact') {
+        compactNodes += 1;
+      }
+      if (lod === 'minimal') {
+        minimalNodes += 1;
+      }
+      if (node.dataset.nodeId !== activeNodeId && (lod === 'compact' || lod === 'minimal')) {
+        collapsedNodes += 1;
+      }
+    }
+
+    return {
+      selectedLod: selectedNode.getAttribute('data-node-lod'),
+      visibleNodeCount: visibleNodes.length,
+      collapsedNodes,
+      compactNodes,
+      minimalNodes,
+    };
+  }, selectedId);
+}
+
 async function resolveActiveWorkspace(page: Page): Promise<string> {
   await gotoAndWaitForViewer(page, TICKET_VIEWER);
 
@@ -218,6 +269,191 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
         pathname: `/workspace/${candidate.workspace}`,
         ticketId: candidate.rootId,
       });
+  });
+
+  test('graph selection recenters the active node and dims unrelated nodes without replacing the graph', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+
+    const candidate = await findGraphSelectionCandidate(page);
+
+    await openCandidateTicket(page, candidate);
+
+    const container = page.locator('#graph3d-container');
+    await page.getByRole('button', { name: /^Graph$/ }).first().click();
+    await expect(container).toBeVisible({ timeout: 30_000 });
+
+    await expect.poll(async () => page.evaluate(({ rootId, childId }) => {
+      const container = document.getElementById('graph3d-container');
+      if (!container) {
+        return false;
+      }
+      const visibleNodes = Array.from(container.querySelectorAll('[data-node-id]')).filter((node) => {
+        const element = node as HTMLElement;
+        return element.style.display !== 'none';
+      }) as HTMLElement[];
+      return visibleNodes.some((node) => node.dataset.nodeId === rootId) &&
+        visibleNodes.some((node) => node.dataset.nodeId === childId);
+    }, {
+      rootId: candidate.rootId,
+      childId: candidate.childId,
+    }), {
+      timeout: 30_000,
+    }).toBe(true);
+
+    const childNode = page.locator(`#graph3d-container [data-node-id="${candidate.childId}"]`).first();
+    await expect(childNode).toBeVisible();
+
+    const initialDistance = await page.evaluate((childId) => {
+      const container = document.getElementById('graph3d-container');
+      if (!container) {
+        return null;
+      }
+      const child = Array.from(container.querySelectorAll('[data-node-id]')).find((node) => {
+        const element = node as HTMLElement;
+        return element.style.display !== 'none' && element.dataset.nodeId === childId;
+      }) as HTMLElement | undefined;
+      if (!child) {
+        return null;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const childRect = child.getBoundingClientRect();
+      const containerCx = containerRect.left + containerRect.width / 2;
+      const containerCy = containerRect.top + containerRect.height / 2;
+      const childCx = childRect.left + childRect.width / 2;
+      const childCy = childRect.top + childRect.height / 2;
+      return Math.hypot(childCx - containerCx, childCy - containerCy);
+    }, candidate.childId);
+    expect(initialDistance, 'selected child node must expose an initial distance').not.toBeNull();
+
+    await childNode.click();
+
+    await expect.poll(async () => page.evaluate(({ childId, maxDistance }) => {
+      const container = document.getElementById('graph3d-container');
+      if (!container) {
+        return false;
+      }
+      const visibleNodes = Array.from(container.querySelectorAll('[data-node-id]')).filter((node) => {
+        const element = node as HTMLElement;
+        return element.style.display !== 'none';
+      }) as HTMLElement[];
+      const child = visibleNodes.find((node) => node.dataset.nodeId === childId);
+      if (!child) {
+        return false;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const childRect = child.getBoundingClientRect();
+      const containerCx = containerRect.left + containerRect.width / 2;
+      const containerCy = containerRect.top + containerRect.height / 2;
+      const childCx = childRect.left + childRect.width / 2;
+      const childCy = childRect.top + childRect.height / 2;
+      const dimmedCount = visibleNodes.filter((node) => {
+        if (node.dataset.nodeId === childId) {
+          return false;
+        }
+        return Number.parseFloat(getComputedStyle(node).opacity || '1') < 0.5;
+      }).length;
+      const childDistance = Math.hypot(childCx - containerCx, childCy - containerCy);
+
+      return childDistance <= maxDistance && dimmedCount > 0;
+    }, {
+      childId: candidate.childId,
+      maxDistance: Math.max(48, initialDistance! * 0.75),
+    }), {
+      timeout: 20_000,
+    }).toBe(true);
+
+    const focusedMetrics = await page.evaluate((childId) => {
+      const container = document.getElementById('graph3d-container');
+      if (!container) {
+        return null;
+      }
+      const visibleNodes = Array.from(container.querySelectorAll('[data-node-id]')).filter((node) => {
+        const element = node as HTMLElement;
+        return element.style.display !== 'none';
+      }) as HTMLElement[];
+      const child = visibleNodes.find((node) => node.dataset.nodeId === childId);
+      if (!child) {
+        return null;
+      }
+
+      const containerRect = container.getBoundingClientRect();
+      const childRect = child.getBoundingClientRect();
+      const containerCx = containerRect.left + containerRect.width / 2;
+      const containerCy = containerRect.top + containerRect.height / 2;
+      const childCx = childRect.left + childRect.width / 2;
+      const childCy = childRect.top + childRect.height / 2;
+      const dimmedCount = visibleNodes.filter((node) => {
+        if (node.dataset.nodeId === childId) {
+          return false;
+        }
+        return Number.parseFloat(getComputedStyle(node).opacity || '1') < 0.5;
+      }).length;
+
+      return {
+        childDistance: Math.hypot(childCx - containerCx, childCy - containerCy),
+        dimmedCount,
+      };
+    }, candidate.childId);
+
+    expect(focusedMetrics, 'focused graph metrics must be measurable').not.toBeNull();
+    expect(
+      focusedMetrics!.childDistance,
+      'focused node should move closer to the graph center after selection',
+    ).toBeLessThanOrEqual(Math.max(48, initialDistance! * 0.75));
+    expect(
+      focusedMetrics!.dimmedCount,
+      'graph selection should dim at least one unrelated visible node',
+    ).toBeGreaterThan(0);
+
+    await attachScreenshot(page, testInfo, 'graph-focused-selection');
+  });
+
+  test('graph node LOD keeps the active selection rich while collapsing other visible nodes', async ({ page }, testInfo) => {
+    test.setTimeout(120_000);
+
+    const candidate = await findGraphSelectionCandidate(page);
+
+    await openCandidateTicket(page, candidate);
+
+    const container = page.locator('#graph3d-container');
+    await page.getByRole('button', { name: /^Graph$/ }).first().click();
+    await expect(container).toBeVisible({ timeout: 30_000 });
+
+    await expect.poll(() => graphLodMetrics(page, candidate.rootId), {
+      timeout: 20_000,
+    }).toMatchObject({
+      selectedLod: 'rich',
+      visibleNodeCount: expect.any(Number),
+    });
+
+    const rootMetrics = await graphLodMetrics(page, candidate.rootId);
+    expect(rootMetrics, 'root graph node should expose LOD metrics').not.toBeNull();
+    expect(
+      rootMetrics!.collapsedNodes,
+      'workspace graph should collapse at least one non-selected visible node to a smaller LOD tier',
+    ).toBeGreaterThan(0);
+
+    const childNode = page.locator(`#graph3d-container [data-node-id="${candidate.childId}"]`).first();
+    await expect(childNode).toBeVisible();
+    await childNode.click();
+
+    await expect.poll(() => graphLodMetrics(page, candidate.childId), {
+      timeout: 20_000,
+    }).toMatchObject({
+      selectedLod: 'rich',
+      visibleNodeCount: expect.any(Number),
+    });
+
+    const childMetrics = await graphLodMetrics(page, candidate.childId);
+    expect(childMetrics, 'selected child node should expose LOD metrics').not.toBeNull();
+    expect(
+      childMetrics!.collapsedNodes,
+      'after selection, other visible nodes should still use smaller compact or minimal tiers',
+    ).toBeGreaterThan(0);
+
+    await attachScreenshot(page, testInfo, 'graph-node-lod-tiers');
   });
 
   test('graph mode defaults to hierarchical isometric controls and preserves top-to-bottom depth ordering', async ({ page }, testInfo) => {

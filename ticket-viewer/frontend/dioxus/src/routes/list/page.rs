@@ -77,10 +77,25 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut list_error: Signal<Option<String>> = use_signal(|| None);
     let mut workspace_label: Signal<String> = use_signal(|| workspace.clone());
     let mut selected_ticket = store.open_ticket;
+    let mut graph_root_ticket: Signal<Option<TicketRef>> =
+        use_signal(|| None);
     let mut graph_content_ticket: Signal<Option<TicketRef>> =
         use_signal(|| None);
     use_effect(move || {
-        let _ = selected_ticket.read();
+        let next_selected = selected_ticket.read().clone();
+        match next_selected {
+            Some(ticket_ref) => {
+                let root_needs_reset = graph_root_ticket
+                    .peek()
+                    .as_ref()
+                    .map(|root| root.workspace != ticket_ref.workspace)
+                    .unwrap_or(true);
+                if root_needs_reset {
+                    graph_root_ticket.set(Some(ticket_ref));
+                }
+            },
+            None => graph_root_ticket.set(None),
+        }
         graph_content_ticket.set(None);
     });
     let mut filter = store.filter;
@@ -415,6 +430,7 @@ pub fn TicketListPage(workspace: String) -> Element {
                     {render_selected_main_panel(
                         workspace.clone(),
                         selected_ticket_ref,
+                        graph_root_ticket,
                         tickets,
                         graph_content_ticket,
                         view_mode,

@@ -26,6 +26,7 @@ use super::{
 pub(super) fn render_selected_main_panel(
     active_workspace: String,
     selected_ticket: TicketRef,
+    graph_root_ticket: Signal<Option<TicketRef>>,
     tickets: Signal<Vec<TicketSummary>>,
     mut graph_content_ticket: Signal<Option<TicketRef>>,
     view_mode: Signal<String>,
@@ -56,7 +57,14 @@ pub(super) fn render_selected_main_panel(
             style: "display: flex; flex-direction: row; flex: 1; overflow: hidden; min-height: 0;",
             if view_mode_value.as_str() != "content" && !graph_panel_collapsed {
                 {
-                    let graph_root = selected_ticket.clone();
+                    let graph_root = graph_root_ticket
+                        .read()
+                        .clone()
+                        .unwrap_or_else(|| selected_ticket.clone());
+                    let graph_focus_ticket = graph_content_ticket
+                        .read()
+                        .clone()
+                        .unwrap_or_else(|| selected_ticket.clone());
                     let graph_style = if view_mode_value.as_str() == "graph" {
                         "flex: 1; position: relative; min-width: 0; overflow: hidden;".to_string()
                     } else {
@@ -67,12 +75,12 @@ pub(super) fn render_selected_main_panel(
                     };
                     rsx! {
                         div {
-                            key: "{graph_root.key()}",
+                            key: "graph-{graph_root.workspace}",
                             style: "{graph_style}",
                             DepGraph {
                                 workspace: graph_root.workspace.clone(),
                                 root_id: graph_root.id.clone(),
-                                selected_node_id: graph_content_ticket.read().as_ref().map(|ticket| ticket.id.clone()),
+                                selected_node_id: Some(graph_focus_ticket.id.clone()),
                                 layout_mode: *graph_layout_mode.read(),
                                 projection: *graph_projection.read(),
                                 on_layout_mode_change: move |mode| graph_layout_mode.set(mode),
@@ -278,18 +286,20 @@ fn render_content_panel(
     let content_summary = tickets
         .read()
         .iter()
-        .find(|ticket| {
-            ticket.resolved_ticket_ref(&active_workspace) == content_ticket
-        })
+        .find(|ticket| ticket.id == content_ticket.id)
         .cloned();
+    let document_ticket = content_summary
+        .as_ref()
+        .map(|ticket| ticket.resolved_ticket_ref(&active_workspace))
+        .unwrap_or_else(|| content_ticket.clone());
     let active_asset = selected_file
         .read()
         .as_ref()
-        .filter(|(ticket_ref, _)| ticket_ref == &content_ticket)
+        .filter(|(ticket_ref, _)| ticket_ref == &document_ticket)
         .map(|(_, path)| path.clone());
     let content_key = format!(
         "content-{}-{}",
-        content_ticket.key(),
+        document_ticket.key(),
         active_asset.as_deref().unwrap_or("description.md")
     );
     let fields = content_summary
@@ -302,8 +312,9 @@ fn render_content_panel(
             key: "{content_key}",
             style: "flex: 1; min-width: 0; overflow: hidden; display: flex; flex-direction: column;",
             TicketContent {
-                workspace: content_ticket.workspace,
-                ticket_id: content_ticket.id,
+                workspace: document_ticket.workspace,
+                summary_workspace: active_workspace,
+                ticket_id: document_ticket.id,
                 fields,
                 ticket_title: content_summary.as_ref().and_then(|ticket| ticket.title.clone()),
                 ticket_state: content_summary.as_ref().and_then(|ticket| ticket.state.clone()),

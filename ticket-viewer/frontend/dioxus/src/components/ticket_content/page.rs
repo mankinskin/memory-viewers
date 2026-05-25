@@ -27,6 +27,7 @@ use super::{
 #[component]
 pub fn TicketContent(
     workspace: String,
+    summary_workspace: String,
     ticket_id: String,
     fields: serde_json::Value,
     #[props(default)] ticket_title: Option<String>,
@@ -37,6 +38,18 @@ pub fn TicketContent(
     #[props(default)] asset_path: Option<String>,
 ) -> Element {
     let mut active_tab: Signal<Tab> = use_signal(|| Tab::Description);
+    let mut document_title: Signal<Option<String>> =
+        use_signal(|| ticket_title.clone());
+    let mut document_state: Signal<Option<String>> =
+        use_signal(|| ticket_state.clone());
+    let mut document_type: Signal<Option<String>> =
+        use_signal(|| ticket_type.clone());
+    let mut document_fields: Signal<serde_json::Value> =
+        use_signal(|| fields.clone());
+    let mut document_created_at: Signal<Option<String>> =
+        use_signal(|| created_at.clone());
+    let mut document_updated_at: Signal<Option<String>> =
+        use_signal(|| updated_at.clone());
     let mut desc_loading: Signal<bool> = use_signal(|| true);
     let mut desc_text: Signal<Option<String>> = use_signal(|| None);
     let mut desc_error: Signal<Option<String>> = use_signal(|| None);
@@ -57,13 +70,63 @@ pub fn TicketContent(
     let document_context = TicketDocumentContext {
         workspace: workspace.clone(),
         ticket_id: ticket_id.clone(),
-        title: ticket_title,
-        ticket_state,
-        ticket_type,
-        created_at,
-        updated_at,
-        fields: fields.clone(),
+        title: document_title(),
+        ticket_state: document_state(),
+        ticket_type: document_type(),
+        created_at: document_created_at(),
+        updated_at: document_updated_at(),
+        fields: document_fields.read().clone(),
     };
+
+    {
+        let workspace = workspace.clone();
+        let summary_workspace = summary_workspace.clone();
+        let ticket_id = ticket_id.clone();
+        use_effect(move || {
+            let workspace = workspace.clone();
+            let summary_workspace = summary_workspace.clone();
+            let ticket_id = ticket_id.clone();
+            let summary_query = format!("id:{ticket_id}");
+            spawn(async move {
+                let backend = HttpTicketBackend::new(None);
+                if let Ok(response) = backend
+                    .list_tickets(
+                        &summary_workspace,
+                        None,
+                        Some(summary_query.as_str()),
+                        Some(1),
+                    )
+                    .await
+                {
+                    if let Some(summary) = response
+                        .items
+                        .into_iter()
+                        .find(|ticket| {
+                            ticket.resolved_ticket_ref(&summary_workspace).id
+                                == ticket_id
+                        })
+                    {
+                        document_title.set(summary.title);
+                        document_state.set(summary.state);
+                        document_type.set(summary.ticket_type);
+                        document_created_at.set(Some(summary.created_at));
+                        document_updated_at.set(if summary.updated_at.trim().is_empty() {
+                            None
+                        } else {
+                            Some(summary.updated_at)
+                        });
+                        document_fields.set(summary.fields);
+                    }
+                }
+                if let Ok(response) =
+                    backend.get_ticket(&workspace, &ticket_id).await
+                {
+                    document_fields.set(response.ticket.fields);
+                    document_created_at.set(Some(response.ticket.created_at));
+                }
+            });
+        });
+    }
 
     {
         let workspace = workspace.clone();
@@ -100,7 +163,6 @@ pub fn TicketContent(
                             desc_loading.set(false);
                         },
                         Err(error) => {
-                            desc_loading.set(false);
                             desc_error.set(Some(error));
                         },
                     }
@@ -148,7 +210,7 @@ pub fn TicketContent(
         });
     }
 
-    let toml_text = fields_to_toml(&ticket_id, &fields);
+    let toml_text = fields_to_toml(&ticket_id, &document_fields.read());
     let body_style = if active_tab() == Tab::History {
         "flex: 1; overflow: hidden;"
     } else if active_tab() == Tab::Description {

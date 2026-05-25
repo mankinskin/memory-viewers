@@ -64,6 +64,11 @@ interface SeededViewerFixture {
   childWorkspace: string;
   childWorkspaceLabel: string;
   childTitle: string;
+  childAcceptanceCriteria: string;
+  childImplementationSummary: string;
+  childValidationSummary: string;
+  childWorkflowStage: string;
+  childReleaseTarget: string;
   childDescriptionSnippet: string;
   childAssetSnippet: string;
   secondChildTicketId: string;
@@ -252,6 +257,11 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
   const parentTitle = 'Seeded parent ticket';
   const childTitle = 'Seeded first shared ticket';
   const secondChildTitle = 'Seeded second shared ticket';
+  const childAcceptanceCriteria = 'Document metadata should expose the remaining top-level ticket fields.';
+  const childImplementationSummary = 'Expanded integrated document coverage should render the summary fields inline.';
+  const childValidationSummary = 'Playwright confirms extra seeded ticket fields appear in the document view.';
+  const childWorkflowStage = 'delivery';
+  const childReleaseTarget = '2026.05';
   const parentDescriptionSnippet = 'Default workspace root for mixed-workspace validation.';
   const childDescriptionSnippet = 'First shared-workspace ticket body used by Playwright validation.';
   const secondChildDescriptionSnippet = 'Second shared-workspace ticket body used by Playwright validation.';
@@ -308,6 +318,26 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
     'tracker-improvement',
     '--title',
     childTitle,
+    '--field',
+    'component=ticket-viewer',
+    '--field',
+    'priority=high',
+    '--field',
+    'risk_level=medium',
+    '--field',
+    'tags=layout,document',
+    '--field',
+    'spec_refs=seeded-spec-01',
+    '--field',
+    `acceptance_criteria=${childAcceptanceCriteria}`,
+    '--field',
+    `implementation_summary=${childImplementationSummary}`,
+    '--field',
+    `validation_summary=${childValidationSummary}`,
+    '--field',
+    `workflow_stage=${childWorkflowStage}`,
+    '--field',
+    `release_target=${childReleaseTarget}`,
     '--body-file',
     childBodyPath,
   ]);
@@ -451,6 +481,11 @@ async function seedMixedWorkspaceFixture(): Promise<SeededViewerFixture> {
     childWorkspace: childWorkspace!,
     childWorkspaceLabel: childWorkspaceInfo?.label ?? childWorkspaceLabel,
     childTitle,
+    childAcceptanceCriteria,
+    childImplementationSummary,
+    childValidationSummary,
+    childWorkflowStage,
+    childReleaseTarget,
     childDescriptionSnippet,
     childAssetSnippet,
     secondChildTicketId: secondChildTicket.id,
@@ -834,7 +869,28 @@ test('content mode renders an integrated ticket document and keeps asset context
   await expect(page.getByTestId('ticket-document-metadata')).toContainText(currentFixture.childWorkspace);
   await expect(page.getByTestId('ticket-document-metadata')).toContainText(currentFixture.childTicketId);
   await expect(page.getByTestId('desc-markdown')).toContainText(currentFixture.childDescriptionSnippet);
+  await expect(page.getByTestId('ticket-document-fields')).toContainText('Acceptance Criteria');
+  await expect(page.getByTestId('ticket-document-fields')).toContainText(currentFixture.childAcceptanceCriteria);
+  await expect(page.getByTestId('ticket-document-fields')).toContainText('Implementation Summary');
+  await expect(page.getByTestId('ticket-document-fields')).toContainText(currentFixture.childImplementationSummary);
+  await expect(page.getByTestId('ticket-document-fields')).toContainText('Validation Summary');
+  await expect(page.getByTestId('ticket-document-fields')).toContainText(currentFixture.childValidationSummary);
+  await expect(page.getByTestId('ticket-document-fields')).toContainText('Workflow Stage');
+  await expect(page.getByTestId('ticket-document-fields')).toContainText(currentFixture.childWorkflowStage);
+  await expect(page.getByTestId('ticket-document-fields')).toContainText('Release Target');
+  await expect(page.getByTestId('ticket-document-fields')).toContainText(currentFixture.childReleaseTarget);
   await expect(page.getByTestId('ticket-detail-panel')).toHaveCount(0);
+
+  await gotoAndWaitForSeededViewer(
+    page,
+    `${currentFixture.url}/workspace/${encodeURIComponent(currentFixture.parentWorkspace)}#ticket-id=${currentFixture.childTicketId}&ticket-workspace=${encodeURIComponent(currentFixture.parentWorkspace)}`,
+  );
+  await page.getByRole('button', { name: 'Content' }).click();
+  await expect(page.getByTestId('desc-markdown')).toContainText(currentFixture.childDescriptionSnippet);
+  await expect(page.getByTestId('ticket-document-header')).toContainText(currentFixture.childTitle);
+  await expect(page.getByTestId('ticket-document')).toContainText('tracker-improvement');
+  await expect(page.getByTestId('ticket-document-metadata')).toContainText(currentFixture.childWorkspace);
+  await expect(page.getByTestId('ticket-document-metadata')).toContainText(currentFixture.childTicketId);
 
   const row = page.getByTestId(`ticket-tree-row-${currentFixture.childTicketId}`);
   const rowEntry = row.locator('xpath=..');

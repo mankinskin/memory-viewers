@@ -16,12 +16,16 @@
 //! http://localhost:3002/workspace/default?log=ticket_viewer=debug
 //! ```
 
-use std::collections::HashMap;
+use std::collections::{
+    HashMap,
+    HashSet,
+};
 
 use dioxus::prelude::*;
 
 use viewer_api_dioxus::{
     can_use_webgpu_graph3d,
+    Camera,
     CameraCommand,
     EdgeRef3D,
     Layout3D,
@@ -95,6 +99,75 @@ pub fn lift_2d(
         .with_node_card_profile(NodeCardProfile::TicketWide)
 }
 
+fn focus_context_ids(
+    layout: &Layout3D,
+    focus_id: Option<&str>,
+) -> Option<HashSet<String>> {
+    let focus_id = focus_id?;
+    let focus_idx = layout
+        .nodes
+        .iter()
+        .position(|node| node.id == focus_id)?;
+    let mut ids = HashSet::from([focus_id.to_string()]);
+    for edge in &layout.edges {
+        if edge.from_idx == focus_idx {
+            if let Some(node) = layout.nodes.get(edge.to_idx) {
+                ids.insert(node.id.clone());
+            }
+        }
+        if edge.to_idx == focus_idx {
+            if let Some(node) = layout.nodes.get(edge.from_idx) {
+                ids.insert(node.id.clone());
+            }
+        }
+    }
+    Some(ids)
+}
+
+fn focus_camera_command(
+    layout: &Layout3D,
+    focus_id: Option<&str>,
+) -> Option<CameraCommand> {
+    let focus_id = focus_id?;
+    let focus_node = layout.nodes.iter().find(|node| node.id == focus_id)?;
+    let focus_radius = layout
+        .nodes
+        .iter()
+        .map(|node| {
+            let dx = node.x - focus_node.x;
+            let dy = node.y - focus_node.y;
+            let dz = node.z - focus_node.z;
+            (dx * dx + dy * dy + dz * dz).sqrt()
+        })
+        .fold(0.0_f32, f32::max)
+        .max(1.0);
+    Some(CameraCommand::FocusOn {
+        target: [focus_node.x, focus_node.y, focus_node.z],
+        distance: viewer_api_dioxus::graph3d::camera::frame_distance(
+            focus_radius,
+        ),
+    })
+}
+
+fn initial_camera_for_layout(
+    layout: &Layout3D,
+    layout_mode: LayoutMode,
+) -> Camera {
+    let mut camera = Camera::default();
+    let bounds = layout.bounds();
+    camera.frame(bounds.0, bounds.1);
+    let (yaw, pitch) = match layout_mode {
+        LayoutMode::Hierarchical3D => (0.78_f32, 0.62_f32),
+        LayoutMode::Flat2D => (0.78_f32, 0.72_f32),
+    };
+    camera.apply_command_for_mode(
+        &CameraCommand::ResetTo { yaw, pitch },
+        viewer_api_dioxus::graph3d::camera::CameraMode::Orbit,
+        bounds,
+    );
+    camera
+}
+
 #[derive(Props, Clone, PartialEq)]
 pub struct Graph3DProps {
     pub workspace: String,
@@ -137,17 +210,6 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
         use_context::<crate::graph_fetch::GraphFetchService>();
     let cache: crate::GraphCache = use_context::<crate::GraphCache>();
     let cache_key = crate::graph_fetch::workspace_cache_key(&workspace);
-
-    // ── Camera command channel ────────────────────────────────────────────
-    // Fire a one-time camera reset the first time a layout is shown for each
-    // focused root_id, and again whenever the layout mode changes.
-    let mut cam_cmd: Signal<Option<CameraCommand>> =
-        use_hook(|| Signal::new(None));
-    let mut cam_seq: Signal<u64> = use_hook(|| Signal::new(0_u64));
-    let mut last_cam_root: Signal<Option<String>> =
-        use_hook(|| Signal::new(None));
-    let mut last_cam_mode: Signal<Option<LayoutMode>> =
-        use_hook(|| Signal::new(None));
 
     // ── Lifecycle logging ─────────────────────────────────────────────────
     tracing::debug!(target: T, rid = %root_id, "mount");
@@ -221,38 +283,15 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
 
     let nodes = layout.nodes.clone();
     let node_count = nodes.len();
-
-    // Issue a camera reset when root_id changes OR when layout_mode changes.
-    let root_changed =
-        last_cam_root.read().as_deref() != Some(root_id.as_str());
-    let mode_changed = *last_cam_mode.read() != Some(layout_mode);
-    if root_changed || mode_changed {
-        if root_changed {
-            last_cam_root.set(Some(root_id.clone()));
-        }
-        if mode_changed {
-            last_cam_mode.set(Some(layout_mode));
-        }
-        // Camera angle depends on layout mode:
-        // Hierarchical3D — orthographic-friendly isometric framing so the
-        // hierarchy reads top-to-bottom while bounded Z offsets remain visible.
-        // Flat2D — a slightly steeper planar framing so the graph still reads
-        // as a diagram instead of a front-on horizontal wall.
-        let (yaw, pitch) = match layout_mode {
-            LayoutMode::Hierarchical3D => (0.78_f32, 0.62_f32),
-            LayoutMode::Flat2D => (0.78_f32, 0.72_f32),
-        };
-        cam_cmd.set(Some(CameraCommand::ResetTo { yaw, pitch }));
-        let next_seq = *cam_seq.peek() + 1;
-        cam_seq.set(next_seq);
-    }
+    let focus_context = focus_context_ids(&layout, selected_node_id.as_deref());
+    let initial_camera = initial_camera_for_layout(&layout, layout_mode);
 
     rsx! {
         viewer_api_dioxus::Graph3D {
             layout: layout,
+            initial_camera: Some(initial_camera),
             selected_node_id: selected_node_id.clone(),
-            camera_command: *cam_cmd.read(),
-            camera_command_seq: *cam_seq.read(),
+            selection_auto_focus: true,
             projection: projection,
             layout_mode: layout_mode,
             on_layout_mode_change: on_layout_mode_change,
@@ -272,33 +311,85 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                             .cloned()
                             .unwrap_or_else(|| TicketRef::new(workspace.clone(), node_id.clone()));
                         let is_selected = selected_node_id.as_deref() == Some(node_id.as_str());
+                        let is_focus_context = focus_context
+                            .as_ref()
+                            .map(|ids| ids.contains(&node_id))
+                            .unwrap_or(false);
                         let card_class = if is_selected {
                             "graph-node-card content node-card-selected"
+                        } else if is_focus_context {
+                            "graph-node-card content node-card-context"
                         } else {
                             "graph-node-card content"
+                        };
+                        let focus_style = if is_selected {
+                            "opacity: 1.0; filter: saturate(1.0) brightness(1.0);"
+                        } else if is_focus_context {
+                            "opacity: 0.95; filter: saturate(0.92) brightness(0.96);"
+                        } else if focus_context.is_some() {
+                            "opacity: 0.3; filter: saturate(0.4) brightness(0.78);"
+                        } else {
+                            "opacity: 1.0; filter: none;"
                         };
                         rsx! {
                             div {
                                 key: "{node_id}",
                                 class: "{card_class}",
                                 "data-node-idx": "{idx}",
-                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 260px; height: 56px; box-sizing: border-box; border: 1px solid var(--graph-node-border, rgba(200,200,200,0.35)); border-left: 3px solid {color}; border-radius: 7px; background: var(--graph-node-surface, rgba(30,30,40,0.92)); backdrop-filter: blur(2px); padding: 9px 11px; cursor: pointer; overflow: hidden; font-family: sans-serif; color: var(--graph-node-text, #e8e8f0); box-shadow: var(--graph-node-shadow, 0 3px 12px rgba(0,0,0,0.6));",
+                                "data-node-id": "{node_id}",
+                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 260px; height: 56px; box-sizing: border-box; border: 1px solid var(--graph-node-border, rgba(200,200,200,0.35)); border-left: 3px solid {color}; border-radius: 7px; background: var(--graph-node-surface, rgba(30,30,40,0.92)); backdrop-filter: blur(2px); padding: 9px 11px; cursor: pointer; overflow: hidden; font-family: sans-serif; color: var(--graph-node-text, #e8e8f0); box-shadow: var(--graph-node-shadow, 0 3px 12px rgba(0,0,0,0.6)); transition: opacity 160ms ease, filter 160ms ease, box-shadow 160ms ease; {focus_style}",
                                 onclick: move |evt: Event<MouseData>| {
                                     evt.stop_propagation();
                                     on_select.call(ticket_ref_click.clone());
                                 },
                                 div {
-                                    style: "font-size: 13px; font-weight: 600; color: var(--graph-node-text, #e8e8f0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
-                                    "{title}"
+                                    "data-node-detail-tier": "rich",
+                                    "data-node-detail-display": "block",
+                                    style: "display: block;",
+                                    div {
+                                        style: "font-size: 13px; font-weight: 600; color: var(--graph-node-text, #e8e8f0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                                        "{title}"
+                                    }
+                                    div {
+                                        style: "display: flex; align-items: center; gap: 6px; margin-top: 4px;",
+                                        span {
+                                            style: "font-size: 11px; color: {color}; font-weight: 500;",
+                                            "{state_str}"
+                                        }
+                                        span {
+                                            style: "font-size: 10px; color: var(--graph-node-muted-text, #888);",
+                                            "{short_id}"
+                                        }
+                                    }
                                 }
                                 div {
-                                    style: "display: flex; align-items: center; gap: 6px; margin-top: 4px;",
+                                    "data-node-detail-tier": "compact",
+                                    "data-node-detail-display": "flex",
+                                    style: "display: none; align-items: center; gap: 8px; height: 100%;",
                                     span {
-                                        style: "font-size: 11px; color: {color}; font-weight: 500;",
-                                        "{state_str}"
+                                        style: "width: 8px; height: 8px; border-radius: 999px; background: {color}; flex-shrink: 0;",
+                                    }
+                                    div {
+                                        style: "min-width: 0; display: flex; flex-direction: column; gap: 2px;",
+                                        div {
+                                            style: "font-size: 11px; font-weight: 600; color: var(--graph-node-text, #e8e8f0); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;",
+                                            "{title}"
+                                        }
+                                        div {
+                                            style: "font-size: 9px; color: var(--graph-node-muted-text, #888); text-transform: uppercase; letter-spacing: 0.04em;",
+                                            "{short_id}"
+                                        }
+                                    }
+                                }
+                                div {
+                                    "data-node-detail-tier": "minimal",
+                                    "data-node-detail-display": "flex",
+                                    style: "display: none; align-items: center; justify-content: center; gap: 6px; width: 100%; height: 100%;",
+                                    span {
+                                        style: "width: 10px; height: 10px; border-radius: 999px; background: {color}; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.12);",
                                     }
                                     span {
-                                        style: "font-size: 10px; color: var(--graph-node-muted-text, #888);",
+                                        style: "font-size: 10px; font-weight: 700; color: var(--graph-node-text, #e8e8f0); letter-spacing: 0.08em; text-transform: uppercase;",
                                         "{short_id}"
                                     }
                                 }
