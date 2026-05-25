@@ -1,4 +1,4 @@
-import { expect, test, type APIResponse, type Page, type TestInfo } from '@playwright/test';
+import { expect, test, type APIResponse, type Locator, type Page, type TestInfo } from '@playwright/test';
 import { execFile, spawn, type ChildProcessWithoutNullStreams } from 'node:child_process';
 import fs from 'node:fs/promises';
 import os from 'node:os';
@@ -26,10 +26,15 @@ interface WorkspacesResponse {
 
 interface WorkflowCandidateItem {
   id: string;
+  became_actionable_at?: string | null;
+  last_blocker_progress_at?: string | null;
 }
 
 interface WorkflowTreeItem {
   id: string;
+  is_frontier?: boolean;
+  became_actionable_at?: string | null;
+  last_blocker_progress_at?: string | null;
   children?: WorkflowTreeItem[];
 }
 
@@ -53,6 +58,11 @@ interface WorkflowFixture {
   blockersRootTitle: string;
   unblockedByRootId: string;
   unblockedByRootTitle: string;
+}
+
+interface WorkflowTreeEntry {
+  id: string;
+  depth: number;
 }
 
 async function expectJson<T>(response: APIResponse, message: string): Promise<T> {
@@ -245,11 +255,15 @@ async function createDependsOnEdge(
 async function seedWorkflowFixture(page: Page): Promise<WorkflowFixture> {
   const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'ticket-viewer-workflow-'));
   const indexRoot = path.join(tempDir, 'workspace');
-  const blockerRootTitle = 'Workflow blocker root';
-  const siblingBlockerTitle = 'Workflow sibling blocker';
-  const blockersRootTitle = 'Workflow blocked target';
-  const downstreamMidTitle = 'Workflow downstream mid';
-  const downstreamLeafTitle = 'Workflow downstream leaf';
+  const blockersRootTitle = 'Workflow blockers root';
+  const directLeafTitle = 'Workflow direct frontier leaf';
+  const nestedParentTitle = 'Workflow nested blocker parent';
+  const nestedLeafTitle = 'Workflow nested frontier leaf';
+  const unblockedByRootTitle = 'Workflow shared prerequisite';
+  const actionableTitle = 'Workflow direct dependent';
+  const extraBlockerTitle = 'Workflow extra blocker';
+  const stillBlockedTitle = 'Workflow still blocked dependent';
+  const transitiveTitle = 'Workflow transitive dependent';
   await fs.mkdir(indexRoot, { recursive: true });
   await runTicketCli<unknown>([
     'init',
@@ -261,19 +275,31 @@ async function seedWorkflowFixture(page: Page): Promise<WorkflowFixture> {
   const { url, viewer } = await startSeededViewer(indexRoot);
   const workspace = await resolveActiveWorkspace(url);
 
-  const blockerRootId = await createTicket(page, url, workspace, blockerRootTitle);
-  const siblingBlockerId = await createTicket(page, url, workspace, siblingBlockerTitle);
   const blockersRootId = await createTicket(page, url, workspace, blockersRootTitle);
-  const downstreamMidId = await createTicket(page, url, workspace, downstreamMidTitle);
-  const downstreamLeafId = await createTicket(page, url, workspace, downstreamLeafTitle);
+  const directLeafId = await createTicket(page, url, workspace, directLeafTitle);
+  const nestedParentId = await createTicket(page, url, workspace, nestedParentTitle);
+  const nestedLeafId = await createTicket(page, url, workspace, nestedLeafTitle);
+  const unblockedByRootId = await createTicket(page, url, workspace, unblockedByRootTitle);
+  const actionableId = await createTicket(page, url, workspace, actionableTitle);
+  const extraBlockerId = await createTicket(page, url, workspace, extraBlockerTitle);
+  const stillBlockedId = await createTicket(page, url, workspace, stillBlockedTitle);
+  const transitiveId = await createTicket(page, url, workspace, transitiveTitle);
 
-  await patchTicketState(page, url, workspace, blockerRootId, 'ready');
-  await patchTicketState(page, url, workspace, siblingBlockerId, 'ready');
+  for (const [fromId, toId] of [
+    [blockersRootId, nestedParentId],
+    [blockersRootId, directLeafId],
+    [nestedParentId, nestedLeafId],
+    [actionableId, unblockedByRootId],
+    [stillBlockedId, unblockedByRootId],
+    [stillBlockedId, extraBlockerId],
+    [transitiveId, actionableId],
+  ] as const) {
+    await createDependsOnEdge(page, url, workspace, fromId, toId);
+  }
 
-  await createDependsOnEdge(page, url, workspace, blockersRootId, blockerRootId);
-  await createDependsOnEdge(page, url, workspace, blockersRootId, siblingBlockerId);
-  await createDependsOnEdge(page, url, workspace, downstreamMidId, blockerRootId);
-  await createDependsOnEdge(page, url, workspace, downstreamLeafId, downstreamMidId);
+  await patchTicketState(page, url, workspace, directLeafId, 'ready');
+  await patchTicketState(page, url, workspace, nestedLeafId, 'ready');
+  await patchTicketState(page, url, workspace, unblockedByRootId, 'ready');
 
   return {
     tempDir,
@@ -283,8 +309,8 @@ async function seedWorkflowFixture(page: Page): Promise<WorkflowFixture> {
     workspace,
     blockersRootId,
     blockersRootTitle,
-    unblockedByRootId: blockerRootId,
-    unblockedByRootTitle: blockerRootTitle,
+    unblockedByRootId,
+    unblockedByRootTitle,
   };
 }
 
@@ -330,17 +356,57 @@ async function visibleIds(
   );
 }
 
-async function treeDepthIds(
+async function visibleTreeEntries(
   page: Page,
-  depth: number,
-): Promise<string[]> {
+): Promise<WorkflowTreeEntry[]> {
   return await page
-    .locator(`[data-testid^="workflow-tree-node-"][data-depth="${depth}"]`)
+    .locator('[data-testid^="workflow-tree-node-"]')
     .evaluateAll((nodes) =>
       nodes
-        .map((node) => node.getAttribute('data-testid') ?? '')
-        .map((testId) => testId.replace('workflow-tree-node-', '')),
+        .map((node) => ({
+          id: (node.getAttribute('data-testid') ?? '').replace('workflow-tree-node-', ''),
+          depth: Number(node.getAttribute('data-depth') ?? '0'),
+        }))
+        .filter((entry) => entry.id.length > 0),
     );
+}
+
+function flattenTreeEntries(
+  root: WorkflowTreeItem,
+  depth = 0,
+): WorkflowTreeEntry[] {
+  return [
+    { id: root.id, depth },
+    ...(root.children ?? []).flatMap((child) => flattenTreeEntries(child, depth + 1)),
+  ];
+}
+
+function frontierTreeIds(root: WorkflowTreeItem): string[] {
+  return [
+    ...(root.is_frontier ? [root.id] : []),
+    ...(root.children ?? []).flatMap((child) => frontierTreeIds(child)),
+  ];
+}
+
+function hasWorkflowEvidence(item: {
+  became_actionable_at?: string | null;
+  last_blocker_progress_at?: string | null;
+}): boolean {
+  return Boolean(item.became_actionable_at || item.last_blocker_progress_at);
+}
+
+async function expectEvidenceIfPresent(
+  locator: Locator,
+  item: {
+    became_actionable_at?: string | null;
+    last_blocker_progress_at?: string | null;
+  },
+): Promise<void> {
+  if (!hasWorkflowEvidence(item)) {
+    return;
+  }
+
+  await expect(locator).toContainText('Evidence:');
 }
 
 async function selectTicketInBrowse(
@@ -369,7 +435,35 @@ async function attachScreenshot(
 }
 
 test.describe('ticket-viewer — workflow sidebar', () => {
-  test('workflow modes preserve server order and hierarchy', async ({ page }, testInfo) => {
+  test('workflow blockers mode keeps browse intact and shows a clear empty-root state', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+
+    const fixture = await seedWorkflowFixture(page);
+    try {
+      await page.setViewportSize({ width: 1280, height: 900 });
+      await page.goto(`${fixture.url}/`, {
+        waitUntil: 'domcontentloaded',
+      });
+      await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
+        state: 'visible',
+        timeout: TICKET_VIEWER.readyTimeout,
+      });
+
+      await expect(page.getByTestId('ticket-tree-filter')).toBeVisible();
+
+      await page.getByTestId('sidebar-mode-blockers').click();
+      await expect(page.getByTestId('workflow-root-empty')).toBeVisible();
+      await attachScreenshot(page, testInfo, 'workflow-root-empty-sidebar');
+
+      await page.getByTestId('sidebar-mode-browse').click();
+      await expect(page.getByTestId('ticket-tree-filter')).toBeVisible();
+    } finally {
+      await stopSeededViewer(fixture.viewer);
+      await fs.rm(fixture.tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test('workflow modes preserve server order, hierarchy, evidence, and narrow-width rendering', async ({ page }, testInfo) => {
     test.setTimeout(180_000);
 
     const fixture = await seedWorkflowFixture(page);
@@ -392,6 +486,7 @@ test.describe('ticket-viewer — workflow sidebar', () => {
       expect(blockersResponse.root.children?.length ?? 0).toBeGreaterThan(0);
       expect(unblockedByResponse.root.children?.length ?? 0).toBeGreaterThan(0);
 
+      await page.setViewportSize({ width: 1280, height: 900 });
       await page.goto(`${fixture.url}/`, {
         waitUntil: 'domcontentloaded',
       });
@@ -407,19 +502,44 @@ test.describe('ticket-viewer — workflow sidebar', () => {
       await expect
         .poll(async () => await visibleIds(page, 'workflow-next-item-'))
         .toEqual(nextResponse.items.map((item) => item.id));
+      for (const item of nextResponse.items) {
+        await expectEvidenceIfPresent(
+          page.getByTestId(`workflow-next-item-${item.id}`),
+          item,
+        );
+      }
       await attachScreenshot(page, testInfo, 'workflow-next-sidebar');
+
+      await page.setViewportSize({ width: 820, height: 900 });
+      await expect(page.getByTestId('sidebar-mode-next')).toBeVisible();
+      await expect(
+        page.getByTestId(`workflow-next-item-${nextResponse.items[0].id}`),
+      ).toBeVisible();
 
       await selectTicketInBrowse(page, fixture.blockersRootTitle, fixture.blockersRootId);
       await page.getByTestId('sidebar-mode-blockers').click();
       await expect(
         page.getByTestId(`workflow-tree-node-${fixture.blockersRootId}`),
       ).toBeVisible();
-      await expect.poll(async () => await treeDepthIds(page, 1)).toEqual(
-        (blockersResponse.root.children ?? []).map((item) => item.id),
-      );
+      await expect
+        .poll(async () => await visibleTreeEntries(page))
+        .toEqual(flattenTreeEntries(blockersResponse.root));
+      await expect
+        .poll(async () => await visibleIds(page, 'workflow-tree-frontier-'))
+        .toEqual(frontierTreeIds(blockersResponse.root));
       await expect
         .poll(async () => await visibleIds(page, 'workflow-frontier-item-'))
         .toEqual((blockersResponse.frontier_items ?? []).map((item) => item.id));
+      await expectEvidenceIfPresent(
+        page.getByTestId('workflow-root-card'),
+        blockersResponse.root,
+      );
+      for (const item of blockersResponse.frontier_items ?? []) {
+        await expectEvidenceIfPresent(
+          page.getByTestId(`workflow-frontier-item-${item.id}`),
+          item,
+        );
+      }
       await attachScreenshot(page, testInfo, 'workflow-blockers-sidebar');
 
       await selectTicketInBrowse(
@@ -431,12 +551,29 @@ test.describe('ticket-viewer — workflow sidebar', () => {
       await expect(
         page.getByTestId(`workflow-tree-node-${fixture.unblockedByRootId}`),
       ).toBeVisible();
-      await expect.poll(async () => await treeDepthIds(page, 1)).toEqual(
-        (unblockedByResponse.root.children ?? []).map((item) => item.id),
-      );
+      await expect
+        .poll(async () => await visibleTreeEntries(page))
+        .toEqual(flattenTreeEntries(unblockedByResponse.root));
+      await expect
+        .poll(async () => await visibleIds(page, 'workflow-tree-frontier-'))
+        .toEqual(frontierTreeIds(unblockedByResponse.root));
       await expect
         .poll(async () => await visibleIds(page, 'workflow-frontier-item-'))
         .toEqual((unblockedByResponse.frontier_items ?? []).map((item) => item.id));
+      await expectEvidenceIfPresent(
+        page.getByTestId('workflow-root-card'),
+        unblockedByResponse.root,
+      );
+      const unblockedFrontierItems = unblockedByResponse.frontier_items ?? [];
+      expect(
+        unblockedFrontierItems.some((item) => hasWorkflowEvidence(item)),
+      ).toBe(true);
+      for (const item of unblockedFrontierItems) {
+        await expectEvidenceIfPresent(
+          page.getByTestId(`workflow-frontier-item-${item.id}`),
+          item,
+        );
+      }
       await attachScreenshot(page, testInfo, 'workflow-unblocked-by-sidebar');
     } finally {
       await stopSeededViewer(fixture.viewer);
