@@ -7,6 +7,7 @@ The ticket-viewer main layout still splits ticket reading across separate conten
 - make the selected ticket read like one compact integrated document in the main layout
 - keep the workspace graph visible while selection changes move focus through the existing graph
 - make dependency hierarchy read cleanly with mostly planar isometric defaults
+- add a kanban-style table layout that groups tickets by workflow state and dependency-related subcomponents
 - add node detail tiers so dense graphs stay legible when zoomed out
 
 # Requirements
@@ -29,6 +30,13 @@ The ticket-viewer main layout still splits ticket reading across separate conten
 
 - dependency hierarchy should read from parent to child consistently
 - default placement should prefer a mostly planar arrangement suitable for isometric viewing instead of deep overlapping stacks
+- graph settings should also expose a kanban or table layout mode that maps ticket states to stable columns
+- the kanban columns should leave enough horizontal spacing that adjacent workflow lanes, cards, and headers do not crowd each other
+- the kanban layout should organize nodes into vertically ordered dependency-group rows so related subcomponents stay clustered within each state column
+- each kanban cell may contain multiple nodes, but those nodes should remain separately readable through soft clustering rather than exact overlap
+- the kanban layout should render visible state-column headers and separators so workflow lanes remain readable without inferring the table structure from node placement alone
+- dependency-group rows should render visible row labels so viewers can scan clustered branches without opening each node first
+- kanban headers and row labels should scale from camera distance and visible node sizing so they stay readable when zoomed in, avoid overlapping nearby nodes or each other, and shrink to compact sizes and line heights when the graph is zoomed far out
 - graph settings should expose the main hierarchy and spacing parameters required to tune this view
 
 ## Node level of detail
@@ -49,6 +57,7 @@ Tracker: [05dae5fd [ticket-viewer][ticket-http][viewer-api] Improve main layout 
 6. [1f39ba8f [ticket-viewer] Add graph review E2E coverage](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/1f39ba8f-650b-417d-b664-1878f08af669/ticket.toml)
 7. [800f09ed [ticket-viewer][viewer-api] Tighten graph layout and enlarge rich nodes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/800f09ed-beb0-4a12-be93-1392e45eadb8/ticket.toml)
 8. [d1d38010 [ticket-viewer][viewer-api] Preserve graph layout and camera across same-graph refreshes](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/.ticket/tickets/d1d38010-08b8-4a06-ad2b-0bbed453c941/ticket.toml)
+9. [eeda4039 [ticket-viewer][viewer-api] Add kanban table graph layout mode](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/.ticket/tickets/eeda4039-d82d-4573-9d79-0bc89e152a76/ticket.toml)
 
 # Implementation traceability
 
@@ -106,6 +115,14 @@ Completed eighth slice: [d1d38010 [ticket-viewer][viewer-api] Preserve graph lay
 - [render.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/render.rs) now mirrors the live camera distance onto the graph container as a data attribute, giving the browser regression a stable zoom probe
 - [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now drags a node, zooms the shared graph, changes focus inside the mounted graph, and asserts both the relative node offsets and camera distance stay stable
 
+Completed ninth slice: [eeda4039 [ticket-viewer][viewer-api] Add kanban table graph layout mode](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/.ticket/tickets/eeda4039-d82d-4573-9d79-0bc89e152a76/ticket.toml)
+
+- [camera.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/camera.rs) and [settings_overlay.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/settings_overlay.rs) now add a shared `KanbanTable` layout mode to the built-in graph settings surface so viewers can switch into a workflow-table presentation without introducing a tool-local mode fork
+- [layout.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/layout.rs) now computes kanban placements with even wider workflow-state columns, dependency-group row seeds, and soft intra-cell clustering so related ticket branches stay grouped while multiple nodes remain visible inside one table cell
+- [graph3d.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph3d.rs) now reflows cached graph layouts with the active layout mode at render time and exposes deterministic per-node layout coordinates for browser assertions, so switching between hierarchical, flat, and kanban views does not require a refetch
+- [layout.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/layout.rs), [graph3d.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/src/graph3d.rs), [mod.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/mod.rs), and [render.rs](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/graph3d/render.rs) now project visible kanban lane guides from shared world-space anchors, keep layout-mode camera resets framed to the guide extents, pin column headers and row labels back into the viewport when their guide anchors drift just past the top or left edge, and scale those guide labels from camera zoom so they stay readable up close while still collapsing to compact line heights far out
+- [graph-detail-sidebar.spec.ts](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/ticket-viewer/frontend/dioxus/e2e-release/graph-detail-sidebar.spec.ts) now switches the mounted workspace graph into Kanban mode and asserts both the left-to-right workflow ordering and the visible state headers, separators, and row labels
+
 # Related specs
 
 - viewer-api Graph3D shared behavior: [viewer-api Graph3D](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/.spec/specs/4f14356f-c4bd-4554-be1e-35361de241da/body.md)
@@ -162,6 +179,11 @@ Completed for [d1d38010 [ticket-viewer][viewer-api] Preserve graph layout and ca
 - passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts -g "dragged graph layout and camera zoom persist when focus changes inside the same graph"`
 - passed `cargo test --manifest-path memory-viewers/viewer-api/viewer-api/frontend/dioxus/Cargo.toml preserve_same_topology_layout -- --nocapture`
 - passed `cargo test --manifest-path memory-viewers/viewer-api/viewer-api/frontend/dioxus/Cargo.toml selection_focus_goal_preserves_distance -- --nocapture`
+
+Completed for [eeda4039 [ticket-viewer][viewer-api] Add kanban table graph layout mode](C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/.ticket/tickets/eeda4039-d82d-4573-9d79-0bc89e152a76/ticket.toml):
+
+- passed `cargo test --manifest-path memory-viewers/ticket-viewer/frontend/dioxus/Cargo.toml kanban_layout_ -- --nocapture`
+- passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts -g "graph settings can switch to kanban state columns"`
 
 # Ongoing validation plan
 
