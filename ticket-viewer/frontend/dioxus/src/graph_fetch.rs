@@ -41,7 +41,7 @@ use crate::{
 };
 
 const T: &str = "ticket_viewer::graph_fetch";
-const REQUEST_TIMEOUT_MS: u32 = 8_000;
+const REQUEST_TIMEOUT_MS: u32 = 20_000;
 const MAX_CONCURRENT_FETCHES: usize = 3;
 const MAX_RETRIES: u8 = 1;
 

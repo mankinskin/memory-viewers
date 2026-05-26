@@ -19,11 +19,16 @@ test.use({
 interface TicketListItem {
   id: string;
   title?: string;
+  ticket_ref?: {
+    workspace?: string;
+    id?: string;
+  };
 }
 
 interface GraphNode {
   id: string;
   title?: string;
+  state?: string;
 }
 
 interface GraphEdge {
@@ -42,6 +47,15 @@ interface CandidateSelection {
   childComponent: string;
 }
 
+interface KanbanLayoutCandidate {
+  workspace: string;
+  rootId: string;
+  stateSamples: Array<{
+    id: string;
+    state: string;
+  }>;
+}
+
 interface GraphNodeMetrics {
   x: number;
   y: number;
@@ -50,6 +64,9 @@ interface GraphNodeMetrics {
   centerX: number;
   centerY: number;
   lod: string | null;
+  layoutX: number | null;
+  layoutY: number | null;
+  layoutZ: number | null;
 }
 
 interface WorkspacesResponse {
@@ -74,7 +91,15 @@ async function openCandidateTicket(
   page: Page,
   candidate: CandidateSelection,
 ): Promise<void> {
-  await page.goto(`${TICKET_VIEWER.url}/workspace/${candidate.workspace}`, {
+  await openTicketById(page, candidate.workspace, candidate.rootId);
+}
+
+async function openTicketById(
+  page: Page,
+  workspace: string,
+  rootId: string,
+): Promise<void> {
+  await page.goto(`${TICKET_VIEWER.url}/workspace/${workspace}`, {
     waitUntil: 'domcontentloaded',
   });
   await page.locator(TICKET_VIEWER.readySelector).first().waitFor({
@@ -83,11 +108,38 @@ async function openCandidateTicket(
   });
 
   const searchBox = page.getByRole('textbox').first();
-  await searchBox.fill(`id:${candidate.rootId}`);
+  await searchBox.fill(`id:${rootId}`);
 
-  const rootTicketButton = page.getByTestId(`ticket-tree-ticket-${candidate.rootId}`);
+  const rootTicketButton = page.getByTestId(`ticket-tree-ticket-${rootId}`);
   await expect(rootTicketButton).toBeVisible({ timeout: 30_000 });
   await rootTicketButton.click();
+}
+
+function normalizeTicketState(state?: string | null): string {
+  const normalized = state?.trim().toLowerCase();
+  return normalized && normalized.length > 0 ? normalized : 'new';
+}
+
+function kanbanStateRank(state: string): number {
+  switch (state) {
+    case 'new':
+      return 0;
+    case 'ready':
+      return 1;
+    case 'blocked':
+      return 2;
+    case 'in-implementation':
+      return 3;
+    case 'in-review':
+      return 4;
+    case 'done':
+      return 5;
+    case 'cancelled':
+    case 'canceled':
+      return 6;
+    default:
+      return 7;
+  }
 }
 
 async function graphLodMetrics(
@@ -199,6 +251,14 @@ async function graphNodeMetrics(
     }
 
     const rect = node.getBoundingClientRect();
+    const parseCoordinate = (name: string): number | null => {
+      const value = node.getAttribute(name);
+      if (!value) {
+        return null;
+      }
+      const parsed = Number.parseFloat(value);
+      return Number.isFinite(parsed) ? parsed : null;
+    };
     return {
       x: rect.x,
       y: rect.y,
@@ -207,6 +267,9 @@ async function graphNodeMetrics(
       centerX: rect.x + rect.width / 2,
       centerY: rect.y + rect.height / 2,
       lod: node.getAttribute('data-node-lod'),
+      layoutX: parseCoordinate('data-layout-x'),
+      layoutY: parseCoordinate('data-layout-y'),
+      layoutZ: parseCoordinate('data-layout-z'),
     };
   }, nodeId);
 }
@@ -223,6 +286,78 @@ async function graphCameraDistance(page: Page): Promise<number | null> {
     }
     const parsed = Number.parseFloat(distance);
     return Number.isFinite(parsed) ? parsed : null;
+  });
+}
+
+async function visibleGuideCount(
+  page: Page,
+  selector: string,
+): Promise<number> {
+  return page.locator(selector).evaluateAll((elements) => {
+    return elements.filter((element) => {
+      const html = element as HTMLElement;
+      const style = window.getComputedStyle(html);
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+    }).length;
+  });
+}
+
+async function visibleGuideMetrics(
+  page: Page,
+  selector: string,
+): Promise<null | {
+  width: number;
+  height: number;
+}> {
+  return page.evaluate((activeSelector) => {
+    const container = document.getElementById('graph3d-container');
+    if (!container) {
+      return null;
+    }
+
+    const guide = Array.from(container.querySelectorAll(activeSelector)).find((candidate) => {
+      const element = candidate as HTMLElement;
+      const style = window.getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+    }) as HTMLElement | undefined;
+    if (!guide) {
+      return null;
+    }
+
+    const rect = guide.getBoundingClientRect();
+    return {
+      width: rect.width,
+      height: rect.height,
+    };
+  }, selector);
+}
+
+async function visibleRowLabelOverlapsVisibleNode(page: Page): Promise<boolean> {
+  return page.evaluate(() => {
+    const container = document.getElementById('graph3d-container');
+    if (!container) {
+      return true;
+    }
+
+    const isVisible = (candidate: Element): candidate is HTMLElement => {
+      const element = candidate as HTMLElement;
+      const style = window.getComputedStyle(element);
+      return style.display !== 'none' && style.visibility !== 'hidden' && style.opacity !== '0';
+    };
+
+    const labels = Array.from(container.querySelectorAll('[data-kanban-row-label]')).filter(isVisible);
+    const nodes = Array.from(container.querySelectorAll('[data-node-idx]')).filter(isVisible);
+
+    return labels.some((label) => {
+      const labelRect = label.getBoundingClientRect();
+      return nodes.some((node) => {
+        const nodeRect = node.getBoundingClientRect();
+        return labelRect.left < nodeRect.right
+          && labelRect.right > nodeRect.left
+          && labelRect.top < nodeRect.bottom
+          && labelRect.bottom > nodeRect.top;
+      });
+    });
   });
 }
 
@@ -357,6 +492,62 @@ async function findGraphSelectionCandidate(page: Page): Promise<CandidateSelecti
   }
 
   throw new Error('No root ticket with a direct graph child and unique component field was found');
+}
+
+async function findKanbanLayoutCandidate(page: Page): Promise<KanbanLayoutCandidate> {
+  const workspace = await resolveActiveWorkspace(page);
+
+  const listResp = await page.request.get(
+    `${TICKET_VIEWER.url}/api/tickets?workspace=${workspace}&limit=500`,
+  );
+  expect(listResp.ok(), 'ticket list API must respond').toBe(true);
+
+  const listBody = await listResp.json();
+  const items: TicketListItem[] = listBody?.items ?? [];
+  expect(items.length, `workspace \`${workspace}\` must contain tickets`).toBeGreaterThan(0);
+
+  for (const item of items) {
+    const graphWorkspace = item.ticket_ref?.workspace ?? workspace;
+    const graphResp = await page.request.get(
+      `${TICKET_VIEWER.url}/api/graph/subgraph?workspace=${graphWorkspace}&root=${item.id}&depth=2`,
+    );
+    if (!graphResp.ok()) {
+      continue;
+    }
+
+    const graph = await graphResp.json();
+    const nodes: GraphNode[] = graph?.nodes ?? [];
+    if (nodes.length < 3) {
+      continue;
+    }
+
+    const stateGroups = new Map<string, string[]>();
+    for (const node of nodes) {
+      const state = normalizeTicketState(node.state);
+      const group = stateGroups.get(state) ?? [];
+      group.push(node.id);
+      stateGroups.set(state, group);
+    }
+
+    const orderedStates = Array.from(stateGroups.keys()).sort((left, right) => {
+      const rankDelta = kanbanStateRank(left) - kanbanStateRank(right);
+      return rankDelta === 0 ? left.localeCompare(right) : rankDelta;
+    });
+    if (orderedStates.length < 2) {
+      continue;
+    }
+
+    return {
+      workspace,
+      rootId: item.id,
+      stateSamples: orderedStates.slice(0, 4).map((state) => ({
+        state,
+        id: stateGroups.get(state)![0],
+      })),
+    };
+  }
+
+  throw new Error('No graph candidate with at least two distinct workflow states was found');
 }
 
 test.describe('ticket-viewer — graph selection updates right detail sidebar', () => {
@@ -847,5 +1038,108 @@ test.describe('ticket-viewer — graph selection updates right detail sidebar', 
     ).toBeGreaterThan(restoredMetrics!.rootY + 10);
 
     await attachScreenshot(page, testInfo, 'graph-restored-default-layout');
+  });
+
+  test('graph settings can switch to kanban state columns', async ({ page }, testInfo) => {
+    test.setTimeout(180_000);
+
+    const candidate = await findKanbanLayoutCandidate(page);
+
+    await openTicketById(page, candidate.workspace, candidate.rootId);
+
+    await page.getByRole('button', { name: /^Graph$/ }).first().click();
+    await expect(page.locator('#graph3d-container')).toBeVisible({ timeout: 30_000 });
+
+    await page.getByTitle('Graph settings').click();
+    const kanbanButton = page.getByRole('button', { name: 'Kanban' });
+    await expect(kanbanButton).toBeVisible();
+    await kanbanButton.click();
+    await expect(kanbanButton).toHaveAttribute('style', GRAPH_ACTIVE_STYLE);
+    await attachScreenshot(page, testInfo, 'graph-kanban-guides-after-switch');
+
+    for (const sample of candidate.stateSamples) {
+      await expect.poll(
+        () => visibleGuideCount(page, `#graph3d-container [data-kanban-column-header="${sample.state}"]`),
+        { timeout: 30_000 },
+      ).toBeGreaterThan(0);
+    }
+
+    await expect.poll(
+      () => visibleGuideCount(page, '#graph3d-container [data-kanban-column-separator]'),
+      { timeout: 30_000 },
+    ).toBeGreaterThan(0);
+    await expect.poll(
+      () => visibleGuideCount(page, '#graph3d-container [data-kanban-row-label]'),
+      { timeout: 30_000 },
+    ).toBeGreaterThan(0);
+
+    await expect.poll(
+      async () => (await visibleGuideMetrics(page, '#graph3d-container [data-kanban-row-label]'))?.height ?? 0,
+      { timeout: 30_000 },
+    ).toBeGreaterThan(0);
+    await expect.poll(() => visibleRowLabelOverlapsVisibleNode(page), {
+      timeout: 30_000,
+    }).toBe(false);
+
+    await zoomGraph(page, -480, 3);
+
+    await expect.poll(
+      async () => (await visibleGuideMetrics(page, '#graph3d-container [data-kanban-row-label]'))?.height ?? 0,
+      { timeout: 30_000 },
+    ).toBeGreaterThan(5.0);
+
+    await expect.poll(() => visibleRowLabelOverlapsVisibleNode(page), {
+      timeout: 30_000,
+    }).toBe(false);
+
+    await zoomGraph(page, 480, 7);
+
+    await expect.poll(
+      async () => (await visibleGuideMetrics(page, '#graph3d-container [data-kanban-row-label]'))?.height ?? Number.POSITIVE_INFINITY,
+      { timeout: 30_000 },
+    ).toBeLessThan(2.5);
+
+    await expect.poll(async () => {
+      const metrics = await Promise.all(
+        candidate.stateSamples.map((sample) => graphNodeMetrics(page, sample.id)),
+      );
+      return metrics.every((sample) => sample !== null);
+    }, {
+      timeout: 30_000,
+    }).toBe(true);
+
+    const orderedSamples = (await Promise.all(
+      candidate.stateSamples.map(async (sample) => ({
+        ...sample,
+        metrics: await graphNodeMetrics(page, sample.id),
+      })),
+    ))
+      .filter((sample): sample is typeof sample & { metrics: GraphNodeMetrics } => sample.metrics !== null)
+      .sort((left, right) => {
+        const rankDelta = kanbanStateRank(left.state) - kanbanStateRank(right.state);
+        return rankDelta === 0 ? left.state.localeCompare(right.state) : rankDelta;
+      });
+
+    expect(
+      orderedSamples.length,
+      'kanban candidate should provide visible state samples after switching layouts',
+    ).toBeGreaterThanOrEqual(2);
+
+    for (let index = 1; index < orderedSamples.length; index += 1) {
+      expect(
+        orderedSamples[index].metrics.layoutX,
+        `state ${orderedSamples[index].state} should render to the right of ${orderedSamples[index - 1].state} in kanban mode`,
+      ).not.toBeNull();
+      expect(
+        orderedSamples[index - 1].metrics.layoutX,
+        `state ${orderedSamples[index - 1].state} should expose a layout x-coordinate in kanban mode`,
+      ).not.toBeNull();
+      expect(
+        orderedSamples[index].metrics.layoutX!,
+        `state ${orderedSamples[index].state} should render to the right of ${orderedSamples[index - 1].state} in kanban mode`,
+      ).toBeGreaterThan(orderedSamples[index - 1].metrics.layoutX! + 0.25);
+    }
+
+    await attachScreenshot(page, testInfo, 'graph-kanban-state-columns');
   });
 });
