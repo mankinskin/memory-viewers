@@ -453,7 +453,7 @@ test.describe('ticket-viewer — keyboard navigation', () => {
 
     const filterInput = page.getByTestId('ticket-tree-filter');
     const filterHint = page.getByTestId('ticket-tree-filter-hint');
-    await expect(filterHint).toContainText('Free text searches titles and descriptions');
+    await expect(filterHint).toContainText('Free text searches titles');
     await expect(filterHint).toContainText('id:<value>');
     await expect(filterHint).not.toContainText('priority:');
     await filterInput.click();
@@ -555,7 +555,7 @@ test.describe('ticket-viewer — keyboard navigation', () => {
     const syntaxHint = page.getByTestId('search-syntax-hint');
     await expect(searchInput).toBeVisible();
     await expect(searchInput).toHaveAttribute('placeholder', /id:, title:, state:, type:/);
-    await expect(syntaxHint).toContainText('Free text searches titles and descriptions');
+    await expect(syntaxHint).toContainText('Free text searches titles');
     await expect(syntaxHint).toContainText('state:<value>/status:<value>');
     await expect(syntaxHint).toContainText('type:<value>/ticket_type:<value>');
     await expect(syntaxHint).not.toContainText('priority:');
