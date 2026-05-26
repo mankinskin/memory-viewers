@@ -3,6 +3,41 @@
    viewers; anything reusable belongs upstream in
    tools/viewer/viewer-api/frontend/dioxus/public/css/. */
 
+/* ── Ticket content overlay panel (split view) ─────────────────────────────
+   The overlay panel that floats over the dep-graph in split view must keep
+   all its visual styling in a CSS class. Putting these declarations in the
+   inline `style="…"` attribute alongside the dynamic `width:` interpolation
+   causes Dioxus's per-property style diff to intermittently drop the
+   `border:` and `background:` declarations during resize, producing visible
+   opacity flicker. Only `width` is interpolated inline now.                  */
+.ticket-content-overlay-panel {
+  max-width: calc(100% - 24px);
+  min-width: 320px;
+  height: 100%;
+  position: relative;
+  pointer-events: auto;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--border-subtle);
+  border-radius: 16px;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.36);
+  isolation: isolate;
+}
+
+.ticket-content-shell {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-family: sans-serif;
+  color: #e0e0e8;
+  overflow: hidden;
+  background: transparent;
+  backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+  -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
+}
+
 /* ── Priority-panel collapse strips ─────────────────────────────────────────
    The 32px collapsed strips for TicketDetail (right edge) and DepGraph (left
    edge) use inline styles from routes.rs; the hover/transition rules live here

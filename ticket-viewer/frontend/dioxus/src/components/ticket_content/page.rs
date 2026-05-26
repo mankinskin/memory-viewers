@@ -222,16 +222,12 @@ pub fn TicketContent(
     rsx! {
         div {
             "data-testid": "ticket-content",
+            // Keep the frosted blur on a stable CSS class instead of the changing
+            // inline style string used by the overlay width. The outer wrapper owns
+            // the border/shadow frame; this inner shell owns the translucent blur.
+            class: "ticket-content-shell",
             style: "
-                display: flex;
-                flex-direction: column;
-                height: 100%;
-                font-family: sans-serif;
-                color: #e0e0e8;
-                overflow: hidden;
                 background: transparent;
-                backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
-                -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(var(--panel-saturate));
             ",
             {render_tab_bar(
                 active_tab,

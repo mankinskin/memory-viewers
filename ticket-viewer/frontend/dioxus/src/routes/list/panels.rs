@@ -3,6 +3,9 @@ use dioxus::prelude::*;
 use viewer_api_dioxus::{
     LayoutMode,
     PanelResizer,
+    ResizeDirection,
+    ResizeEdge,
+    ResizeHandle,
     Projection,
 };
 
@@ -42,6 +45,10 @@ pub(super) fn render_selected_main_panel(
     window_width: Signal<u32>,
 ) -> Element {
     let view_mode_value = view_mode.read().clone();
+    let show_graph_panel =
+        view_mode_value.as_str() != "content" && !graph_panel_collapsed;
+    let overlay_content_on_graph =
+        view_mode_value.as_str() == "split" && show_graph_panel;
 
     rsx! {
         {render_view_mode_bar(
@@ -55,7 +62,7 @@ pub(super) fn render_selected_main_panel(
         )}
         div {
             style: "display: flex; flex-direction: row; flex: 1; overflow: hidden; min-height: 0;",
-            if view_mode_value.as_str() != "content" && !graph_panel_collapsed {
+            if show_graph_panel {
                 {
                     let graph_root = graph_root_ticket
                         .read()
@@ -65,14 +72,18 @@ pub(super) fn render_selected_main_panel(
                         .read()
                         .clone()
                         .unwrap_or_else(|| selected_ticket.clone());
-                    let graph_style = if view_mode_value.as_str() == "graph" {
-                        "flex: 1; position: relative; min-width: 0; overflow: hidden;".to_string()
+                    let graph_style = if overlay_content_on_graph
+                        || view_mode_value.as_str() == "graph"
+                    {
+                        "flex: 1; position: relative; min-width: 0; overflow: hidden;"
+                            .to_string()
                     } else {
                         format!(
                             "width: {}px; flex-shrink: 0; position: relative; min-width: 0; overflow: hidden;",
                             *graph_panel_width.read()
                         )
                     };
+                    let overlay_width = (*graph_panel_width.read()).max(360.0);
                     rsx! {
                         div {
                             key: "graph-{graph_root.workspace}",
@@ -87,10 +98,52 @@ pub(super) fn render_selected_main_panel(
                                 on_projection_change: move |projection| graph_projection.set(projection),
                                 on_select: move |ticket_ref: TicketRef| graph_content_ticket.set(Some(ticket_ref)),
                             }
+                            if overlay_content_on_graph {
+                                div {
+                                    "data-testid": "ticket-content-overlay",
+                                    style: "
+                                        position: absolute;
+                                        inset: 0;
+                                        display: flex;
+                                        justify-content: flex-end;
+                                        align-items: stretch;
+                                        pointer-events: none;
+                                        padding: 12px;
+                                        z-index: 3;
+                                    ",
+                                    div {
+                                        // All static panel chrome (border, background, shadow,
+                                        // flex layout, isolation) lives in `.ticket-content-overlay-panel`
+                                        // in ticket-viewer-overrides.css. Only `width` is interpolated
+                                        // here so Dioxus's per-property style diff has a single declaration
+                                        // to touch during resize — interpolating multiple properties
+                                        // alongside a changing one caused intermittent dropped
+                                        // `border:`/`background:` declarations and opacity flicker.
+                                        class: "ticket-content-overlay-panel",
+                                        style: "width: {overlay_width}px;",
+                                        ResizeHandle {
+                                            edge: ResizeEdge::Left,
+                                            direction: ResizeDirection::Horizontal,
+                                            class: "ticket-content-overlay-resize-handle".to_string(),
+                                            on_resize: move |delta: f64| {
+                                                let width = (*graph_panel_width.read() - delta).max(320.0);
+                                                graph_panel_width.set(width);
+                                            },
+                                        }
+                                        {render_content_panel(
+                                            active_workspace.clone(),
+                                            selected_ticket.clone(),
+                                            tickets,
+                                            graph_content_ticket,
+                                            selected_file,
+                                        )}
+                                    }
+                                }
+                            }
                         }
                     }
                 }
-                if view_mode_value.as_str() == "split" {
+                if view_mode_value.as_str() == "split" && !overlay_content_on_graph {
                     PanelResizer {
                         on_resize: move |delta: f64| {
                             let width = (*graph_panel_width.read() + delta).max(150.0);
@@ -102,7 +155,7 @@ pub(super) fn render_selected_main_panel(
             if view_mode_value.as_str() == "split" && graph_panel_collapsed {
                 {render_graph_strip(graph_panel_override, window_width)}
             }
-            if view_mode_value.as_str() != "graph" {
+            if !overlay_content_on_graph && view_mode_value.as_str() != "graph" {
                 {render_content_panel(
                     active_workspace.clone(),
                     selected_ticket.clone(),
