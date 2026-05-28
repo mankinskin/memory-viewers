@@ -206,7 +206,10 @@ mod tests {
     use tempfile::tempdir;
 
     use super::open_local_ticket_store;
-    use ticket_api::storage::store::TicketStore;
+    use ticket_api::storage::{
+        index::RedbIndexStore,
+        store::TicketStore,
+    };
 
     #[test]
     fn startup_bootstraps_manifest_only_ticket_store() {
@@ -231,6 +234,37 @@ mod tests {
         let _ = std::fs::remove_file(index_root.join("tickets.db-shm"));
         let _ = std::fs::remove_file(index_root.join("tickets.db-wal"));
         let _ = std::fs::remove_dir_all(index_root.join("search_index"));
+
+        let rebuilt = open_local_ticket_store(dir.path()).unwrap();
+        let manifest = rebuilt.get(&ticket_id).unwrap();
+
+        assert_eq!(manifest.id, ticket_id);
+    }
+
+    #[test]
+    fn startup_rebuilds_existing_empty_ticket_index() {
+        let dir = tempdir().unwrap();
+        let store = TicketStore::init(dir.path()).unwrap();
+        let ticket_id = store
+            .create(
+                None,
+                "tracker-improvement",
+                Some("repair existing empty ticket index"),
+                Some("ready"),
+                Default::default(),
+                None,
+                None,
+            )
+            .unwrap();
+
+        let index_root = store.index_root.clone();
+        drop(store);
+
+        std::fs::remove_file(index_root.join("tickets.db")).unwrap();
+        let _ = std::fs::remove_file(index_root.join("tickets.db-shm"));
+        let _ = std::fs::remove_file(index_root.join("tickets.db-wal"));
+        let _ = std::fs::remove_dir_all(index_root.join("search_index"));
+        RedbIndexStore::open(&index_root.join("tickets.db")).unwrap();
 
         let rebuilt = open_local_ticket_store(dir.path()).unwrap();
         let manifest = rebuilt.get(&ticket_id).unwrap();
