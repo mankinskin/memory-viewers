@@ -10,6 +10,12 @@ This spec covers:
 
 It does not redefine explorer query/filter semantics from `ticket-viewer/explorer` or theme-settings content from `ticket-viewer/theme-settings`.
 
+## Single-process startup contract
+
+1. Starting `ticket-viewer` against a checkout that already contains local `.ticket/tickets/` manifests but lacks SQLite index artifacts MUST bootstrap or rebuild the local ticket index before serving routes.
+2. That startup bootstrap MUST preserve existing ticket manifests already on disk; missing `tickets.db` is a recoverable local-state condition, not a fatal panic condition.
+3. If store initialization still fails after bootstrap, the binary MUST return a contextual startup error instead of panicking via `expect(...)`.
+
 ## Sidebar tree container
 
 1. The ticket-viewer sidebar tree is a primary navigation surface and MUST keep long lists reachable via wheel, trackpad, touchpad, and keyboard-assisted scrolling.
@@ -113,6 +119,12 @@ No shell or explorer implementation should begin until the responsible ticket re
 
 ## Traceability
 
+- Ticket: `memory-viewers/.ticket/tickets/d7a27192-6c67-4446-9450-c946bf58747e`
+- Viewer implementation: `memory-viewers/ticket-viewer/src/main.rs`
+- Viewer validation passed:
+	- `cargo test -p ticket-viewer --bin ticket-viewer startup_bootstraps_manifest_only_ticket_store -- --nocapture`
+	- `./target/debug/ticket-viewer.exe --port 0` (started successfully and printed `TICKET_VIEWER_PORT=59348`)
+- Viewer validation blocked by an existing unrelated failure in `cargo test -p ticket-viewer`: `memory-viewers/ticket-viewer/tests/workspace_resolution.rs` imports removed `ticket_api::workspace` symbols and fails before the full crate test suite completes.
 - Planned ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/c10cc92e-03b5-423b-a7ef-93879c253f7d
 - Planned ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/6ea2c97c-0b41-4b90-91db-f0de9e8e4b8e
 - Related existing ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/a2f5460c-1e7e-481b-a250-e9def213ba55

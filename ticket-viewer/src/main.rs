@@ -20,7 +20,10 @@
 use std::{
     env,
     io::Write,
-    path::PathBuf,
+    path::{
+        Path,
+        PathBuf,
+    },
     sync::Arc,
 };
 use tracing::info;
@@ -123,6 +126,12 @@ async fn shutdown_signal() {
     }
 }
 
+fn open_local_ticket_store(
+    index_root: &Path,
+) -> Result<TicketStore, ticket_api::error::StorageError> {
+    TicketStore::open_or_init(index_root)
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = parse_cli_options();
@@ -146,8 +155,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // We deliberately do NOT load WorkspaceRegistry::from_config() — the
     // global ~/.ticket-workspaces.toml belongs to the CLI, not to this
     // server, which must serve whatever workspace is local to its cwd.
-    let store =
-        TicketStore::open(&index_root).expect("failed to open ticket store");
+    let store = open_local_ticket_store(&index_root).map_err(|error| {
+        std::io::Error::other(format!(
+            "failed to initialize ticket store at {}: {error}",
+            index_root.display()
+        ))
+    })?;
     let registry = WorkspaceRegistry::single_opened(Arc::new(store));
 
     // Build the ticket-http AppState and wire up streaming.
@@ -186,4 +199,42 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_graceful_shutdown(shutdown_signal())
         .await?;
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use tempfile::tempdir;
+
+    use super::open_local_ticket_store;
+    use ticket_api::storage::store::TicketStore;
+
+    #[test]
+    fn startup_bootstraps_manifest_only_ticket_store() {
+        let dir = tempdir().unwrap();
+        let store = TicketStore::init(dir.path()).unwrap();
+        let ticket_id = store
+            .create(
+                None,
+                "tracker-improvement",
+                Some("bootstrap local ticket store"),
+                Some("ready"),
+                Default::default(),
+                None,
+                None,
+            )
+            .unwrap();
+
+        let index_root = store.index_root.clone();
+        drop(store);
+
+        std::fs::remove_file(index_root.join("tickets.db")).unwrap();
+        let _ = std::fs::remove_file(index_root.join("tickets.db-shm"));
+        let _ = std::fs::remove_file(index_root.join("tickets.db-wal"));
+        let _ = std::fs::remove_dir_all(index_root.join("search_index"));
+
+        let rebuilt = open_local_ticket_store(dir.path()).unwrap();
+        let manifest = rebuilt.get(&ticket_id).unwrap();
+
+        assert_eq!(manifest.id, ticket_id);
+    }
 }
