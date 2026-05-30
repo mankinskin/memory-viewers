@@ -2,7 +2,6 @@ id = "1ca2fc7e-3b33-4a7c-899e-7eb635abbaf5"
 created_at = "2026-05-25T22:29:08.251455300+00:00"
 title = "ticket-viewer: theme settings"
 state = "draft"
-body = "# ticket-viewer: theme settings\n\nThe ticket-viewer's theme settings panel **MUST** conform to the canonical spec\n[`viewer-api/theme-settings`](../viewer-api/theme-settings) — same layout, same 17 sections,\nsame controls, same persistence keys."
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

@@ -2,7 +2,6 @@ id = "e8b6fa08-6fe8-4c98-9523-6b6ad21b66c5"
 created_at = "2026-05-25T22:28:59.882686800+00:00"
 title = "Shared theme-settings viewer-specific overrides"
 state = "draft"
-body = "## Viewer-specific overrides\r\n\r\n_None._ The viewer conforms to the canonical defaults verbatim:\r\n\r\n| Field | Value |\r\n|---|---|\r\n| GPU master toggle default | **ON** (`viewer-api-gpu-enabled` defaults to `\"true\"`) |\r\n| Default `EffectSettings` | `DEFAULT_EFFECT_SETTINGS` (all effects on at default intensity) |\r\n| Presets | inherited from `viewer-api`'s shared preset list |\r\n"
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

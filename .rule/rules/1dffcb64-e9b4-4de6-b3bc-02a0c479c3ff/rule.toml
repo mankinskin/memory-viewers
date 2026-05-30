@@ -2,7 +2,6 @@ id = "1dffcb64-e9b4-4de6-b3bc-02a0c479c3ff"
 created_at = "2026-05-25T22:29:09.377014200+00:00"
 title = "Rationale"
 state = "draft"
-body = "## Rationale\n\nThe spec-viewer is fully GPU-accelerated by default — the animated background,\nglass panels, and particle effects are part of the visual identity of the app and\nare expected to be visible on first load. Users who prefer a lightweight, static\npresentation can disable the master GPU toggle in ThemeSettings; the choice is\npersisted to `viewer-api-gpu-enabled` localStorage."
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

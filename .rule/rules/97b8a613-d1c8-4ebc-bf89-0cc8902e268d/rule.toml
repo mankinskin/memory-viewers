@@ -2,7 +2,6 @@ id = "97b8a613-d1c8-4ebc-bf89-0cc8902e268d"
 created_at = "2026-05-25T22:29:09.162130800+00:00"
 title = "spec-viewer: theme settings"
 state = "draft"
-body = "# spec-viewer: theme settings\n\nThe spec-viewer's theme settings panel **MUST** conform to the canonical spec\n[`viewer-api/theme-settings`](../viewer-api/theme-settings) — same layout, same 17 sections,\nsame controls, same persistence keys."
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

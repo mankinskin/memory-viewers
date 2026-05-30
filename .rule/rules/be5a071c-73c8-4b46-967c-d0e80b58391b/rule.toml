@@ -2,7 +2,6 @@ id = "be5a071c-73c8-4b46-967c-d0e80b58391b"
 created_at = "2026-05-12T11:28:17.921889500+00:00"
 title = "Canonical Sources"
 state = "draft"
-body = "## Canonical Sources\n\n- API patterns and gotchas: `CHEAT_SHEET.md`\n- Ticket workflow details: `.github/prompts/tickets.prompt.md`\n- Swarm workflow details: `.github/prompts/swarm-worker.prompt.md`\n- Path-specific rules: `.agents/instructions/*.instructions.md`"
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

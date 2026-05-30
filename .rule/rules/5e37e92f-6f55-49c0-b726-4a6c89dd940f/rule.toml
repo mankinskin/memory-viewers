@@ -2,7 +2,6 @@ id = "5e37e92f-6f55-49c0-b726-4a6c89dd940f"
 created_at = "2026-05-11T16:04:15.896208+00:00"
 title = "Nested Workspaces"
 state = "draft"
-body = "## Tool Use Examples\r\n\r\n```bash\r\nviewer-ctl start ticket-viewer\r\nviewer-ctl start spec-viewer\r\ncargo run -p rule-cli -- sync-targets --config memory-viewers/rule-targets.yaml\r\n```\r\n\r\n- Start `ticket-viewer` to inspect work in progress and board relationships.\r\n- Start `spec-viewer` to browse spec structure and linked code references.\r\n- Regenerate the parent README when rule content changes.\r\n"
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

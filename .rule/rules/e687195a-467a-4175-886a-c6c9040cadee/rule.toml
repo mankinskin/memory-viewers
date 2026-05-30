@@ -2,7 +2,6 @@ id = "e687195a-467a-4175-886a-c6c9040cadee"
 created_at = "2026-05-25T22:29:09.497479+00:00"
 title = "Implementation pointers"
 state = "draft"
-body = "## Implementation pointers\n\n- Panel lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/components/theme_settings.rs`\n  (shared component, mounted by the spec-viewer's settings page).\n- Store factory: `ThemeStore::new()` in\n  `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/store/theme.rs` with\n  `gpu_enabled: true` default.\n- The spec-viewer Trunk shell in `memory-viewers/spec-viewer/frontend/dioxus/index.html` MUST load the shared `modal.css` bundle in addition to `glass-panel.css` and `theme-settings.css`.\n- Shared modal CSS lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/public/css/modal.css`."
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

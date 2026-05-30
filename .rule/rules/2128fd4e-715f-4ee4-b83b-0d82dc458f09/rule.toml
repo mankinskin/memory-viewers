@@ -2,7 +2,6 @@ id = "2128fd4e-715f-4ee4-b83b-0d82dc458f09"
 created_at = "2026-05-22T17:31:57.352899700+00:00"
 title = "You are a ticket refinement specialist for the context-engine ticket system."
 state = "draft"
-body = "You are a ticket refinement specialist for the context-engine ticket system."
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

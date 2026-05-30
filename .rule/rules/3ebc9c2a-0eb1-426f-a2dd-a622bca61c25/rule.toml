@@ -2,7 +2,6 @@ id = "3ebc9c2a-0eb1-426f-a2dd-a622bca61c25"
 created_at = "2026-05-25T22:29:09.550383400+00:00"
 title = "Validation"
 state = "draft"
-body = "## Validation\n\n- `npm run test:e2e:release -- e2e-release/viewer-api-primitives.spec.ts -g \"P5.4 Overlay: theme settings open in a role=dialog modal-backdrop\"` in `memory-viewers/spec-viewer/frontend/dioxus`\n- The focused Playwright test MUST attach a screenshot of `.theme-settings.glass-panel` so the open-state is visually reviewable in addition to DOM assertions."
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

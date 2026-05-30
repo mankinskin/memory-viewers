@@ -2,7 +2,6 @@ id = "f116a30d-199c-45db-a22c-6049d319f263"
 created_at = "2026-05-11T16:04:15.815661200+00:00"
 title = "Usage Guide"
 state = "draft"
-body = "## Dependency Graph\r\n\r\n```mermaid\r\nflowchart LR\r\n    User((User)) --> TicketViewer[ticket-viewer]\r\n    User --> SpecViewer[spec-viewer]\r\n    TicketViewer --> TicketTools[memory-api ticket surfaces]\r\n    SpecViewer --> SpecTools[memory-api spec surfaces]\r\n    TicketTools --> ViewerAPI[viewer-api]\r\n    SpecTools --> ViewerAPI\r\n    Docs[generated README targets] --> MemoryTools[memory-api rule surfaces]\r\n```\r\n"
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

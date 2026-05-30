@@ -2,7 +2,6 @@ id = "b95c38f7-7cd6-47d5-9ecf-d13645e0bf29"
 created_at = "2026-05-25T22:29:08.587750900+00:00"
 title = "Implementation pointers"
 state = "draft"
-body = "## Implementation pointers\n\n- Panel lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/components/theme_settings.rs`\n  (shared component).\n- Store: `ThemeStore` in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/store/theme.rs` with\n  `gpu_enabled: true` default.\n- The ticket-viewer Trunk shell in `memory-viewers/ticket-viewer/frontend/dioxus/index.html` MUST load the shared `modal.css` bundle in addition to `glass-panel.css` and `theme-settings.css`.\n- Shared modal CSS lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/public/css/modal.css`.\n- Canvas ownership arbitration with graph3d: `GPU_CANVAS_OWNER` thread-local in\n  `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/effects/mod.rs`."
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

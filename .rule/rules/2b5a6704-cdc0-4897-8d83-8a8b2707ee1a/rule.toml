@@ -2,7 +2,6 @@ id = "2b5a6704-cdc0-4897-8d83-8a8b2707ee1a"
 created_at = "2026-05-11T16:04:15.733127+00:00"
 title = "User Stories"
 state = "draft"
-body = "## Tool Screenshots\r\n\r\n`ticket-viewer` can keep the queue visible while a selected ticket stays open in the detail pane.\r\n\r\n![ticket-viewer screenshot](.github/assets/ticket-viewer-home.png)\r\n\r\n`spec-viewer` can open a specific spec and expose its API, code references, and health tabs in place.\r\n\r\n![spec-viewer screenshot](.github/assets/spec-viewer-home.png)\r\n"
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

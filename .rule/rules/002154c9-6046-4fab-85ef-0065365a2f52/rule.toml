@@ -2,7 +2,6 @@ id = "002154c9-6046-4fab-85ef-0065365a2f52"
 created_at = "2026-05-12T11:28:16.938048+00:00"
 title = "Agent Rules"
 state = "draft"
-body = "# Agent Rules\n\nGlobal working rules for this repository. Keep this file small and stable."
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0

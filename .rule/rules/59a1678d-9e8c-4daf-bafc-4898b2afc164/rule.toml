@@ -2,7 +2,6 @@ id = "59a1678d-9e8c-4daf-bafc-4898b2afc164"
 created_at = "2026-05-25T22:28:59.232396200+00:00"
 title = "Shared theme-settings open/close contract"
 state = "draft"
-body = "## Open/close contract\r\n\r\n- Clicking the header `Theme settings` action MUST open a visible modal overlay, not just mount the panel in the DOM.\r\n- The overlay MUST use `.modal-backdrop[role=\"dialog\"][aria-label=\"Theme settings\"]` with fixed positioning, a non-transparent backdrop tint, and a centered `.modal-panel.theme-settings-modal` container.\r\n- The underlying page MUST remain visibly dimmed behind the modal while the theme settings panel is open.\r\n"
 feedback_helpful_count = 0
 feedback_mixed_count = 0
 feedback_not_helpful_count = 0
