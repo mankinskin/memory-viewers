@@ -1,7 +1,7 @@
 id = "8f5d611f-0033-423e-b2f6-17683feb8e34"
 created_at = "2026-05-25T11:48:36.231250600+00:00"
 title = "[ticket-viewer] Build integrated ticket document panel"
-state = "in-review"
+state = "done"
 acceptance_criteria = "1. The selected ticket renders as one primary document surface in the main layout. 2. Title, key metadata, and description are visible in the same reading context without a separate metadata panel. 3. Asset content is contextualized within the document area instead of appearing only as a detached raw tab. 4. The new document remains readable in split and content-only modes."
 component = "ticket-viewer"
 implementation_summary = "Content mode now renders an integrated ticket document with a header, compact metadata cards, inline asset context, and a generic field section for the remaining top-level ticket.toml fields. Mixed-workspace selection now resolves the owning ticket reference for document fetches, and the TOML tab reuses the hydrated ticket fields so the integrated document and raw field view stay aligned."
