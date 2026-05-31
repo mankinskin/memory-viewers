@@ -112,7 +112,8 @@ pub(super) fn render_document_panel(
     let risk_level = field_value(&document.fields, "risk_level");
     let tags = field_value(&document.fields, "tags");
     let spec_refs = field_value(&document.fields, "spec_refs");
-    let dependency_ids = field_value(&document.fields, "depends_on");
+    let dependency_ids = field_value(&document.fields, "dependencies")
+        .or_else(|| field_value(&document.fields, "depends_on"));
     let created_at = document
         .created_at
         .clone()
@@ -159,7 +160,7 @@ pub(super) fn render_document_panel(
         metadata_rows.push(("Specs".to_string(), value));
     }
     if let Some(value) = dependency_ids {
-        metadata_rows.push(("Depends on".to_string(), value));
+        metadata_rows.push(("Dependencies".to_string(), value));
     }
 
     if desc_loading {
@@ -398,6 +399,7 @@ fn is_header_field(key: &str) -> bool {
             | "updated_at"
             | "tags"
             | "spec_refs"
+            | "dependencies"
             | "depends_on"
     )
 }
@@ -433,6 +435,7 @@ fn field_label(key: &str) -> String {
         "execution_wave" => "Execution Wave".to_string(),
         "parallel_track" => "Parallel Track".to_string(),
         "impl_status" => "Implementation Status".to_string(),
+        "dependencies" | "depends_on" => "Dependencies".to_string(),
         _ => key
             .split('_')
             .filter(|segment| !segment.is_empty())

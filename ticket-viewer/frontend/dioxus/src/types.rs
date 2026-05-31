@@ -299,7 +299,8 @@ pub struct WorkflowCandidateItem {
     pub priority: String,
     pub dependency_count: usize,
     pub remaining_blocker_count: usize,
-    pub dependees: usize,
+    #[serde(default, alias = "dependees")]
+    pub dependee_count: usize,
     pub transitive_reverse_dependents: usize,
     pub affected_reverse_dependent_reach: usize,
     pub max_affected_dependent_state: Option<String>,

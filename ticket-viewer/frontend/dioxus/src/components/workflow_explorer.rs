@@ -503,7 +503,7 @@ fn render_tree_node(
                     span { "Remaining blockers {remaining_blocker_count}" }
                     span { "Frontier leaves {unresolved_frontier_leaf_count}" }
                     span { "Dependencies {dependency_count}" }
-                    span { "Dependees {immediate_dependees}" }
+                    span { "Immediate dependee count {immediate_dependees}" }
                     span { "Reach {affected_reverse_dependent_reach}" }
                     span { "Gap {dependency_state_gap}" }
                 }
@@ -556,7 +556,7 @@ fn render_candidate_card(
         priority,
         dependency_count,
         remaining_blocker_count,
-        dependees,
+        dependee_count,
         transitive_reverse_dependents,
         affected_reverse_dependent_reach,
         max_affected_dependent_state,
@@ -609,7 +609,7 @@ fn render_candidate_card(
                 style: "font-size: 11px; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 6px 10px; width: 100%; text-align: left;",
                 span { "Remaining blockers {remaining_blocker_count}" }
                 span { "Dependencies {dependency_count}" }
-                span { "Dependees {dependees}" }
+                span { "Dependee count {dependee_count}" }
                 span { "Reach {affected_reverse_dependent_reach}" }
                 span { "Gap {dependency_state_gap}" }
                 if transitive_reverse_dependents > 0 {
