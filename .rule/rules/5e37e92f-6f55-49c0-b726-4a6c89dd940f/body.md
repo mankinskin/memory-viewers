@@ -8,7 +8,7 @@ From the parent `context-engine` checkout, install the viewer lifecycle tooling 
 bash ./install-tools.sh
 ```
 
-That installs `viewer-ctl`, `trunk`, and the `rule`, `spec`, `ticket`, and `audit` CLIs onto Cargo's bin path. If you are working from a standalone `memory-viewers` checkout, follow the direct install commands in [memory-api/README.md](memory-api/README.md) and [viewer-api/README.md](viewer-api/README.md).
+That installs `viewer-ctl`, `trunk`, `spec-viewer`, `ticket-viewer`, and the `rule`, `spec`, `ticket`, and `audit` CLIs onto Cargo's bin path. If you are working from a standalone `memory-viewers` checkout, follow the direct install commands in [memory-api/README.md](memory-api/README.md) and [viewer-api/README.md](viewer-api/README.md).
 
 ### Start the viewers and regenerate docs
 
@@ -18,6 +18,6 @@ viewer-ctl start spec-viewer
 rule sync-targets --config memory-viewers/rule-targets.yaml
 ```
 
-- Start `ticket-viewer` to inspect work in progress and board relationships.
-- Start `spec-viewer` to browse spec structure and linked code references.
-- Regenerate the parent README when rule content changes.
+- `viewer-ctl start ...` follows the lifecycle workflow documented in [viewer-api/viewer-ctl/README.md](viewer-api/viewer-ctl/README.md).
+- `rule sync-targets --config memory-viewers/rule-targets.yaml` is documented in [memory-api/tools/cli/rule-cli/README.md](memory-api/tools/cli/rule-cli/README.md).
+- Continue from [memory-api/README.md](memory-api/README.md) for rule, spec, ticket, and audit command surfaces and from [viewer-api/README.md](viewer-api/README.md) for shared viewer runtime details.

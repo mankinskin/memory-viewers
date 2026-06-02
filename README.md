@@ -5,14 +5,21 @@
 
 memory-viewers is the top-level repository for the user-facing viewer tools and the nested toolchain they depend on.
 
+Direct child READMEs:
+
+- [memory-api/README.md](memory-api/README.md) for the rule, spec, ticket, and audit automation surfaces.
+- [viewer-api/README.md](viewer-api/README.md) for `viewer-ctl`, the shared viewer runtime, and the frontend scaffold.
+
+Installable content in or directly behind this repository includes the `spec-viewer` and `ticket-viewer` binaries plus the `viewer-ctl`, `rule`, `spec`, `ticket`, and `audit` command surfaces documented in those child READMEs.
+
 ## Tool Surface
 
-| Tool | What it exposes | Use it when |
+| Tool | What it exposes | Direct docs |
 | --- | --- | --- |
-| <code>ticket&#8209;viewer</code> | Ticket board and graph views | You want to review active work, owners, and dependency flow visually. |
-| <code>spec&#8209;viewer</code> | Spec browsing UI | You want to inspect specs, sections, and linked code references. |
-| <code>memory&#8209;api</code> | CLI, MCP, HTTP, and VS Code tooling | You need automation or authoring workflows behind rules, specs, tickets, and audits. |
-| <code>viewer&#8209;api</code> | Shared viewer-facing APIs | You need reusable viewer integration surfaces across the stack. |
+| <code>ticket&#8209;viewer</code> | Ticket board and graph views | [memory-api/README.md](memory-api/README.md) for the ticket backends and [viewer-api/README.md](viewer-api/README.md) for the shared viewer runtime. |
+| <code>spec&#8209;viewer</code> | Spec browsing UI | [memory-api/README.md](memory-api/README.md) for the spec backends and [viewer-api/README.md](viewer-api/README.md) for the shared viewer runtime. |
+| [<code>memory&#8209;api</code>](memory-api/README.md) | CLI, MCP, HTTP, and VS Code tooling | [memory-api/README.md](memory-api/README.md) |
+| [<code>viewer&#8209;api</code>](viewer-api/README.md) | Shared viewer-facing APIs | [viewer-api/README.md](viewer-api/README.md) |
 
 <!-- rule-api:entry id=2b5a6704-cdc0-4897-8d83-8a8b2707ee1a slug=memory-viewers/readme/memory-viewers/user-stories/l5 -->
 ## Tool Screenshots
@@ -50,7 +57,7 @@ From the parent `context-engine` checkout, install the viewer lifecycle tooling 
 bash ./install-tools.sh
 ```
 
-That installs `viewer-ctl`, `trunk`, and the `rule`, `spec`, `ticket`, and `audit` CLIs onto Cargo's bin path. If you are working from a standalone `memory-viewers` checkout, follow the direct install commands in [memory-api/README.md](memory-api/README.md) and [viewer-api/README.md](viewer-api/README.md).
+That installs `viewer-ctl`, `trunk`, `spec-viewer`, `ticket-viewer`, and the `rule`, `spec`, `ticket`, and `audit` CLIs onto Cargo's bin path. If you are working from a standalone `memory-viewers` checkout, follow the direct install commands in [memory-api/README.md](memory-api/README.md) and [viewer-api/README.md](viewer-api/README.md).
 
 ### Start the viewers and regenerate docs
 
@@ -60,6 +67,6 @@ viewer-ctl start spec-viewer
 rule sync-targets --config memory-viewers/rule-targets.yaml
 ```
 
-- Start `ticket-viewer` to inspect work in progress and board relationships.
-- Start `spec-viewer` to browse spec structure and linked code references.
-- Regenerate the parent README when rule content changes.
+- `viewer-ctl start ...` follows the lifecycle workflow documented in [viewer-api/viewer-ctl/README.md](viewer-api/viewer-ctl/README.md).
+- `rule sync-targets --config memory-viewers/rule-targets.yaml` is documented in [memory-api/tools/cli/rule-cli/README.md](memory-api/tools/cli/rule-cli/README.md).
+- Continue from [memory-api/README.md](memory-api/README.md) for rule, spec, ticket, and audit command surfaces and from [viewer-api/README.md](viewer-api/README.md) for shared viewer runtime details.
