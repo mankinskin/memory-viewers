@@ -20,8 +20,9 @@ use ticket_api::{
     model::filesystem::ScanRoot,
     storage::store::TicketStore,
     workspace::{
-        find_local_workspace_file_from,
-        LOCAL_WORKSPACE_FILE,
+        find_local_root_from,
+        resolve_workspace_from,
+        TICKET_INDEX_DIR,
     },
 };
 use ticket_http::serve::{
@@ -33,7 +34,7 @@ use ticket_http::serve::{
 // ── Helpers ──────────────────────────────────────────────────────────────────
 
 fn open_store(dir: &std::path::Path) -> Arc<TicketStore> {
-    let store = Arc::new(TicketStore::open(dir).expect("open store"));
+    let store = Arc::new(TicketStore::open_or_init(dir).expect("open store"));
     store
         .add_scan_root(ScanRoot {
             path: dir.join("tickets"),
@@ -43,18 +44,21 @@ fn open_store(dir: &std::path::Path) -> Arc<TicketStore> {
     store
 }
 
-fn build_app(store: Arc<TicketStore>) -> axum::Router {
-    let state = AppState::new(
-        Arc::new(WorkspaceRegistry::single_opened(store)),
-        Arc::new(StreamBroker::new()),
-    );
-    let _ = state.ensure_workspace_runtime("default");
-    ticket_http::build_router(state)
+fn build_app(store: Arc<TicketStore>) -> (axum::Router, String) {
+    let registry = Arc::new(WorkspaceRegistry::single_opened(store));
+    let workspace = registry.primary_workspace_name().to_string();
+    let state =
+        AppState::new(registry, Arc::new(StreamBroker::new()));
+    let _ = state.ensure_workspace_runtime(&workspace);
+    (ticket_http::build_router(state), workspace)
 }
 
-async fn get_ticket_count(app: axum::Router) -> (StatusCode, usize) {
+async fn get_ticket_count(
+    app: axum::Router,
+    workspace: &str,
+) -> (StatusCode, usize) {
     let req = Request::builder()
-        .uri("/api/tickets?workspace=default")
+        .uri(format!("/api/tickets?workspace={workspace}"))
         .body(axum::body::Body::empty())
         .unwrap();
 
@@ -77,27 +81,22 @@ fn local_workspace_file_is_found_walking_up() {
     let nested = root.path().join("a").join("b").join("c");
     std::fs::create_dir_all(&nested).expect("mkdir");
 
-    // Place .ticket-workspace at root
-    std::fs::write(root.path().join(LOCAL_WORKSPACE_FILE), ".ticket\n")
-        .expect("write");
+    std::fs::create_dir(root.path().join(TICKET_INDEX_DIR))
+        .expect("create .ticket");
 
-    // Walking up from nested dir should find the file at root
-    let found = find_local_workspace_file_from(&nested);
-    assert!(found.is_some(), "should find .ticket-workspace walking up");
-    assert_eq!(found.unwrap(), root.path().join(LOCAL_WORKSPACE_FILE),);
+    let found = find_local_root_from(&nested, TICKET_INDEX_DIR);
+    assert!(found.is_some(), "should find .ticket walking up");
+    assert_eq!(found.unwrap(), root.path().join(TICKET_INDEX_DIR),);
 }
 
 #[test]
 fn local_workspace_file_not_found_in_empty_tree() {
     let root = tempfile::tempdir().expect("tempdir");
-    // No .ticket-workspace anywhere
-    let found = find_local_workspace_file_from(root.path());
-    // May or may not find one depending on the user's home directory —
-    // the important property is that it does NOT find one inside root.
+    let found = find_local_root_from(root.path(), TICKET_INDEX_DIR);
     if let Some(path) = found {
         assert!(
             !path.starts_with(root.path()),
-            "should not find .ticket-workspace inside the temp dir",
+            "should not find .ticket inside the temp dir",
         );
     }
 }
@@ -105,19 +104,12 @@ fn local_workspace_file_not_found_in_empty_tree() {
 #[test]
 fn workspace_file_relative_path_resolves_from_file_parent() {
     let root = tempfile::tempdir().expect("tempdir");
-    let ticket_dir = root.path().join(".ticket");
+    let ticket_dir = root.path().join(TICKET_INDEX_DIR);
     std::fs::create_dir_all(&ticket_dir).expect("mkdir .ticket");
+    let probe_file = root.path().join("notes.txt");
+    std::fs::write(&probe_file, "workspace probe").expect("write probe");
 
-    // Write a relative path in .ticket-workspace
-    std::fs::write(root.path().join(LOCAL_WORKSPACE_FILE), ".ticket")
-        .expect("write");
-
-    // Simulate what resolve_workspace does for a local file:
-    let local_file =
-        find_local_workspace_file_from(root.path()).expect("should find file");
-    let content = std::fs::read_to_string(&local_file).expect("read");
-    let value = content.trim();
-    let resolved = local_file.parent().unwrap().join(value);
+    let (resolved, _source) = resolve_workspace_from(&probe_file);
 
     assert_eq!(resolved, ticket_dir);
 }
@@ -128,9 +120,9 @@ fn workspace_file_relative_path_resolves_from_file_parent() {
 async fn empty_store_returns_zero_tickets() {
     let dir = tempfile::tempdir().expect("tempdir");
     let store = open_store(dir.path());
-    let app = build_app(store);
+    let (app, workspace) = build_app(store);
 
-    let (status, count) = get_ticket_count(app).await;
+    let (status, count) = get_ticket_count(app, &workspace).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(count, 0, "empty store should return 0 tickets");
 }
@@ -155,37 +147,22 @@ async fn store_with_tickets_returns_correct_count() {
             .expect("create ticket");
     }
 
-    let app = build_app(store);
-    let (status, count) = get_ticket_count(app).await;
+    let (app, workspace) = build_app(store);
+    let (status, count) = get_ticket_count(app, &workspace).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(count, 3, "store with 3 tickets should return 3");
 }
 
 #[tokio::test]
 async fn resolved_workspace_serves_correct_store() {
-    // Simulate the exact flow from main.rs:
-    // 1. Create a temp dir with .ticket-workspace pointing to .ticket/
-    // 2. Open the store at that resolved path
-    // 3. Create tickets
-    // 4. Verify the API serves them
-
     let root = tempfile::tempdir().expect("tempdir");
-    let ticket_dir = root.path().join(".ticket");
+    let ticket_dir = root.path().join(TICKET_INDEX_DIR);
     std::fs::create_dir_all(&ticket_dir).expect("mkdir");
 
-    // Write workspace file (relative path, same as context-engine)
-    std::fs::write(root.path().join(LOCAL_WORKSPACE_FILE), ".ticket")
-        .expect("write");
+    let (index_root, _source) = resolve_workspace_from(root.path());
 
-    // Resolve the workspace path the same way main.rs does
-    let local_file = find_local_workspace_file_from(root.path())
-        .expect("find workspace file");
-    let content = std::fs::read_to_string(&local_file).expect("read");
-    let value = content.trim();
-    let index_root = local_file.parent().unwrap().join(value);
-
-    // Open store at the resolved path and create tickets
-    let store = Arc::new(TicketStore::open(&index_root).expect("open store"));
+    let store =
+        Arc::new(TicketStore::open_or_init(&index_root).expect("open store"));
     store
         .add_scan_root(ScanRoot {
             path: index_root.join("tickets"),
@@ -205,9 +182,8 @@ async fn resolved_workspace_serves_correct_store() {
         )
         .expect("create ticket");
 
-    // Build the app and query
-    let app = build_app(store);
-    let (status, count) = get_ticket_count(app).await;
+    let (app, workspace) = build_app(store);
+    let (status, count) = get_ticket_count(app, &workspace).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(count, 1, "resolved workspace should serve its tickets");
 }
@@ -238,11 +214,11 @@ async fn separate_workspaces_are_isolated() {
             .expect("create in store_a");
     }
 
-    let app_a = build_app(store_a);
-    let app_b = build_app(store_b);
+    let (app_a, workspace_a) = build_app(store_a);
+    let (app_b, workspace_b) = build_app(store_b);
 
-    let (_, count_a) = get_ticket_count(app_a).await;
-    let (_, count_b) = get_ticket_count(app_b).await;
+    let (_, count_a) = get_ticket_count(app_a, &workspace_a).await;
+    let (_, count_b) = get_ticket_count(app_b, &workspace_b).await;
 
     assert_eq!(count_a, 2, "store_a should have 2 tickets");
     assert_eq!(count_b, 0, "store_b should have 0 tickets");
