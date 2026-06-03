@@ -24,13 +24,7 @@ Installable content in or directly behind this repository includes the `spec-vie
 <!-- rule-api:entry id=2b5a6704-cdc0-4897-8d83-8a8b2707ee1a slug=memory-viewers/readme/memory-viewers/user-stories/l5 -->
 ## Tool Screenshots
 
-`ticket-viewer` can keep the queue visible while a selected ticket stays open in the detail pane.
-
-![ticket-viewer screenshot](.github/assets/ticket-viewer-home.png)
-
-`spec-viewer` can open a specific spec and expose its API, code references, and health tabs in place.
-
-![spec-viewer screenshot](.github/assets/spec-viewer-home.png)
+![ticket-viewer screenshot](.github/assets/ticket-viewer-example.png)
 
 <!-- rule-api:entry id=f116a30d-199c-45db-a22c-6049d319f263 slug=memory-viewers/readme/memory-viewers/usage-guide/l11 -->
 ## Dependency Graph
