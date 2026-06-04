@@ -14,6 +14,7 @@ pub(super) const STRING_FIELDS: &[(&str, &str)] = &[
     ("title", "Title"),
     ("priority", "Priority"),
     ("component", "Component"),
+    ("effort", "Effort"),
     ("risk_level", "Risk Level"),
     ("tags", "Tags"),
     ("workflow_stage", "Workflow Stage"),
