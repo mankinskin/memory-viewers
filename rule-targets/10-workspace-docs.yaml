@@ -1,9 +1,9 @@
+defaults:
+  repo_scope: memory-viewers
 files:
 - name: README.md
   target:
     name: memory-viewers-readme
-    repo_scope: memory-viewers
-    file_kind: README
     path_scope: README.md
     nodes:
     - name: tool-surface
@@ -20,8 +20,6 @@ files:
 - name: AGENTS.md
   target:
     name: memory-viewers-agents
-    repo_scope: memory-viewers
-    file_kind: AGENTS
     path_scope: AGENTS.md
     nodes:
     - name: agent-rules
