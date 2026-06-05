@@ -433,6 +433,7 @@ pub fn TicketListPage(workspace: String) -> Element {
                         graph_root_ticket,
                         tickets,
                         graph_content_ticket,
+                        graph_hover_id,
                         view_mode,
                         graph_panel_collapsed,
                         detail_is_collapsed,

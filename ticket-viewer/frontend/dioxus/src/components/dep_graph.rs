@@ -25,11 +25,20 @@ pub struct DepGraphProps {
     /// `TicketDetailPage`.
     #[props(optional)]
     pub on_select: Option<EventHandler<TicketRef>>,
+    /// Optional callback invoked when the user hovers a graph node.
+    #[props(optional)]
+    pub on_hover: Option<EventHandler<Option<String>>>,
+    /// Optional callback invoked when the user clicks empty graph space.
+    #[props(optional)]
+    pub on_deselect: Option<EventHandler<()>>,
     /// Graph-preview selection — the node ID currently shown in the content
     /// panel (set by clicking a node). Highlights that card with an ember
     /// border without changing the primary list selection.
     #[props(optional)]
     pub selected_node_id: Option<String>,
+    /// Currently hovered node id.
+    #[props(optional)]
+    pub hovered_node_id: Option<String>,
     /// Which 3-D layout algorithm to use.
     #[props(default)]
     pub layout_mode: LayoutMode,

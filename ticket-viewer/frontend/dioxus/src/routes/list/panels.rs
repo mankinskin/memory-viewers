@@ -32,6 +32,7 @@ pub(super) fn render_selected_main_panel(
     graph_root_ticket: Signal<Option<TicketRef>>,
     tickets: Signal<Vec<TicketSummary>>,
     mut graph_content_ticket: Signal<Option<TicketRef>>,
+    mut graph_hover_id: Signal<Option<String>>,
     view_mode: Signal<String>,
     graph_panel_collapsed: bool,
     detail_is_collapsed: bool,
@@ -92,11 +93,14 @@ pub(super) fn render_selected_main_panel(
                                 workspace: graph_root.workspace.clone(),
                                 root_id: graph_root.id.clone(),
                                 selected_node_id: Some(graph_focus_ticket.id.clone()),
+                                hovered_node_id: graph_hover_id.read().clone(),
                                 layout_mode: *graph_layout_mode.read(),
                                 projection: *graph_projection.read(),
                                 on_layout_mode_change: move |mode| graph_layout_mode.set(mode),
                                 on_projection_change: move |projection| graph_projection.set(projection),
                                 on_select: move |ticket_ref: TicketRef| graph_content_ticket.set(Some(ticket_ref)),
+                                on_deselect: move |_| graph_content_ticket.set(None),
+                                on_hover: move |id| graph_hover_id.set(id),
                             }
                             if overlay_content_on_graph {
                                 div {

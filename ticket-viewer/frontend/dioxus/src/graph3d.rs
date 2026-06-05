@@ -72,7 +72,7 @@ pub fn lift_2d(
                 LayoutMode::Hierarchical3D | LayoutMode::KanbanTable => {
                     gn.z as f32 * LAYOUT_SCALE
                 },
-                LayoutMode::Flat2D => 0.0,
+                LayoutMode::Flat2D | LayoutMode::Fixed2D => 0.0,
             },
         })
         .collect();
@@ -170,6 +170,7 @@ fn initial_camera_for_layout(
         LayoutMode::Hierarchical3D => (0.78_f32, 0.62_f32),
         LayoutMode::Flat2D => (0.78_f32, 0.72_f32),
         LayoutMode::KanbanTable => (0.78_f32, 0.72_f32),
+        LayoutMode::Fixed2D => (0.0_f32, 1.5708_f32), // Top-down
     };
     camera.apply_command_for_mode(
         &CameraCommand::ResetTo { yaw, pitch },
@@ -339,10 +340,19 @@ pub struct Graph3DProps {
     pub workspace: String,
     pub root_id: String,
     pub on_select: EventHandler<TicketRef>,
+    /// Optional callback invoked when the user hovers a graph node.
+    #[props(optional)]
+    pub on_hover: Option<EventHandler<Option<String>>>,
+    /// Optional callback invoked when the user clicks empty graph space.
+    #[props(optional)]
+    pub on_deselect: Option<EventHandler<()>>,
     /// Optional graph-preview selection — highlights this node with an ember
     /// border effect without changing the primary ticket-list selection.
     #[props(optional)]
     pub selected_node_id: Option<String>,
+    /// Currently hovered node id. Used for transient edge emphasis.
+    #[props(optional)]
+    pub hovered_node_id: Option<String>,
     /// Graph layout algorithm — drives `lift_2d` and the initial camera angle.
     #[props(default)]
     pub layout_mode: LayoutMode,
@@ -362,7 +372,10 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let workspace = props.workspace.clone();
     let root_id = props.root_id.clone();
     let on_select = props.on_select;
+    let on_hover = props.on_hover.clone();
+    let on_deselect = props.on_deselect.clone();
     let selected_node_id = props.selected_node_id.clone();
+    let hovered_node_id = props.hovered_node_id.clone();
     let layout_mode = props.layout_mode;
     let projection = props.projection;
     let on_layout_mode_change = props.on_layout_mode_change.clone();
@@ -461,11 +474,17 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
             layout: layout,
             initial_camera: Some(initial_camera),
             selected_node_id: selected_node_id.clone(),
+            hovered_node_id: props.hovered_node_id.clone(),
             selection_auto_focus: true,
             projection: projection,
             layout_mode: layout_mode,
             on_layout_mode_change: on_layout_mode_change,
             on_projection_change: on_projection_change,
+            on_deselect: move |_| {
+                if let Some(ref handler) = on_deselect {
+                    handler.call(());
+                }
+            },
             if layout_mode == LayoutMode::KanbanTable {
                 if let Some(overlay) = kanban_overlay.as_ref() {
                     {render_kanban_overlay(overlay)}
@@ -486,19 +505,22 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                             .cloned()
                             .unwrap_or_else(|| TicketRef::new(workspace.clone(), node_id.clone()));
                         let is_selected = selected_node_id.as_deref() == Some(node_id.as_str());
+                        let is_hovered = hovered_node_id.as_deref() == Some(node_id.as_str());
                         let is_focus_context = focus_context
                             .as_ref()
                             .map(|ids| ids.contains(&node_id))
                             .unwrap_or(false);
                         let card_class = if is_selected {
                             "graph-node-card content node-card-selected"
+                        } else if is_hovered {
+                            "graph-node-card content node-card-hovered"
                         } else if is_focus_context {
                             "graph-node-card content node-card-context"
                         } else {
                             "graph-node-card content"
                         };
                         let focus_style = if is_selected {
-                            "opacity: 1.0; filter: saturate(1.0) brightness(1.0);"
+                            "opacity: 1.0; filter: saturate(1.0) brightness(1.0); transform: scale(1.08); box-shadow: 0 0 20px var(--graph-node-glow, rgba(122, 162, 255, 0.6));"
                         } else if is_focus_context {
                             "opacity: 0.95; filter: saturate(0.92) brightness(0.96);"
                         } else if focus_context.is_some() {
@@ -516,10 +538,20 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                 "data-layout-x": "{node.x}",
                                 "data-layout-y": "{node.y}",
                                 "data-layout-z": "{node.z}",
-                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 212px; height: 132px; box-sizing: border-box; border: 1px solid color-mix(in srgb, {color} 35%, var(--graph-node-border, rgba(200,200,200,0.35))); border-top: 3px solid {color}; border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, {color} 10%, var(--graph-node-surface, rgba(30,30,40,0.92))) 0%, var(--graph-node-surface, rgba(30,30,40,0.94)) 100%); backdrop-filter: blur(6px); padding: 12px; cursor: pointer; overflow: hidden; font-family: sans-serif; color: var(--graph-node-text, #e8e8f0); box-shadow: var(--graph-node-shadow, 0 10px 24px rgba(0,0,0,0.42)); transition: opacity 160ms ease, filter 160ms ease, box-shadow 160ms ease; {focus_style}",
+                                style: "position: absolute; top: 0; left: 0; pointer-events: auto; transform-origin: center center; display: none; width: 212px; height: 132px; box-sizing: border-box; border: 1px solid color-mix(in srgb, {color} 35%, var(--graph-node-border, rgba(200,200,200,0.35))); border-top: 3px solid {color}; border-radius: 18px; background: linear-gradient(180deg, color-mix(in srgb, {color} 10%, var(--graph-node-surface, rgba(30,30,40,0.92))) 0%, var(--graph-node-surface, rgba(30,30,40,0.94)) 100%); backdrop-filter: blur(6px); padding: 12px; cursor: pointer; overflow: hidden; font-family: sans-serif; color: var(--graph-node-text, #e8e8f0); box-shadow: var(--graph-node-shadow, 0 10px 24px rgba(0,0,0,0.42)); transition: opacity 160ms ease, filter 160ms ease, box-shadow 160ms ease, transform 160ms ease; {focus_style}",
                                 onclick: move |evt: Event<MouseData>| {
                                     evt.stop_propagation();
                                     on_select.call(ticket_ref_click.clone());
+                                },
+                                onmouseenter: move |_| {
+                                    if let Some(ref handler) = props.on_hover {
+                                        handler.call(Some(node_id.clone()));
+                                    }
+                                },
+                                onmouseleave: move |_| {
+                                    if let Some(ref handler) = props.on_hover {
+                                        handler.call(None);
+                                    }
                                 },
                                 div {
                                     "data-node-detail-tier": "rich",
@@ -548,26 +580,25 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                                     }
                                 }
                                 div {
-                                    "data-node-detail-tier": "compact",
+                                    "data-node-detail-tier": "label",
                                     "data-node-detail-display": "flex",
-                                    style: "display: none; flex-direction: column; justify-content: center; align-items: stretch; gap: 6px; width: 100%; height: 100%;",
+                                    style: "display: none; flex-direction: column; justify-content: center; align-items: center; gap: 4px; width: 100%; height: 100%;",
                                     div {
-                                        style: "display: flex; align-items: center; justify-content: space-between; gap: 8px;",
-                                        span {
-                                            style: "display: inline-flex; width: 10px; height: 10px; border-radius: 999px; background: {color}; flex-shrink: 0; box-shadow: 0 0 0 1px rgba(255,255,255,0.12);",
-                                        }
-                                        span {
-                                            style: "font-size: 9px; color: var(--graph-node-muted-text, #9aa0ac); text-transform: uppercase; letter-spacing: 0.06em;",
-                                            "{state_str}"
-                                        }
-                                    }
-                                    div {
-                                        style: "font-size: 11px; font-weight: 650; color: var(--graph-node-text, #e8e8f0); line-height: 1.28; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; word-break: break-word;",
+                                        style: "font-size: 11px; font-weight: 700; color: var(--graph-node-text, #e8e8f0); text-align: center; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; width: 100%;",
                                         "{title}"
                                     }
                                     div {
-                                        style: "font-size: 9px; color: var(--graph-node-muted-text, #888); text-transform: uppercase; letter-spacing: 0.05em;",
-                                        "{short_id}"
+                                        style: "font-size: 9px; color: {color}; text-transform: uppercase; font-weight: 600;",
+                                        "{state_str}"
+                                    }
+                                }
+                                div {
+                                    "data-node-detail-tier": "icon",
+                                    "data-node-detail-display": "flex",
+                                    style: "display: none; align-items: center; justify-content: center; width: 100%; height: 100%;",
+                                    span {
+                                        style: "width: 24px; height: 24px; border-radius: 6px; background: {color}; display: flex; align-items: center; justify-content: center; color: white; font-size: 12px; font-weight: 800; box-shadow: 0 4px 10px rgba(0,0,0,0.3);",
+                                        "{state_str.chars().next().unwrap_or('?').to_uppercase()}"
                                     }
                                 }
                                 div {

@@ -32,7 +32,10 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
     let workspace = props.workspace.clone();
     let root_id = props.root_id.clone();
     let on_select = props.on_select.clone();
+    let on_hover = props.on_hover.clone();
+    let on_deselect = props.on_deselect.clone();
     let selected_node_id = props.selected_node_id.clone();
+    let hovered_node_id = props.hovered_node_id.clone();
     let nav = use_navigator();
 
     #[cfg(target_arch = "wasm32")]
@@ -43,7 +46,10 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
             workspace,
             root_id,
             on_select,
+            on_hover,
+            on_deselect,
             selected_node_id,
+            hovered_node_id,
         );
     }
 
@@ -133,7 +139,10 @@ fn render_webgpu_graph(
     workspace: String,
     root_id: String,
     on_select: Option<EventHandler<TicketRef>>,
+    on_hover: Option<EventHandler<Option<String>>>,
+    on_deselect: Option<EventHandler<()>>,
     selected_node_id: Option<String>,
+    hovered_node_id: Option<String>,
 ) -> Element {
     rsx! {
         crate::graph3d::Graph3D {
@@ -141,10 +150,21 @@ fn render_webgpu_graph(
             workspace: workspace.clone(),
             root_id: root_id.clone(),
             selected_node_id,
+            hovered_node_id,
             layout_mode: props.layout_mode,
             projection: props.projection,
             on_layout_mode_change: props.on_layout_mode_change.clone(),
             on_projection_change: props.on_projection_change.clone(),
+            on_deselect: move |_| {
+                if let Some(ref handler) = on_deselect {
+                    handler.call(());
+                }
+            },
+            on_hover: move |id| {
+                if let Some(ref handler) = on_hover {
+                    handler.call(id);
+                }
+            },
             on_select: move |ticket_ref: TicketRef| {
                 select_node_or_navigate(
                     on_select.clone(),
