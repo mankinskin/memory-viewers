@@ -152,6 +152,21 @@ impl GraphFetchService {
         self.ensure_fetched(workspace, "");
     }
 
+    /// Invalidate the cache entry for a workspace, forcing a fresh fetch.
+    ///
+    /// Removes the layout from the cache, clears any stored error, and removes
+    /// the key from the in-flight set.  The next call to `ensure_fetched` will
+    /// trigger a new fetch.
+    pub fn invalidate_workspace(&self, workspace: &str) {
+        let cache_key = workspace_cache_key(workspace);
+        self.cache.remove(&cache_key);
+        let mut inner = self.inner.borrow_mut();
+        inner.errors.remove(&cache_key);
+        inner.in_flight.remove(&cache_key);
+        // Bump version to trigger UI updates
+        self.version += 1;
+    }
+
     /// Ensure a workspace-scoped graph layout will be available in the shared
     /// cache.
     ///

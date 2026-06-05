@@ -145,10 +145,13 @@ pub fn use_sse(
         // filters remain authoritative.
         let mut refresh_upsert = refresh_counter;
         let mut silent_upsert = silent_refresh;
+        let service_upsert = use_context::<crate::graph_fetch::GraphFetchService>();
+        let workspace_upsert = workspace.clone();
         let l_upsert = EventListener::new(&es, "ticket.upsert", move |event| {
             let data = msg_data(event);
             match serde_json::from_str::<UpsertPayload>(&data) {
                 Ok(_payload) => {
+                    service_upsert.invalidate_workspace(&workspace_upsert);
                     silent_upsert.set(true);
                     refresh_upsert.with_mut(|value| *value += 1);
                 },
