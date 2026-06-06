@@ -127,7 +127,7 @@ async fn shutdown_signal() {
 }
 
 fn open_local_ticket_store(
-    index_root: &Path,
+    index_root: &Path
 ) -> Result<TicketStore, ticket_api::error::StorageError> {
     TicketStore::open_or_init(index_root)
 }
@@ -161,6 +161,27 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             index_root.display()
         ))
     })?;
+    let workspace_root =
+        ticket_api::workspace::resolve_workspace_root_from_store_root(
+            &index_root,
+            ticket_api::workspace::TICKET_INDEX_DIR,
+        );
+    if ticket_http::serve::register_descendant_scan_roots(
+        &store,
+        &workspace_root,
+    )
+    .map_err(|error| {
+        std::io::Error::other(format!(
+            "failed to register descendant ticket workspaces for {}: {error}",
+            workspace_root.display()
+        ))
+    })? {
+        store.scan(true).map_err(|error| {
+            std::io::Error::other(format!(
+                "failed to reindex ticket store after registering descendant workspaces: {error}"
+            ))
+        })?;
+    }
     let registry = WorkspaceRegistry::single_opened(Arc::new(store));
 
     // Build the ticket-http AppState and wire up streaming.
