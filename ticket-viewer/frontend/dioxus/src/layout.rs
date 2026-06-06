@@ -439,125 +439,87 @@ impl GraphLayout {
         }
     }
 
-    /// Place nodes in a hierarchical layout that strongly prefers a flat X/Y
-    /// reading order with only a small bounded Z stagger for depth cues.
+    /// Place nodes on a flat, uniform grid whose overall footprint matches the
+    /// viewport aspect ratio.
+    ///
+    /// Hierarchical order is preserved by laying nodes out in depth bands
+    /// (depth 0 = top): each depth level fills full-width rows before the next
+    /// depth begins on a fresh row, so a shallower ticket never sits below a
+    /// deeper one.  Within a depth, nodes are ordered by priority then title.
+    ///
+    /// The number of grid columns is derived from the node count and the
+    /// viewport aspect ratio so the resulting block reads as a rectangle that
+    /// fills the screen instead of a few extremely wide rows.  Column / row
+    /// spacing is generous enough that the largest ticket cards never overlap,
+    /// even at the highest level of detail, and the grid is kept perfectly flat
+    /// (z = 0) so the default head-on camera shows every node.
     fn hierarchical_layout(&mut self) {
-        // Vertical gap between depth layers (dependency hierarchy).
-        const LAYER_SPACING: f64 = 280.0;
-        // Minimum horizontal gap between nodes in the same depth layer.
-        const COL_SPACING: f64 = 248.0;
-        // Small bounded Z offsets so the default camera reads as isometric
-        // without turning each layer into a deep overlapping stack.
-        const Z_STAGGER: f64 = 24.0;
+        // Uniform grid spacing in layout-space pixels.  Ticket cards are wider
+        // than they are tall (≈ 212×132 px at full detail), so columns are
+        // spaced further apart than rows to keep equal visual gaps.
+        const COL_SPACING: f64 = 380.0;
+        const ROW_SPACING: f64 = 260.0;
 
-        // Group node indices by depth.
-        let mut by_depth: HashMap<usize, Vec<usize>> = HashMap::new();
-        for (i, node) in self.nodes.iter().enumerate() {
-            by_depth.entry(node.depth).or_default().push(i);
+        let total = self.nodes.len();
+        if total == 0 {
+            return;
         }
 
-        let id_to_idx: HashMap<&str, usize> = self
-            .nodes
-            .iter()
-            .enumerate()
-            .map(|(i, node)| (node.id.as_str(), i))
-            .collect();
-        let mut parents_by_child: HashMap<usize, Vec<usize>> = HashMap::new();
-        for edge in &self.edges {
-            let Some(&from_idx) = id_to_idx.get(edge.from.as_str()) else {
-                continue;
-            };
-            let Some(&to_idx) = id_to_idx.get(edge.to.as_str()) else {
-                continue;
-            };
-            parents_by_child.entry(to_idx).or_default().push(from_idx);
-        }
-
-        let mut depths: Vec<usize> = by_depth.keys().copied().collect();
-        depths.sort_unstable();
-
-        for depth in depths {
-            let indices = by_depth.get_mut(&depth).unwrap();
-
-            let mut anchored: Vec<(usize, f64)> = indices
-                .iter()
-                .map(|&node_idx| {
-                    let anchor = parent_anchor(
-                        &self.nodes,
-                        &parents_by_child,
-                        node_idx,
-                    );
-                    (node_idx, anchor)
+        // Order nodes by depth (hierarchy), then priority, then title.
+        let mut order: Vec<usize> = (0..total).collect();
+        order.sort_by(|&a, &b| {
+            let na = &self.nodes[a];
+            let nb = &self.nodes[b];
+            na.depth
+                .cmp(&nb.depth)
+                .then_with(|| {
+                    priority_order(na.priority.as_deref())
+                        .cmp(&priority_order(nb.priority.as_deref()))
                 })
-                .collect();
+                .then_with(|| {
+                    na.title
+                        .as_deref()
+                        .unwrap_or("")
+                        .cmp(nb.title.as_deref().unwrap_or(""))
+                })
+        });
 
-            // Keep siblings grouped by the X position of their already-placed
-            // parents so the hierarchy reads left-to-right within each layer.
-            anchored.sort_by(|(a_idx, a_anchor), (b_idx, b_anchor)| {
-                a_anchor
-                    .partial_cmp(b_anchor)
-                    .unwrap_or(Ordering::Equal)
-                    .then_with(|| {
-                        let pa = priority_order(
-                            self.nodes[*a_idx].priority.as_deref(),
-                        );
-                        let pb = priority_order(
-                            self.nodes[*b_idx].priority.as_deref(),
-                        );
-                        pa.cmp(&pb)
-                    })
-                    .then_with(|| {
-                        let ta =
-                            self.nodes[*a_idx].title.as_deref().unwrap_or("");
-                        let tb =
-                            self.nodes[*b_idx].title.as_deref().unwrap_or("");
-                        ta.cmp(tb)
-                    })
-            });
+        // Choose a column count so the overall grid bounding box matches the
+        // viewport aspect ratio.  With `grid_w = cols * COL_SPACING`,
+        // `grid_h = rows * ROW_SPACING` and `rows ≈ total / cols`, requiring
+        // `grid_w / grid_h ≈ aspect` solves to
+        // `cols = sqrt(total * aspect * ROW_SPACING / COL_SPACING)`.
+        let aspect = viewport_aspect_ratio();
+        let cols_f =
+            (total as f64 * aspect * (ROW_SPACING / COL_SPACING)).sqrt();
+        let cols = (cols_f.round() as usize).clamp(1, total);
 
-            let n = anchored.len();
-            let y = depth as f64 * LAYER_SPACING;
+        // Lay each depth band into full-width rows, starting every new depth on
+        // a fresh row so hierarchy bands stay visually distinct.
+        let mut row = 0usize;
+        let mut col = 0usize;
+        let mut last_depth: Option<usize> = None;
+        for &node_idx in &order {
+            let depth = self.nodes[node_idx].depth;
+            if last_depth.is_some_and(|d| d != depth) && col != 0 {
+                row += 1;
+                col = 0;
+            }
+            last_depth = Some(depth);
 
-            if n == 1 {
-                let node_idx = anchored[0].0;
-                self.nodes[node_idx].x = anchored[0].1;
-                self.nodes[node_idx].y = y;
-                self.nodes[node_idx].z = 0.0;
-            } else {
-                let target_mean = anchored
-                    .iter()
-                    .map(|(_, anchor)| *anchor)
-                    .sum::<f64>()
-                    / n as f64;
-                let mut assigned: Vec<(usize, f64)> = Vec::with_capacity(n);
-                for (slot, (node_idx, anchor)) in anchored.iter().enumerate() {
-                    let x = match assigned.last() {
-                        Some((_, prev_x)) => anchor.max(*prev_x + COL_SPACING),
-                        None => *anchor,
-                    };
-                    assigned.push((*node_idx, x));
+            self.nodes[node_idx].x = col as f64 * COL_SPACING;
+            self.nodes[node_idx].y = row as f64 * ROW_SPACING;
+            self.nodes[node_idx].z = 0.0;
 
-                    self.nodes[*node_idx].x = x;
-                    self.nodes[*node_idx].y = y;
-                    self.nodes[*node_idx].z = layer_stagger(slot, Z_STAGGER);
-                }
-
-                let assigned_mean = assigned
-                    .iter()
-                    .map(|(_, x)| *x)
-                    .sum::<f64>()
-                    / n as f64;
-                let shift = target_mean - assigned_mean;
-                for (node_idx, _) in assigned {
-                    self.nodes[node_idx].x += shift;
-                }
+            col += 1;
+            if col >= cols {
+                row += 1;
+                col = 0;
             }
         }
 
-        // Centre vertically around y = 0.
+        // Centre the grid on the origin.
         self.centre_y();
-
-        // Re-centre after row placement and Z staggering.
         self.centre_xz();
     }
 
