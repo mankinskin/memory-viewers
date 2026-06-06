@@ -154,8 +154,13 @@ pub fn use_sse(
         let l_upsert = EventListener::new(&es, "ticket.upsert", move |event| {
             let data = msg_data(event);
             match serde_json::from_str::<UpsertPayload>(&data) {
-                Ok(_payload) => {
-                    service_upsert.invalidate_workspace(&workspace_upsert);
+                Ok(payload) => {
+                    service_upsert.update_node_or_invalidate(
+                        &workspace_upsert,
+                        &payload.ticket.id,
+                        payload.ticket.title.as_deref(),
+                        payload.ticket.state.as_deref(),
+                    );
                     silent_upsert.set(true);
                     refresh_upsert.with_mut(|value| *value += 1);
                 },

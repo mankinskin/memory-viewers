@@ -165,7 +165,43 @@ impl GraphFetchService {
         inner.in_flight.remove(&cache_key);
         // Bump version to trigger UI updates
         let mut version = self.version;
-        version += 1;
+        *version.write() += 1;
+    }
+
+    /// Try to update a single node's visual properties (title/state) in the cache.
+    /// Falls back to full invalidate if the node doesn't exist or isn't cached.
+    pub fn update_node_or_invalidate(
+        &self,
+        workspace: &str,
+        ticket_id: &str,
+        title: Option<&str>,
+        state: Option<&str>,
+    ) {
+        let cache_key = workspace_cache_key(workspace);
+        if let Some(mut layout) = self.cache.get(&cache_key) {
+            let mut found = false;
+            for node in &mut layout.nodes {
+                if node.id == ticket_id {
+                    if let Some(t) = title {
+                        node.title = Some(t.to_string());
+                    }
+                    if let Some(s) = state {
+                        node.state = Some(s.to_string());
+                    }
+                    found = true;
+                    break;
+                }
+            }
+            if found {
+                self.cache.insert(cache_key, layout);
+                // Bump version to trigger UI updates
+                let mut version = self.version;
+                *version.write() += 1;
+                return;
+            }
+        }
+        // Fallback: full invalidation
+        self.invalidate_workspace(workspace);
     }
 
     /// Ensure a workspace-scoped graph layout will be available in the shared
