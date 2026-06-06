@@ -205,6 +205,13 @@ impl GraphLayout {
         layout
     }
 
+    fn fixed_2d_layout(&mut self) {
+        self.hierarchical_layout();
+        for nd in &mut self.nodes {
+            nd.z = 0.0;
+        }
+    }
+
     fn apply_layout_mode(
         &mut self,
         mode: LayoutMode,
@@ -1111,11 +1118,4 @@ fn layer_stagger(
 ) -> f64 {
     const OFFSETS: [f64; 7] = [0.0, 1.0, -1.0, 2.0, -2.0, 3.0, -3.0];
     OFFSETS[slot % OFFSETS.len()] * spacing
-}
-
-impl LayoutMode {
-    pub fn fixed_2d_layout(&mut self) {
-        // Implementation for Fixed2D layout logic if needed, 
-        // or just a placeholder to satisfy the call site.
-    }
 }

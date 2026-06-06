@@ -36,18 +36,30 @@ pub fn TicketDetail(
     id: String,
 ) -> Element {
     let backend = HttpTicketBackend::new(None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut ticket_fields: Signal<serde_json::Value> =
         use_signal(|| serde_json::Value::Null);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut load_error: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut editing_field: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut draft_value: Signal<String> = use_signal(String::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut save_pending: Signal<bool> = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut save_error: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut schema: Signal<Option<TypeSchema>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut visited_states: Signal<Vec<String>> = use_signal(Vec::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut transition_pending: Signal<bool> = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut transition_error: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut conflict: Signal<Option<ConflictState>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut sse_handle: Signal<SseHandle> = use_signal(|| None);
 
     use_ticket_detail_data(

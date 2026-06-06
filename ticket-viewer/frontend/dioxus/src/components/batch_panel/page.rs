@@ -24,9 +24,9 @@ pub struct BatchPanelProps {
 #[component]
 pub fn BatchPanel(props: BatchPanelProps) -> Element {
     let pending_op: Signal<Option<BulkOp>> = use_signal(|| None);
-    let mut running: Signal<bool> = use_signal(|| false);
-    let mut results: Signal<Vec<CommandResult>> = use_signal(Vec::new);
-    let mut global_error: Signal<Option<String>> = use_signal(|| None);
+    let running: Signal<bool> = use_signal(|| false);
+    let results: Signal<Vec<CommandResult>> = use_signal(Vec::new);
+    let global_error: Signal<Option<String>> = use_signal(|| None);
 
     let count = props.selected_ids.len();
     let result_rows = results.read().clone();

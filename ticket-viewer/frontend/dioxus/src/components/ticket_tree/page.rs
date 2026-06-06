@@ -31,10 +31,12 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
     let file_cache: Signal<HashMap<String, Vec<TicketFileEntry>>> =
         use_signal(HashMap::new);
     let loading_files: Signal<HashSet<String>> = use_signal(HashSet::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut focused_ticket_id: Signal<Option<String>> = use_signal(|| None);
     // Only set by keyboard navigation; the scroll effect subscribes to this
     // rather than to `focused_ticket_id` so that data refreshes and focus
     // initialisation never trigger a scroll jump.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut keyboard_scroll_request: Signal<Option<String>> =
         use_signal(|| None);
     let sorted = sorted_tickets(props.tickets.clone(), &props.sort_key);

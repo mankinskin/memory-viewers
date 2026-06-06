@@ -163,7 +163,8 @@ fn initial_camera_for_layout(
         },
         (LayoutMode::KanbanTable, None)
         | (LayoutMode::Hierarchical3D, _)
-        | (LayoutMode::Flat2D, _) => layout.bounds(),
+        | (LayoutMode::Flat2D, _)
+        | (LayoutMode::Fixed2D, _) => layout.bounds(),
     };
     camera.frame(framed_bounds.0, framed_bounds.1);
     let (yaw, pitch) = match layout_mode {
@@ -372,7 +373,6 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let workspace = props.workspace.clone();
     let root_id = props.root_id.clone();
     let on_select = props.on_select;
-    let on_hover = props.on_hover.clone();
     let on_deselect = props.on_deselect.clone();
     let selected_node_id = props.selected_node_id.clone();
     let hovered_node_id = props.hovered_node_id.clone();

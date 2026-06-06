@@ -53,13 +53,17 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
         );
     }
 
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut layout: Signal<Option<GraphLayout>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut load_error: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut fetch_trigger: Signal<u32> = use_signal(|| 0_u32);
     let pan_x: Signal<f64> = use_signal(|| 0.0_f64);
     let pan_y: Signal<f64> = use_signal(|| 0.0_f64);
     let zoom: Signal<f64> = use_signal(|| 1.0_f64);
     let drag: Signal<Option<DragState>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut sse_handle: Signal<Option<DepSseHandle>> = use_signal(|| None);
     let picker_open: Signal<bool> = use_signal(|| false);
     let remove_confirm: Signal<Option<RemoveEdge>> = use_signal(|| None);

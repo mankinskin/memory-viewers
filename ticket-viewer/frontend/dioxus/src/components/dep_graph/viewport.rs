@@ -135,13 +135,13 @@ fn render_loading_state(
 }
 
 fn render_graph_nodes(
-    workspace: String,
+    _workspace: String,
     on_select: Option<EventHandler<TicketRef>>,
     nav: Navigator,
     layout: Signal<Option<GraphLayout>>,
     pan_x: Signal<f64>,
     pan_y: Signal<f64>,
-    zoom: Signal<f64>,
+    _zoom: Signal<f64>,
     drag: Signal<Option<DragState>>,
     canvas_width: f64,
     canvas_height: f64,

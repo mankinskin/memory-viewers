@@ -29,8 +29,8 @@ pub(super) fn unique_values<F: Fn(&TicketSummary) -> &str>(
 pub(super) fn render_facet_chips(
     state_facets: &[String],
     type_facets: &[String],
-    mut state_filter: Signal<Option<String>>,
-    mut type_filter: Signal<Option<String>>,
+    state_filter: Signal<Option<String>>,
+    type_filter: Signal<Option<String>>,
 ) -> Element {
     rsx! {
         div {

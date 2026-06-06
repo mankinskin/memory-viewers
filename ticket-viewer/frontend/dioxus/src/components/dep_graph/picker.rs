@@ -18,14 +18,22 @@ pub(super) fn EdgePickerOverlay(
     mut open: Signal<bool>,
     mut fetch_trigger: Signal<u32>,
 ) -> Element {
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut picker_query: Signal<String> = use_signal(String::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut picker_results: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut picker_selected_id: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut picker_kind: Signal<String> =
         use_signal(|| "depends_on".to_string());
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut picker_reason: Signal<String> = use_signal(String::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut picker_error: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut picker_searching: Signal<bool> = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut debounce_gen: Signal<u32> = use_signal(|| 0u32);
 
     use_effect(move || {

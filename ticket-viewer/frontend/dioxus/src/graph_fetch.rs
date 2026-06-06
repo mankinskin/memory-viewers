@@ -164,7 +164,8 @@ impl GraphFetchService {
         inner.errors.remove(&cache_key);
         inner.in_flight.remove(&cache_key);
         // Bump version to trigger UI updates
-        self.version += 1;
+        let mut version = self.version;
+        version += 1;
     }
 
     /// Ensure a workspace-scoped graph layout will be available in the shared

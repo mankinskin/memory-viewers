@@ -42,13 +42,18 @@ pub fn CreateTicketModal(props: CreateTicketModalProps) -> Element {
     let nav = use_navigator();
     let backend = HttpTicketBackend::new(None);
 
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut schema_list: Signal<Option<SchemaListResponse>> =
         use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut schema_err: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut draft: Signal<DraftState> =
         use_signal(|| initial_draft(&props.prefill));
     let show_optional: Signal<bool> = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut submitting: Signal<bool> = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut submit_err: Signal<Option<String>> = use_signal(|| None);
 
     load_schemas(backend.clone(), workspace.clone(), schema_list, schema_err);

@@ -104,17 +104,21 @@ pub fn use_sse(
 ) {
     // Monotonic counter — incrementing this value re-runs the effect, which
     // drops the old `SseHandle` (closing the EventSource) and opens a fresh one.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut reconnect_gen: Signal<u32> = use_signal(|| 0_u32);
 
     // Current reconnect delay in milliseconds; doubled after each error.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut backoff_ms: Signal<u32> = use_signal(|| BACKOFF_INITIAL_MS);
 
     // Keeps the live `SseHandle` alive for the component's lifetime.
     // The Option allows us to drop it explicitly before creating the next one.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut handle: Signal<Option<SseHandle>> = use_signal(|| None);
 
     // Owns the pending reconnect timer so it can be cancelled on rerender or
     // unmount instead of firing after the hook has been torn down.
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut retry_timer: Signal<Option<Timeout>> = use_signal(|| None);
 
     use_effect(move || {

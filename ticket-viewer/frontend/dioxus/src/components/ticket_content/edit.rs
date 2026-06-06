@@ -6,6 +6,7 @@ use crate::api::{
     TicketBackend,
 };
 
+#[allow(unused_mut)]
 pub(super) fn render_edit_panel(
     workspace: String,
     ticket_id: String,

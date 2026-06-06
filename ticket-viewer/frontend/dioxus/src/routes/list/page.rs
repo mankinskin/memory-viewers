@@ -64,21 +64,33 @@ pub fn TicketListPage(workspace: String) -> Element {
         store.persist(&workspace_persist);
     });
 
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut sidebar_collapsed = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut mobile_sidebar_open = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut show_theme_settings = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut workflow_mode: Signal<Option<WorkflowSidebarMode>> =
         use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut workflow_root_ticket: Signal<Option<TicketRef>> =
         use_signal(|| None);
 
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut tickets: Signal<Vec<TicketSummary>> = use_signal(Vec::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut loading: Signal<bool> = use_signal(|| true);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut list_error: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut workspace_label: Signal<String> = use_signal(|| workspace.clone());
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut selected_ticket = store.open_ticket;
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut graph_root_ticket: Signal<Option<TicketRef>> =
         use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut graph_content_ticket: Signal<Option<TicketRef>> =
         use_signal(|| None);
     use_effect(move || {
@@ -98,23 +110,39 @@ pub fn TicketListPage(workspace: String) -> Element {
         }
         graph_content_ticket.set(None);
     });
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut filter = store.filter;
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut state_filter = store.state_filter;
     let sort_key = store.sort_key;
 
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut selected_ids: Signal<Vec<String>> = use_signal(Vec::new);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut show_checkboxes: Signal<bool> = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut refresh_counter: Signal<u32> = use_signal(|| 0);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut silent_refresh: Signal<bool> = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut list_request_seq: Signal<u64> = use_signal(|| 0);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut workspace_label_request_seq: Signal<u64> = use_signal(|| 0);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut view_mode: Signal<String> = use_signal(|| "split".to_string());
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut graph_layout_mode: Signal<LayoutMode> =
         use_signal(|| LayoutMode::Hierarchical3D);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut graph_projection: Signal<Projection> =
         use_signal(|| Projection::Orthographic);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
+    let mut graph_hover_id: Signal<Option<String>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut graph_panel_width: Signal<f64> = use_signal(|| 320.0_f64);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut detail_panel_width: Signal<f64> = use_signal(|| 240.0_f64);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut selected_file: Signal<Option<(TicketRef, String)>> =
         use_signal(|| None);
     #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
@@ -122,7 +150,9 @@ pub fn TicketListPage(workspace: String) -> Element {
     #[cfg(target_arch = "wasm32")]
     let mut resize_guard: Signal<Option<gloo_events::EventListener>> =
         use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut detail_panel_override: Signal<Option<bool>> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut graph_panel_override: Signal<Option<bool>> = use_signal(|| None);
 
     {
