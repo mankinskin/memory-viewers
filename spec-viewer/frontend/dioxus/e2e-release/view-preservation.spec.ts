@@ -171,7 +171,7 @@ test.describe('spec-viewer - detail view preservation', () => {
     await page.getByRole('button', { name: 'Sections' }).click();
     const sourceUrl = await expectSectionsView(page);
 
-    await page.getByRole('link', { name: '📐 Specs' }).click();
+    await page.getByRole('link', { name: 'Specs', exact: true }).click();
     await expect
       .poll(() => page.url(), {
         timeout: 15_000,
@@ -202,7 +202,7 @@ test.describe('spec-viewer - detail view preservation', () => {
     await page.getByRole('button', { name: 'Sections' }).click();
     await expectSectionsView(page);
 
-    await page.getByRole('link', { name: '📐 Specs' }).click();
+    await page.getByRole('link', { name: 'Specs', exact: true }).click();
     await expect
       .poll(() => page.url(), {
         timeout: 15_000,

@@ -137,8 +137,6 @@ pub fn TicketListPage(workspace: String) -> Element {
     let mut graph_projection: Signal<Projection> =
         use_signal(|| Projection::Orthographic);
     #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
-    let mut graph_hover_id: Signal<Option<String>> = use_signal(|| None);
-    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut graph_panel_width: Signal<f64> = use_signal(|| 320.0_f64);
     #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut detail_panel_width: Signal<f64> = use_signal(|| 240.0_f64);
@@ -463,7 +461,6 @@ pub fn TicketListPage(workspace: String) -> Element {
                         graph_root_ticket,
                         tickets,
                         graph_content_ticket,
-                        graph_hover_id,
                         view_mode,
                         graph_panel_collapsed,
                         detail_is_collapsed,

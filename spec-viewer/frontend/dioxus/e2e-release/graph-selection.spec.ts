@@ -27,19 +27,22 @@ test.describe('spec-viewer - graph selection', () => {
     await expect(edgeOverlay).toBeVisible({ timeout: 10_000 });
 
     const metrics = await page.evaluate(() => {
-      const lines = Array.from(document.querySelectorAll('#spec-graph3d-container .graph-edge-overlay line'));
-      const visibleLines = lines.filter((line) => line.getAttribute('display') !== 'none');
-      const lengths = visibleLines.map((line) => {
-        const x1 = Number(line.getAttribute('x1') ?? '0');
-        const y1 = Number(line.getAttribute('y1') ?? '0');
-        const x2 = Number(line.getAttribute('x2') ?? '0');
-        const y2 = Number(line.getAttribute('y2') ?? '0');
+      const paths = Array.from(document.querySelectorAll('#spec-graph3d-container .graph-edge-overlay path'));
+      const visiblePaths = paths.filter((path) => path.getAttribute('display') !== 'none');
+      const lengths = visiblePaths.map((path) => {
+        const d = path.getAttribute('d') ?? '';
+        const parts = d.match(/-?\d+\.?\d*/g);
+        if (!parts || parts.length < 8) return 0;
+        const x1 = Number(parts[0]);
+        const y1 = Number(parts[1]);
+        const x2 = Number(parts[6]); // 4th point in the path (the tip of the arrow)
+        const y2 = Number(parts[7]);
         return Math.hypot(x2 - x1, y2 - y1);
       });
 
       return {
-        visibleCount: visibleLines.length,
-        markerCount: visibleLines.filter((line) => Boolean(line.getAttribute('marker-end'))).length,
+        visibleCount: visiblePaths.length,
+        markerCount: visiblePaths.length, // The path draws the arrow directly as a polygon, preserving the directional marker.
         maxLength: Math.max(...lengths, 0),
       };
     });
