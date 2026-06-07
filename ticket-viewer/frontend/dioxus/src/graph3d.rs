@@ -168,8 +168,10 @@ fn initial_camera_for_layout(
     };
     camera.frame(framed_bounds.0, framed_bounds.1);
     let (yaw, pitch) = match layout_mode {
-        LayoutMode::Hierarchical3D => (0.78_f32, 0.62_f32),
-        LayoutMode::Flat2D => (0.78_f32, 0.72_f32),
+        // Look perfectly flat (head-on) at the grid so the whole layout is
+        // visible without foreshortening.
+        LayoutMode::Hierarchical3D => (0.0_f32, 0.0_f32),
+        LayoutMode::Flat2D => (0.0_f32, 0.0_f32),
         LayoutMode::KanbanTable => (0.78_f32, 0.72_f32),
         LayoutMode::Fixed2D => (0.0_f32, 1.5708_f32), // Top-down
     };

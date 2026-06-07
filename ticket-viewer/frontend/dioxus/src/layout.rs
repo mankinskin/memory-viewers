@@ -124,6 +124,33 @@ fn priority_order(p: Option<&str>) -> u32 {
     }
 }
 
+/// Aspect ratio (width / height) of the current viewport, used to shape the
+/// hierarchical grid so its footprint matches the screen.
+///
+/// On wasm this reads the live browser window size; elsewhere (and as a safe
+/// fallback when the window size is unavailable) it returns a 16:9 default.
+fn viewport_aspect_ratio() -> f64 {
+    #[cfg(target_arch = "wasm32")]
+    {
+        if let Some(win) = web_sys::window() {
+            let w = win
+                .inner_width()
+                .ok()
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            let h = win
+                .inner_height()
+                .ok()
+                .and_then(|v| v.as_f64())
+                .unwrap_or(0.0);
+            if w > 0.0 && h > 0.0 {
+                return w / h;
+            }
+        }
+    }
+    16.0 / 9.0
+}
+
 // ── Layout construction ────────────────────────────────────────────────────
 
 impl GraphLayout {
@@ -1058,6 +1085,7 @@ mod tests {
     }
 }
 
+#[allow(dead_code)]
 fn parent_anchor(
     nodes: &[GraphNode],
     parents_by_child: &HashMap<usize, Vec<usize>>,
