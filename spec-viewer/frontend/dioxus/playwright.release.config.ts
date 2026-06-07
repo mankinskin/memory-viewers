@@ -21,8 +21,17 @@ export default defineConfig({
 
   use: {
     ...devices['Desktop Chrome'],
-    headless: true,
+    channel: 'chrome',
+    headless: false,
     trace: 'on-first-retry',
+    launchOptions: {
+      args: [
+        '--enable-unsafe-webgpu',
+        '--use-angle=swiftshader',
+        '--disable-gpu-sandbox',
+        '--ignore-gpu-blocklist',
+      ],
+    },
   },
 
   webServer: {

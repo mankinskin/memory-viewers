@@ -100,3 +100,6 @@ percent-encoding = "2"
 # Logging in WASM
 tracing = "0.1"
 tracing-wasm = "0.2"
+
+[features]
+profile-browser = ["viewer-api-dioxus/profile-browser"]

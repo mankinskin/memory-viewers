@@ -53,3 +53,6 @@ pulldown-cmark = { version = "0.12", default-features = false, features = ["html
 # Logging in WASM
 tracing = "0.1"
 tracing-wasm = "0.2"
+
+[features]
+profile-browser = ["viewer-api-dioxus/profile-browser"]
