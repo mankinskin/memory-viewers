@@ -5,7 +5,7 @@ The ticket-viewer list route exposes a confusing header action set. The route wi
 ## Evidence
 
 - `memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/page.rs` wires `on_home` and `on_theme_toggle` on `PageHeader` for the list route.
-- `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/components/header.rs` renders `on_theme_toggle` as an `InfoIcon` button titled `Theme settings`.
+- `viewer-api/viewer-api/frontend/dioxus/src/components/header.rs` renders `on_theme_toggle` as an `InfoIcon` button titled `Theme settings`.
 - Existing ticket-viewer specs cover explorer interactions and theme-settings content, but not which header actions belong on the list route.
 
 ## Scope
@@ -35,7 +35,7 @@ This is Track A in the ticket-viewer shell plan and may run in parallel with the
 4. Keep a working theme-settings action in the header.
 5. Remove header actions that are no-ops on the root list route.
 6. If ticket-viewer retains an info/help affordance, implement a visible ticket-viewer help/about surface; otherwise do not render that affordance.
-7. If the fix requires changing shared `PageHeader` / `HeaderActions` semantics, coordinate the minimal upstream change with `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/.ticket/tickets/bb1c32f5-5275-4e4f-85ae-a0fba09c522a`.
+7. If the fix requires changing shared `PageHeader` / `HeaderActions` semantics, coordinate the minimal upstream change with `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/viewer-api/.ticket/tickets/bb1c32f5-5275-4e4f-85ae-a0fba09c522a`.
 
 ## Rigorous test design required before implementation
 

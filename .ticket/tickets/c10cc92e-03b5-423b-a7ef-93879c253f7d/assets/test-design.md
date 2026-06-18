@@ -14,8 +14,8 @@ Define the pre-implementation validation contract for restoring long-list sideba
   - `memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_tree/page.rs`
   - `memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_tree/rows.rs`
 - Shared shell/layout source:
-  - `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/components/layout/sidebar.rs`
-  - `memory-viewers/viewer-api/viewer-api/frontend/dioxus/public/css/layout.css`
+  - `viewer-api/viewer-api/frontend/dioxus/src/components/layout/sidebar.rs`
+  - `viewer-api/viewer-api/frontend/dioxus/public/css/layout.css`
 
 ## Baseline preparation
 

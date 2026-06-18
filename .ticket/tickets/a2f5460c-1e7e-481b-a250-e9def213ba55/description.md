@@ -11,7 +11,7 @@ Research against the current Dioxus ticket-viewer shows the explorer still has t
 - `memory-viewers/ticket-viewer/frontend/dioxus/src/store.rs` persists `state_filter` as `String`.
 - `memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/page.rs` sends only one `state` value to `list_tickets(...)`.
 - `memory-viewers/ticket-viewer/frontend/dioxus/src/components/ticket_tree/header.rs` compares chips against a single active value.
-- `memory-viewers/memory-api/tools/http/ticket-http/src/serve/handlers/tickets/read.rs` takes the `query` branch and ignores `params.state` entirely.
+- `memory-api/tools/http/ticket-http/src/serve/handlers/tickets/read.rs` takes the `query` branch and ignores `params.state` entirely.
 - `memory-viewers/ticket-viewer/frontend/dioxus/src/components/search/results.rs` supports hover/click only; `Enter` does not activate a keyboard-focused result because no keyboard focus model exists.
 
 ## Scope

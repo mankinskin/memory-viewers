@@ -37,13 +37,13 @@ persisted to `viewer-api-gpu-enabled` localStorage.
 <!-- spec-api:entry id=e687195a-467a-4175-886a-c6c9040cadee slug=spec-viewer/theme-settings/spec-viewer-theme-settings/implementation-pointers/l31 -->
 ## Implementation pointers
 
-- Panel lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/components/theme_settings.rs`
+- Panel lives in `viewer-api/viewer-api/frontend/dioxus/src/components/theme_settings.rs`
   (shared component, mounted by the spec-viewer's settings page).
 - Store factory: `ThemeStore::new()` in
-  `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/store/theme.rs` with
+  `viewer-api/viewer-api/frontend/dioxus/src/store/theme.rs` with
   `gpu_enabled: true` default.
 - The spec-viewer Trunk shell in `memory-viewers/spec-viewer/frontend/dioxus/index.html` MUST load the shared `modal.css` bundle in addition to `glass-panel.css` and `theme-settings.css`.
-- Shared modal CSS lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/public/css/modal.css`.
+- Shared modal CSS lives in `viewer-api/viewer-api/frontend/dioxus/public/css/modal.css`.
 
 <!-- spec-api:entry id=3ebc9c2a-0eb1-426f-a2dd-a622bca61c25 slug=spec-viewer/theme-settings/spec-viewer-theme-settings/validation/l41 -->
 ## Validation

@@ -37,14 +37,14 @@ WebGPU regardless of the master toggle (it owns the canvas via `GPU_CANVAS_OWNER
 <!-- spec-api:entry id=b95c38f7-7cd6-47d5-9ecf-d13645e0bf29 slug=ticket-viewer/theme-settings/ticket-viewer-theme-settings/implementation-pointers/l31 -->
 ## Implementation pointers
 
-- Panel lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/components/theme_settings.rs`
+- Panel lives in `viewer-api/viewer-api/frontend/dioxus/src/components/theme_settings.rs`
   (shared component).
-- Store: `ThemeStore` in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/store/theme.rs` with
+- Store: `ThemeStore` in `viewer-api/viewer-api/frontend/dioxus/src/store/theme.rs` with
   `gpu_enabled: true` default.
 - The ticket-viewer Trunk shell in `memory-viewers/ticket-viewer/frontend/dioxus/index.html` MUST load the shared `modal.css` bundle in addition to `glass-panel.css` and `theme-settings.css`.
-- Shared modal CSS lives in `memory-viewers/viewer-api/viewer-api/frontend/dioxus/public/css/modal.css`.
+- Shared modal CSS lives in `viewer-api/viewer-api/frontend/dioxus/public/css/modal.css`.
 - Canvas ownership arbitration with graph3d: `GPU_CANVAS_OWNER` thread-local in
-  `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/effects/mod.rs`.
+  `viewer-api/viewer-api/frontend/dioxus/src/effects/mod.rs`.
 
 <!-- spec-api:entry id=a22fae2d-f471-4cd9-8241-5f1607d235fb slug=ticket-viewer/theme-settings/ticket-viewer-theme-settings/validation/l42 -->
 ## Validation

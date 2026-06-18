@@ -27,7 +27,7 @@ Introduce multiple graph node detail levels so zoomed-out views stay legible and
 
 ## Validation
 
-- passed `cargo test --manifest-path memory-viewers/viewer-api/viewer-api/frontend/dioxus/Cargo.toml node_detail_`
+- passed `cargo test --manifest-path viewer-api/viewer-api/frontend/dioxus/Cargo.toml node_detail_`
 - passed `viewer-ctl stop ticket-viewer && cd memory-viewers/ticket-viewer/frontend/dioxus && npm run test:e2e:release -- graph-detail-sidebar.spec.ts`
 
 ## Documentation

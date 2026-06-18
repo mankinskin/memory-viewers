@@ -11,7 +11,7 @@ That split makes ownership, maintenance, and validation inconsistent. The ticket
 
 - `tools/viewer/e2e/playwright.config.ts` starts managed viewer servers from the main repo and includes `ticket-viewer` on port `3002`.
 - `tools/viewer/e2e/tests/viewers/ticket-viewer.spec.ts` is only a thin wrapper that registers shared suites: `registerCommonViewerSuite(TICKET_VIEWER)` and `registerDioxusThemeSuite(TICKET_VIEWER)`.
-- `tools/viewer/e2e/tests/shared/suites/common-viewer-suite.ts` already imports shared smoke helpers from `memory-viewers/viewer-api/.../e2e/test_apis`, so the centralized ticket-viewer suite already depends on memory-viewers-owned code.
+- `tools/viewer/e2e/tests/shared/suites/common-viewer-suite.ts` already imports shared smoke helpers from `viewer-api/.../e2e/test_apis`, so the centralized ticket-viewer suite already depends on memory-viewers-owned code.
 - `memory-viewers/ticket-viewer/frontend/dioxus/playwright.config.ts` already defines a local Playwright setup and `npm run test:e2e` entrypoint for ticket-viewer-owned browser tests.
 - `Makefile.toml` still routes `cargo make test-e2e` through `tools/viewer/e2e`.
 - `memory-viewers/AGENTS.md` still says viewer E2E tests live under `tools/viewer/e2e`.

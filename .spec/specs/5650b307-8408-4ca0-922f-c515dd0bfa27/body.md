@@ -52,7 +52,7 @@ Primary ticket: `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-e
 3. Keep a working theme-settings affordance.
 4. Remove header actions that are no-ops on the root list route.
 5. If an info/help affordance remains, it must open a visible ticket-viewer help/about surface.
-6. If ticket-viewer needs a different shared header semantic, coordinate the minimal upstream change with `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/.ticket/tickets/bb1c32f5-5275-4e4f-85ae-a0fba09c522a`.
+6. If ticket-viewer needs a different shared header semantic, coordinate the minimal upstream change with `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/viewer-api/.ticket/tickets/bb1c32f5-5275-4e4f-85ae-a0fba09c522a`.
 
 ### Track B — sidebar tree parity and long-list scrolling
 
@@ -71,7 +71,7 @@ Related tickets:
 - `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/a2f5460c-1e7e-481b-a250-e9def213ba55`
 - `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/0b7da330-a38d-49e5-853c-cf1d40633b6f`
 - `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/f121b24b-61b0-41b4-9567-8ffc2417d7cb`
-- `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/.ticket/tickets/cccf5d99-d7e9-43e6-8aea-90480ad3cf0d`
+- `C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-api/.ticket/tickets/cccf5d99-d7e9-43e6-8aea-90480ad3cf0d`
 
 1. Keep query/state semantics, multi-state chips, and keyboard navigation in their existing tickets.
 2. Tracks A and B may run in parallel with this explorer work, but should not absorb those semantics into the shell tickets.
@@ -130,5 +130,5 @@ No shell or explorer implementation should begin until the responsible ticket re
 - Related existing ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/a2f5460c-1e7e-481b-a250-e9def213ba55
 - Related existing ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/0b7da330-a38d-49e5-853c-cf1d40633b6f
 - Related existing ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/.ticket/tickets/f121b24b-61b0-41b4-9567-8ffc2417d7cb
-- Related existing ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/memory-api/.ticket/tickets/cccf5d99-d7e9-43e6-8aea-90480ad3cf0d
-- Related upstream ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-viewers/viewer-api/.ticket/tickets/bb1c32f5-5275-4e4f-85ae-a0fba09c522a
+- Related existing ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/memory-api/.ticket/tickets/cccf5d99-d7e9-43e6-8aea-90480ad3cf0d
+- Related upstream ticket: C:/Users/linus_behrbohm/git/SECOND_CHECKOUT/graph_app/context-engine/viewer-api/.ticket/tickets/bb1c32f5-5275-4e4f-85ae-a0fba09c522a

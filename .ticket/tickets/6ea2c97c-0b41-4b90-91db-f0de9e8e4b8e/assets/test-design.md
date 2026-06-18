@@ -11,7 +11,7 @@ Define the exact validation contract for ticket-viewer root-route header actions
 
 - Managed release viewer route: `http://127.0.0.1:3002/workspace/default`
 - Root shell source: `memory-viewers/ticket-viewer/frontend/dioxus/src/routes/list/page.rs`
-- Shared header source: `memory-viewers/viewer-api/viewer-api/frontend/dioxus/src/components/header.rs`
+- Shared header source: `viewer-api/viewer-api/frontend/dioxus/src/components/header.rs`
 
 ## Baseline preparation
 
