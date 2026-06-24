@@ -13,7 +13,7 @@ dioxus = { version = "0.7", default-features = false, features = ["minimal", "ro
 dioxus-web = { version = "0.7", default-features = false, features = ["document", "mounted"] }
 
 # Shared viewer-api platform shell (WebGPU canvas + overlay layout)
-viewer-api-dioxus = { path = "../../../viewer-api/viewer-api/frontend/dioxus" }
+viewer-api-dioxus = { path = "../../../../viewer-api/viewer-api/frontend/dioxus" }
 
 # HTTP client for the browser fetch API
 gloo-net = { version = "0.6", features = ["http"] }
