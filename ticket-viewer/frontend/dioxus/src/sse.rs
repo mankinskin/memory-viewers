@@ -149,17 +149,23 @@ pub fn use_sse(
         // filters remain authoritative.
         let mut refresh_upsert = refresh_counter;
         let mut silent_upsert = silent_refresh;
+        // The graph-layout fetch service only exists on wasm32 (see `main.rs`),
+        // so gate its acquisition and use consistently with the rest of the
+        // crate. On native builds the SSE path still updates the list counters.
+        #[cfg(target_arch = "wasm32")]
         let service_upsert = use_context::<crate::graph_fetch::GraphFetchService>();
+        #[cfg(target_arch = "wasm32")]
         let workspace_upsert = workspace.clone();
         let l_upsert = EventListener::new(&es, "ticket.upsert", move |event| {
             let data = msg_data(event);
             match serde_json::from_str::<UpsertPayload>(&data) {
-                Ok(payload) => {
+                Ok(_payload) => {
+                    #[cfg(target_arch = "wasm32")]
                     service_upsert.update_node_or_invalidate(
                         &workspace_upsert,
-                        &payload.ticket.id,
-                        payload.ticket.title.as_deref(),
-                        payload.ticket.state.as_deref(),
+                        &_payload.ticket.id,
+                        _payload.ticket.title.as_deref(),
+                        _payload.ticket.state.as_deref(),
                     );
                     silent_upsert.set(true);
                     refresh_upsert.with_mut(|value| *value += 1);
