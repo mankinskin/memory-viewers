@@ -1,7 +1,7 @@
 id = "1f39ba8f-650b-417d-b664-1878f08af669"
 created_at = "2026-05-25T20:57:10.348209400+00:00"
 title = "[ticket-viewer] Add graph review E2E coverage"
-state = "in-implementation"
+state = "in-review"
 acceptance_criteria = "1. Graph browser coverage exercises default hierarchical/isometric layout, layout switching, and restoration of the default layout. 2. Graph browser coverage exercises zoom-driven node LOD changes and verifies the active node remains rich while smaller tiers remain interactive. 3. The added coverage runs in the existing ticket-viewer release Playwright suite."
 component = "ticket-viewer"
 implementation_summary = "Extended the graph-detail-sidebar Playwright release suite with a layout/projection restore regression that switches away from the default hierarchical orthographic view and verifies the graph returns to top-to-bottom hierarchy ordering, plus zoom-driven LOD coverage that proves compact or minimal graph nodes remain clickable and promote the selected node back to rich detail."
