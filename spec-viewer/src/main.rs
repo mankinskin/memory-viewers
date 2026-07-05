@@ -30,7 +30,8 @@ use viewer_api::{
         ClientLogState,
     },
     display_host,
-    init_tracing,
+    init_tracing_full,
+    TracingConfig,
     with_static_files,
 };
 
@@ -115,7 +116,26 @@ async fn shutdown_signal() {
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let options = parse_cli_options();
 
-    init_tracing("info");
+    let workspace_root = std::env::var("WORKSPACE_ROOT")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| {
+            let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            manifest_dir
+                .parent() // memory-viewers/
+                .and_then(|p| p.parent()) // context-engine/
+                .map(|p| p.to_path_buf())
+                .unwrap_or(manifest_dir)
+        });
+    let default_log_dir = workspace_root.join("target").join("logs");
+    let log_dir = std::env::var("LOG_DIR")
+        .map(PathBuf::from)
+        .unwrap_or(default_log_dir);
+    let level = std::env::var("LOG_LEVEL")
+        .unwrap_or_else(|_| "info".to_string());
+    let config = TracingConfig::default()
+        .with_level(level)
+        .with_file_logging(log_dir, "spec-viewer");
+    init_tracing_full(&config);
     info!(
         port = options.port,
         static_dir = %options.static_dir.display(),
