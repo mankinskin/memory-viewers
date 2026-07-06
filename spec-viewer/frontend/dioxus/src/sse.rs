@@ -97,8 +97,8 @@ fn msg_data(event: &web_sys::Event) -> String {
 ///
 /// * `specs` — the displayed spec list; mutated on `spec.updated` / `spec.deleted`.
 pub fn use_sse(specs: Signal<Vec<SpecSummary>>) {
-    let mut reconnect_gen: Signal<u32> = use_signal(|| 0_u32);
-    let mut backoff_ms: Signal<u32> = use_signal(|| BACKOFF_INITIAL_MS);
+    let reconnect_gen: Signal<u32> = use_signal(|| 0_u32);
+    let backoff_ms: Signal<u32> = use_signal(|| BACKOFF_INITIAL_MS);
     let mut handle: Signal<Option<SseHandle>> = use_signal(|| None);
 
     use_effect(move || {

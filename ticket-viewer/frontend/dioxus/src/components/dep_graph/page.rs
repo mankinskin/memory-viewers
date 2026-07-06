@@ -1,5 +1,4 @@
 use dioxus::prelude::*;
-use dioxus_router::Navigator;
 
 use crate::{
     api::{
@@ -7,7 +6,6 @@ use crate::{
         TicketBackend,
     },
     layout::GraphLayout,
-    types::TicketRef,
 };
 
 use super::{
@@ -15,7 +13,6 @@ use super::{
         EdgeListSidebar,
         RemoveEdgeDialog,
     },
-    interactions::select_node_or_navigate,
     picker::EdgePickerOverlay,
     state::{
         subscribe_sse,
@@ -32,11 +29,11 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
     let workspace = props.workspace.clone();
     let root_id = props.root_id.clone();
     let on_select = props.on_select.clone();
-    let on_hover = props.on_hover.clone();
-    let on_deselect = props.on_deselect.clone();
-    let selected_node_id = props.selected_node_id.clone();
-    let hovered_node_id = props.hovered_node_id.clone();
-    let nav = use_navigator();
+    let _on_hover = props.on_hover.clone();
+    let _on_deselect = props.on_deselect.clone();
+    let _selected_node_id = props.selected_node_id.clone();
+    let _hovered_node_id = props.hovered_node_id.clone();
+    let _nav = use_navigator();
 
     #[cfg(target_arch = "wasm32")]
     if crate::graph3d::can_use_webgpu() {

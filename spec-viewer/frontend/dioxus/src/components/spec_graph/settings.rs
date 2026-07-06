@@ -15,8 +15,8 @@ use super::model::{
 
 pub(super) fn render_graph_settings_panel(
     mut store: SpecGraphStore,
-    mut camera_cmd: Signal<Option<CameraCommand>>,
-    mut camera_seq: Signal<u64>,
+    camera_cmd: Signal<Option<CameraCommand>>,
+    camera_seq: Signal<u64>,
 ) -> Element {
     let draft_algo = *store.draft_algo.read();
     let draft_params = *store.draft_params.read();

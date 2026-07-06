@@ -58,13 +58,13 @@ struct CameraFocusRequest {
 pub fn SpecGraphPage() -> Element {
     let mut store = use_context::<SpecGraphStore>();
     let navigation_store = use_context::<crate::store::SpecNavigationStore>();
-    let mut camera_cmd: Signal<Option<CameraCommand>> = use_signal(|| None);
-    let mut camera_seq: Signal<u64> = use_signal(|| 0);
-    let mut last_cam_algo: Signal<LayoutAlgorithm> =
+    let camera_cmd: Signal<Option<CameraCommand>> = use_signal(|| None);
+    let camera_seq: Signal<u64> = use_signal(|| 0);
+    let last_cam_algo: Signal<LayoutAlgorithm> =
         use_hook(|| Signal::new(LayoutAlgorithm::ForceDirected));
-    let mut last_focus_request: Signal<Option<CameraFocusRequest>> =
+    let last_focus_request: Signal<Option<CameraFocusRequest>> =
         use_hook(|| Signal::new(None));
-    let mut applied_frustum_context: Signal<Option<FrustumLayoutContext>> =
+    let applied_frustum_context: Signal<Option<FrustumLayoutContext>> =
         use_hook(|| Signal::new(None));
     let mut preview_id: Signal<Option<String>> = use_signal(|| None);
     let hovered_id: Signal<Option<String>> = use_signal(|| None);
@@ -303,8 +303,8 @@ fn current_viewport_size(_viewport_insets: [f32; 4]) -> Option<(f32, f32)> {
 fn sync_camera_for_algorithm(
     store: SpecGraphStore,
     mut last_cam_algo: Signal<LayoutAlgorithm>,
-    mut camera_cmd: Signal<Option<CameraCommand>>,
-    mut camera_seq: Signal<u64>,
+    camera_cmd: Signal<Option<CameraCommand>>,
+    camera_seq: Signal<u64>,
 ) {
     let current_algo = *store.committed_algo.read();
     if current_algo == *last_cam_algo.peek() {
@@ -324,8 +324,8 @@ fn sync_camera_for_selected_node(
     layout: &Layout3D,
     selected_node_id: Option<&str>,
     mut last_focus_request: Signal<Option<CameraFocusRequest>>,
-    mut camera_cmd: Signal<Option<CameraCommand>>,
-    mut camera_seq: Signal<u64>,
+    camera_cmd: Signal<Option<CameraCommand>>,
+    camera_seq: Signal<u64>,
 ) {
     let center_camera_on_selected_node =
         *store.center_camera_on_selected_node.read();
