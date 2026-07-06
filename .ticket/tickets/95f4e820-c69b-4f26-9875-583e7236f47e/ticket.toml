@@ -1,0 +1,8 @@
+id = "95f4e820-c69b-4f26-9875-583e7236f47e"
+created_at = "2026-07-06T01:00:30.490244700+00:00"
+title = "[audit-roadmap][ticket_graph][batch-4][slice-3] Retro-link orphan chunk-3 (6 memory-viewers tickets)"
+state = "new"
+depends_on = ["1f39ba8f-650b-417d-b664-1878f08af669", "3e7f4202-13f9-4daf-be91-3875fde8fce8", "5185921d-1fea-409d-98eb-6d57e4b5502a", "57efb581-3b7e-4c94-a0ec-798dbfc49527", "593b094d-fcaa-43c4-a693-2ccec4fbc0b4", "6ea2c97c-0b41-4b90-91db-f0de9e8e4b8e"]
+effort = "90"
+priority = "medium"
+type = "tracker-improvement"
