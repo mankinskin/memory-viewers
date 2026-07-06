@@ -85,6 +85,7 @@ pub enum Route {
 }
 
 impl Route {
+    #[allow(dead_code)]
     pub fn spec_detail(
         id: impl Into<String>,
         view: Option<&str>,

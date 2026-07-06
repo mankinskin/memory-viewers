@@ -16,6 +16,7 @@ pub struct SpecSummary {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct SpecListResponse {
     pub count: usize,
     pub items: Vec<SpecSummary>,
@@ -46,6 +47,7 @@ pub struct SpecDetail {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct SpecDetailResponse {
     pub spec: SpecDetail,
 }
@@ -62,6 +64,7 @@ pub struct SpecFullResponse {
 // ── Sections ──────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct SectionsResponse {
     pub spec: String,
     pub count: usize,
@@ -69,6 +72,7 @@ pub struct SectionsResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct SectionResponse {
     pub spec: String,
     pub name: String,
@@ -78,6 +82,7 @@ pub struct SectionResponse {
 // ── Tree ──────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, PartialEq, Deserialize)]
+#[allow(dead_code)]
 pub struct TreeNode {
     pub id: String,
     pub slug: Option<String>,
@@ -88,6 +93,7 @@ pub struct TreeNode {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct SpecTreeResponse {
     pub root: TreeNode,
     pub descendants: Vec<TreeNode>,
@@ -96,6 +102,7 @@ pub struct SpecTreeResponse {
 // ── Search ───────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct SearchResponse {
     pub count: usize,
     pub items: Vec<SpecSummary>,
@@ -104,6 +111,7 @@ pub struct SearchResponse {
 // ── Health ────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct HealthIssue {
     pub id: String,
     pub issue: String,
@@ -166,6 +174,7 @@ pub struct SseSpec {
 // ── State colours ─────────────────────────────────────────────────────────────
 
 /// Returns `(background, foreground)` CSS colour pair for a state badge.
+#[allow(dead_code)]
 pub fn state_colors(state: &str) -> (&'static str, &'static str) {
     match state {
         "draft" => ("#4b5563", "#d1d5db"),
@@ -178,6 +187,7 @@ pub fn state_colors(state: &str) -> (&'static str, &'static str) {
 }
 
 /// Returns a CSS accent colour for a state (used for left-border / ring).
+#[allow(dead_code)]
 pub fn state_accent(state: Option<&str>) -> &'static str {
     match state.unwrap_or("") {
         "draft" => "#6b7280",

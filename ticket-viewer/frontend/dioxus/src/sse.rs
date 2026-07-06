@@ -32,6 +32,7 @@ use crate::types::TicketSummary;
 
 /// Minimal ticket snapshot embedded in `ticket.upsert` events.
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct SseTicket {
     id: String,
     state: Option<String>,
@@ -40,12 +41,14 @@ struct SseTicket {
 
 /// Data payload for `ticket.upsert` SSE events.
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct UpsertPayload {
     ticket: SseTicket,
 }
 
 /// Data payload for `ticket.delete` SSE events.
 #[derive(Debug, Deserialize)]
+#[allow(dead_code)]
 struct DeletePayload {
     /// UUID of the deleted ticket, serialised as a string by the server.
     id: String,

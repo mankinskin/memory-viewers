@@ -78,6 +78,7 @@ pub async fn list_specs(
 
 // ── Spec search ───────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 pub async fn search_specs(
     q: &str,
     limit: Option<u32>,
@@ -90,6 +91,7 @@ pub async fn search_specs(
 
 // ── Spec detail ───────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 pub async fn get_spec(id: &str) -> Result<SpecDetailResponse, String> {
     let base = api_base();
     let id_enc = utf8_percent_encode(id, NON_ALPHANUMERIC);
@@ -104,6 +106,7 @@ pub async fn get_spec_full(id: &str) -> Result<SpecFullResponse, String> {
 
 // ── Tree ──────────────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 pub async fn get_tree(id: &str) -> Result<SpecTreeResponse, String> {
     let base = api_base();
     let id_enc = utf8_percent_encode(id, NON_ALPHANUMERIC);
@@ -112,6 +115,7 @@ pub async fn get_tree(id: &str) -> Result<SpecTreeResponse, String> {
 
 // ── Sections ─────────────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 pub async fn list_sections(id: &str) -> Result<SectionsResponse, String> {
     let base = api_base();
     let id_enc = utf8_percent_encode(id, NON_ALPHANUMERIC);

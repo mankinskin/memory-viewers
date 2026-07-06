@@ -29,6 +29,7 @@ use crate::{
 
 // ── localStorage key ──────────────────────────────────────────────────────────
 
+#[allow(dead_code)]
 fn ls_key() -> &'static str {
     "spec-viewer:ui"
 }

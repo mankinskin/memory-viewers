@@ -29,6 +29,7 @@ pub trait TicketBackend {
         id: &str,
     ) -> impl std::future::Future<Output = Result<TicketDescriptionResponse, String>>;
 
+    #[allow(dead_code)]
     fn get_subgraph(
         &self,
         workspace: &str,

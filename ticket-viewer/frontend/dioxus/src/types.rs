@@ -104,6 +104,7 @@ impl TicketSummary {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct TicketsResponse {
     #[serde(default)]
     pub active_workspace: String,
@@ -137,6 +138,7 @@ impl TicketDetail {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct TicketDetailResponse {
     #[serde(default)]
     pub active_workspace: String,
@@ -145,6 +147,7 @@ pub struct TicketDetailResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct TicketDescriptionResponse {
     pub id: String,
     #[serde(default)]
@@ -168,6 +171,7 @@ pub struct TicketFileEntry {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct TicketFilesResponse {
     pub id: String,
     #[serde(default)]
@@ -179,6 +183,7 @@ pub struct TicketFilesResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct TicketAssetResponse {
     pub id: String,
     #[serde(default)]
@@ -257,6 +262,7 @@ impl GraphEdgeItem {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct SubgraphStats {
     pub nodes_returned: usize,
     pub edges_returned: usize,
@@ -264,6 +270,7 @@ pub struct SubgraphStats {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct GraphSubgraphResponse {
     #[serde(default)]
     pub active_workspace: String,
@@ -311,6 +318,7 @@ pub struct WorkflowCandidateItem {
 }
 
 impl WorkflowCandidateItem {
+    #[allow(dead_code)]
     pub fn resolved_ticket_ref(
         &self,
         active_workspace: &str,
@@ -354,6 +362,7 @@ pub struct WorkflowTreeItem {
 }
 
 impl WorkflowTreeItem {
+    #[allow(dead_code)]
     pub fn resolved_ticket_ref(
         &self,
         active_workspace: &str,
@@ -407,6 +416,7 @@ pub struct WorkflowTreeResponse {
 // ── Schema ────────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct FieldDef {
     pub field_type: String,
     pub required: bool,
@@ -419,12 +429,14 @@ pub struct TransitionDef {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct EdgeRuleDef {
     pub directed: bool,
     pub acyclic_enforced: bool,
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct TypeSchema {
     pub type_id: String,
     pub states: Vec<String>,
@@ -436,6 +448,7 @@ pub struct TypeSchema {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct SchemaListResponse {
     #[serde(default)]
     pub active_workspace: Option<String>,
@@ -444,6 +457,7 @@ pub struct SchemaListResponse {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct SchemaDetailResponse {
     #[serde(default)]
     pub active_workspace: Option<String>,
@@ -477,6 +491,7 @@ pub struct CreateTicketRequest {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct CreateTicketResponse {
     #[serde(default)]
     pub active_workspace: String,
@@ -504,6 +519,7 @@ pub struct HistoryEntry {
 }
 
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct TicketHistoryResponse {
     pub id: String,
     #[serde(default)]
@@ -557,6 +573,7 @@ pub struct BatchRequest {
 
 /// Per-command result returned in the batch response.
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct BatchCommandResult {
     /// The raw JSON result value for this command (ticket object, etc.).
     pub result: Option<serde_json::Value>,
@@ -566,6 +583,7 @@ pub struct BatchCommandResult {
 
 /// Response body from `POST /api/batch`.
 #[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
 pub struct BatchResponse {
     pub workspace: String,
     pub status: String,
