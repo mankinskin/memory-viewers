@@ -1,0 +1,20 @@
+# Workspace policy for the context-engine ticket store.
+#
+# Authoritative allow/deny policy governing which nested `.ticket` workspaces are
+# discovered, scanned, and queried. Children (context-stack, memory-api,
+# memory-viewers, viewer-api, …) are included by default; fixture/test
+# workspaces are permanently denied so they never leak into ticket-graph audit
+# counts. External (ancestor/sibling) stores outside this repo are refused.
+
+include_descendants = true
+include_ancestors = true
+deny_external_paths = true
+
+# Fixture/test workspaces must never be indexed into the real ticket graph.
+ignore_workspaces = [
+    "**/test-fixtures/**",
+]
+
+include_overrides = []
+
+ignore_markers = [".ticket-ignore", ".workspace-ignore"]
