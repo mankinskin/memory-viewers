@@ -1,8 +1,0 @@
-id = "a6110ca3-e027-47b4-8442-2ac7ae2ab6f3"
-created_at = "2026-07-06T00:58:06.366647100+00:00"
-title = "[audit-roadmap][ticket_graph][batch-4][slice-1] Retro-link orphan chunk-1 (8 memory-viewers tickets)"
-state = "new"
-depends_on = ["d7a27192-6c67-4446-9450-c946bf58747e", "d8694ff6-b6dc-4707-8f00-51bbdaf11c20", "dc1a8740-d808-4c4f-ac82-1bea9e22183c", "e2a6ad44-a58d-4a85-b976-bece05ce3a9d", "e42d8e0a-c210-4efe-a22c-2565079e67b8", "ec5d383a-1fa6-4e15-8090-6e5e3c1d94fa", "f7efc6f8-78c4-4f2a-bcb9-95ef1c21bb67", "fea28293-5494-49e1-bdb4-8165457b59ca"]
-effort = "120"
-priority = "medium"
-type = "tracker-improvement"
