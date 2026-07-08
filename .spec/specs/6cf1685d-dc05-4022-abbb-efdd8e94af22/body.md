@@ -1,3 +1,4 @@
+<!-- aligned-structure:v1 -->
 <!-- spec-api:file generated=true -->
 
 <!-- spec-api:entry id=1ca2fc7e-3b33-4a7c-899e-7eb635abbaf5 slug=ticket-viewer/theme-settings/ticket-viewer-theme-settings/l1 -->

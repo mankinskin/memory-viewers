@@ -1,3 +1,4 @@
+<!-- aligned-structure:v1 -->
 <!-- spec-api:file generated=true -->
 
 <!-- spec-api:entry id=97b8a613-d1c8-4ebc-bf89-0cc8902e268d slug=spec-viewer/theme-settings/spec-viewer-theme-settings/l1 -->
