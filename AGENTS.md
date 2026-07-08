@@ -97,7 +97,9 @@ let _tracing = init_test_tracing!(&graph);
 
 - If blocked by ambiguity after focused research (10-15 minutes), ask the user.
 - If evidence conflicts or architecture tradeoffs are required, ask before committing to a direction.
-- If unexpected workspace changes appear that you did not make, stop and ask how to proceed.
+- In multi-agent workspaces, treat unrelated workspace changes as expected background activity and continue.
+- Before editing, claim ownership of the files you will touch; commit only your owned changes, and release ownership when done.
+- Never revert, stage, or commit unrelated changes created by other agents.
 
 <!-- rule-api:entry id=6e037f1d-b9cc-4ed4-aefc-a50b16ef122d slug=shared/agent-rules/fallback-mode-when-mcp-is-unavailable/l65 -->
 ## Fallback Mode (When MCP Is Unavailable)
