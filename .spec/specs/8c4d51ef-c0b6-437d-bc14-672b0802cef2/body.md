@@ -10,11 +10,24 @@ The ticket-viewer main layout still splits ticket reading across separate conten
 
 ## Provided Surface Contracts
 
-- Define provided contracts for this behavior slice.
+- The ticket-viewer main reading surface is a single content panel that contains the selected ticket title, editable fields/actions, summary metadata, and contextual content in one document flow.
+- The separate right-side detail panel is removed from the default experience; features previously only available there are preserved inside the content panel.
+- The content-panel header remains compact and avoids full-width preface blocks before the primary body.
+- Non-essential metadata is rendered in a footer section so the core document remains scannable.
+- The content panel exposes immediate parent and child neighbours for the selected ticket.
+- Parent/child neighbour items are clickable and retarget the active selection.
+- Neighbour retargeting updates graph focus from client-side cached graph data without per-click graph refetch.
+- Graph selection and neighbour-driven selection stay behaviorally consistent (same selected ticket, same focus retarget semantics).
 
 ## Required Validation
 
-- Triangulate behavior with executable checks, natural-language clauses, and code/schema/API references when available.
+- Playwright release coverage validates that default ticket reading uses one consolidated content panel and no standalone right detail panel is required for core read/edit flows.
+- Playwright release coverage validates compact header behavior and metadata footer placement for selected tickets with representative field density.
+- Playwright release coverage validates parity of actions/edit capabilities between the pre-change detail experience and the consolidated panel (no functional regressions).
+- Playwright release coverage validates parent/child neighbour lists in the content panel and confirms each neighbour click retargets selection to the expected ticket.
+- Playwright release coverage validates neighbour-click retargeting reuses cached graph data and does not issue a network fetch for per-click graph expansion.
+- Focused browser validation in external Chromium confirms navigation clarity, readability, and retarget consistency in both split and content-only layouts.
+- Ticket traceability for this spec is maintained through W1 `a34d9891-5cd3-403c-8576-f3a55a50047e` and W4 `1b0dbe8a-1828-41e7-b33f-4a066c3622bf`.
 
 ## Related Implementation Tickets
 
