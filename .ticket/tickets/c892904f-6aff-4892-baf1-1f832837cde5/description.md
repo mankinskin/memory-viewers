@@ -15,6 +15,13 @@ P0: W1, W2, W3 (direct daily-use observability pain).
 P1: W4 (depends on W1+W2), W6 (enables W2 at scale).
 P2: W5a → W5b (platform generalization), W7 (enables demo-viewer domain selection).
 
+## Execution hygiene gates (mandatory for every workstream)
+- Ownership parity gate: board ownership must include every modified file path before implementation continues, including submodule paths such as viewer-api.
+- Validation evidence gate: each W-ticket transition to in-review must reference at least one recorded `.test/default/executions/*.json` artifact linked to the corresponding validation spec id.
+- Command discipline gate: one bounded status snapshot at phase start and one final confirmation snapshot; avoid repeated no-op status polling.
+- Deterministic terminal gate: run sync commands with explicit completion outcomes and avoid ambiguous background/sync interpretation in session logs.
+- Commit scoping gate: stage only roadmap-owned files plus required submodule pointer updates.
+
 ## Existing planning reconciled
 Specs: ticket-viewer/detail-document-and-focused-graph (8c4d51ef), ticket-viewer/graph-focus-property-rendering-and-2d-presentation (98b4f75d), viewer-api/components/graph3d (4f14356f), viewer-api/components/tree-view (a20a0395), viewer-api/demo-viewer (4c3b62b4), viewer-api/components/layout (b3362691). New spec needed: viewer-api/viewer-template.
 In-flight tickets to fold in / re-scope: 6e7a15c9 (keep full graph visible — superseded by W2's bounded-neighbourhood direction), 10c94251 (graph focus + 2D follow-up), 322ba030 (multi-level node detail), f9e9aaae (property-based node tiers), 2b3a6e2e (TicketDetail theme colors — obsoleted by W1 removal), b779c650 (demo-viewer scaffold), 92964ada (extract viewer-theme/widgets), d1e4ab96 (converge shared shells).
