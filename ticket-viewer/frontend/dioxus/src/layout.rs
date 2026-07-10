@@ -279,10 +279,10 @@ impl GraphLayout {
                 CELL_CLUSTER_Y,
                 CELL_CLUSTER_Z,
             );
-            self.nodes[*node_idx].x = placement.column as f64 * COLUMN_SPACING
-                + local_x;
-            self.nodes[*node_idx].y = placement.row as f64 * ROW_SPACING
-                + local_y;
+            self.nodes[*node_idx].x =
+                placement.column as f64 * COLUMN_SPACING + local_x;
+            self.nodes[*node_idx].y =
+                placement.row as f64 * ROW_SPACING + local_y;
             self.nodes[*node_idx].z = local_z;
         }
 
@@ -297,19 +297,15 @@ impl GraphLayout {
         let mut group_seed_by_idx = vec![None; self.nodes.len()];
 
         for &node_idx in &ordered_indices {
-            let primary_parent = primary_parent_index(
-                &self.nodes,
-                &parents_by_child,
-                node_idx,
-            );
+            let primary_parent =
+                primary_parent_index(&self.nodes, &parents_by_child, node_idx);
             let seed = match primary_parent {
                 None => node_idx,
-                Some(parent_idx) if !parents_by_child.contains_key(&parent_idx) => {
-                    node_idx
-                },
-                Some(parent_idx) => {
-                    group_seed_by_idx[parent_idx].unwrap_or(parent_idx)
-                },
+                Some(parent_idx)
+                    if !parents_by_child.contains_key(&parent_idx) =>
+                    node_idx,
+                Some(parent_idx) =>
+                    group_seed_by_idx[parent_idx].unwrap_or(parent_idx),
             };
             group_seed_by_idx[node_idx] = Some(seed);
         }
@@ -345,7 +341,8 @@ impl GraphLayout {
             let row = *group_row_by_seed
                 .get(&seed_idx)
                 .expect("kanban row should exist for dependency group");
-            let state_key = kanban_state_key(self.nodes[node_idx].state.as_deref());
+            let state_key =
+                kanban_state_key(self.nodes[node_idx].state.as_deref());
             let column = *column_by_state
                 .get(&state_key)
                 .expect("kanban column should exist for state");
@@ -373,7 +370,8 @@ impl GraphLayout {
 
         let mut row_labels = vec![String::new(); group_row_by_seed.len()];
         for (seed_idx, row_idx) in group_row_by_seed {
-            row_labels[row_idx] = kanban_row_label(&self.nodes[seed_idx], row_idx);
+            row_labels[row_idx] =
+                kanban_row_label(&self.nodes[seed_idx], row_idx);
         }
 
         KanbanLayoutPlan {
@@ -420,10 +418,8 @@ impl GraphLayout {
             .iter()
             .map(|node| node.y)
             .fold(f64::NEG_INFINITY, f64::max);
-        let min_x = column_centers
-            .iter()
-            .copied()
-            .fold(f64::INFINITY, f64::min);
+        let min_x =
+            column_centers.iter().copied().fold(f64::INFINITY, f64::min);
 
         let header_y = min_y - 160.0;
         let row_label_x = min_x - 260.0;
@@ -906,8 +902,7 @@ fn kanban_cell_offset(
     let cluster_rows = (cell_count + cluster_columns - 1) / cluster_columns;
     let column = slot % cluster_columns;
     let row = slot / cluster_columns;
-    let x = (column as f64 - (cluster_columns as f64 - 1.0) / 2.0)
-        * cluster_x;
+    let x = (column as f64 - (cluster_columns as f64 - 1.0) / 2.0) * cluster_x;
     let y = (row as f64 - (cluster_rows as f64 - 1.0) / 2.0) * cluster_y;
     let z = layer_stagger(slot, cluster_z);
     (x, y, z)
@@ -1008,8 +1003,14 @@ mod tests {
             .iter()
             .map(|column| column.state.as_str())
             .collect::<Vec<_>>();
-        assert_eq!(states, vec!["new", "ready", "in-implementation", "in-review", "done"]);
-        assert_eq!(overlay.separators.len(), overlay.columns.len().saturating_sub(1));
+        assert_eq!(
+            states,
+            vec!["new", "ready", "in-implementation", "in-review", "done"]
+        );
+        assert_eq!(
+            overlay.separators.len(),
+            overlay.columns.len().saturating_sub(1)
+        );
     }
 
     #[test]
@@ -1046,14 +1047,18 @@ mod tests {
             .iter()
             .map(|column| column.x)
             .fold(f64::INFINITY, f64::min);
-        assert!(
-            overlay
-                .row_labels
-                .iter()
-                .all(|row| row.x < leftmost_column_x - 220.0)
-        );
-        assert!(overlay.row_labels.iter().any(|row| row.label.contains("Branch A")));
-        assert!(overlay.row_labels.iter().any(|row| row.label.contains("Branch B")));
+        assert!(overlay
+            .row_labels
+            .iter()
+            .all(|row| row.x < leftmost_column_x - 220.0));
+        assert!(overlay
+            .row_labels
+            .iter()
+            .any(|row| row.label.contains("Branch A")));
+        assert!(overlay
+            .row_labels
+            .iter()
+            .any(|row| row.label.contains("Branch B")));
     }
 
     #[test]

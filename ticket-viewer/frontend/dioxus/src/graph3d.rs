@@ -69,9 +69,8 @@ pub fn lift_2d(
             x: gn.x as f32 * LAYOUT_SCALE,
             y: -(gn.y as f32 * LAYOUT_SCALE),
             z: match mode {
-                LayoutMode::Hierarchical3D | LayoutMode::KanbanTable => {
-                    gn.z as f32 * LAYOUT_SCALE
-                },
+                LayoutMode::Hierarchical3D | LayoutMode::KanbanTable =>
+                    gn.z as f32 * LAYOUT_SCALE,
                 LayoutMode::Flat2D | LayoutMode::Fixed2D => 0.0,
             },
         })
@@ -106,10 +105,7 @@ fn focus_context_ids(
     focus_id: Option<&str>,
 ) -> Option<HashSet<String>> {
     let focus_id = focus_id?;
-    let focus_idx = layout
-        .nodes
-        .iter()
-        .position(|node| node.id == focus_id)?;
+    let focus_idx = layout.nodes.iter().position(|node| node.id == focus_id)?;
     let mut ids = HashSet::from([focus_id.to_string()]);
     for edge in &layout.edges {
         if edge.from_idx == focus_idx {
@@ -158,9 +154,8 @@ fn initial_camera_for_layout(
 ) -> Camera {
     let mut camera = Camera::default();
     let framed_bounds = match (layout_mode, kanban_overlay) {
-        (LayoutMode::KanbanTable, Some(overlay)) => {
-            kanban_camera_bounds(layout, overlay)
-        },
+        (LayoutMode::KanbanTable, Some(overlay)) =>
+            kanban_camera_bounds(layout, overlay),
         (LayoutMode::KanbanTable, None)
         | (LayoutMode::Hierarchical3D, _)
         | (LayoutMode::Flat2D, _)
@@ -287,9 +282,7 @@ fn layout_anchor_z(value: f64) -> String {
     format!("{}", value as f32 * LAYOUT_SCALE)
 }
 
-fn render_kanban_overlay(
-    overlay: &KanbanOverlay,
-) -> Element {
+fn render_kanban_overlay(overlay: &KanbanOverlay) -> Element {
     rsx! {
         div {
             id: "graph3d-kanban-guides",
@@ -468,8 +461,11 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
     let nodes = layout.nodes.clone();
     let node_count = nodes.len();
     let focus_context = focus_context_ids(&layout, selected_node_id.as_deref());
-    let initial_camera =
-        initial_camera_for_layout(&layout, kanban_overlay.as_ref(), layout_mode);
+    let initial_camera = initial_camera_for_layout(
+        &layout,
+        kanban_overlay.as_ref(),
+        layout_mode,
+    );
 
     rsx! {
         viewer_api_dioxus::Graph3D {

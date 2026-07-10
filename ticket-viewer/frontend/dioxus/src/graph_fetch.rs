@@ -157,7 +157,10 @@ impl GraphFetchService {
     /// Removes the layout from the cache, clears any stored error, and removes
     /// the key from the in-flight set.  The next call to `ensure_fetched` will
     /// trigger a new fetch.
-    pub fn invalidate_workspace(&self, workspace: &str) {
+    pub fn invalidate_workspace(
+        &self,
+        workspace: &str,
+    ) {
         let cache_key = workspace_cache_key(workspace);
         self.cache.remove(&cache_key);
         let mut inner = self.inner.borrow_mut();
@@ -366,7 +369,7 @@ impl GraphFetchService {
     }
 
     async fn fetch_once_with_timeout(
-        workspace: &str,
+        workspace: &str
     ) -> Result<GraphLayout, String> {
         let backend = HttpTicketBackend::new(None);
         let fetch_fut =

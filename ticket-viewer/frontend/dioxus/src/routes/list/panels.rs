@@ -3,10 +3,10 @@ use dioxus::prelude::*;
 use viewer_api_dioxus::{
     LayoutMode,
     PanelResizer,
+    Projection,
     ResizeDirection,
     ResizeEdge,
     ResizeHandle,
-    Projection,
 };
 
 use crate::{

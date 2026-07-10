@@ -18,8 +18,8 @@ use super::{
         render_document_panel,
         render_history_panel,
         render_tab_bar,
-        TicketDocumentContext,
         render_toml_panel,
+        TicketDocumentContext,
     },
     Tab,
 };
@@ -98,10 +98,8 @@ pub fn TicketContent(
                     )
                     .await
                 {
-                    if let Some(summary) = response
-                        .items
-                        .into_iter()
-                        .find(|ticket| {
+                    if let Some(summary) =
+                        response.items.into_iter().find(|ticket| {
                             ticket.resolved_ticket_ref(&summary_workspace).id
                                 == ticket_id
                         })
@@ -110,11 +108,13 @@ pub fn TicketContent(
                         document_state.set(summary.state);
                         document_type.set(summary.ticket_type);
                         document_created_at.set(Some(summary.created_at));
-                        document_updated_at.set(if summary.updated_at.trim().is_empty() {
-                            None
-                        } else {
-                            Some(summary.updated_at)
-                        });
+                        document_updated_at.set(
+                            if summary.updated_at.trim().is_empty() {
+                                None
+                            } else {
+                                Some(summary.updated_at)
+                            },
+                        );
                         document_fields.set(summary.fields);
                     }
                 }

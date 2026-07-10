@@ -31,8 +31,8 @@ use viewer_api::{
     },
     display_host,
     init_tracing_full,
-    TracingConfig,
     with_static_files,
+    TracingConfig,
 };
 
 use spec_api::SpecStore;
@@ -130,8 +130,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let log_dir = std::env::var("LOG_DIR")
         .map(PathBuf::from)
         .unwrap_or(default_log_dir);
-    let level = std::env::var("LOG_LEVEL")
-        .unwrap_or_else(|_| "info".to_string());
+    let level =
+        std::env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
     let config = TracingConfig::default()
         .with_level(level)
         .with_file_logging(log_dir, "spec-viewer");

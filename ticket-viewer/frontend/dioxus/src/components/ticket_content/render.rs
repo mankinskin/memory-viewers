@@ -472,23 +472,20 @@ fn field_detail_value(value: &serde_json::Value) -> Option<String> {
                 return None;
             }
 
-            let simple_values: Vec<String> = items
-                .iter()
-                .filter_map(value_to_string)
-                .collect();
+            let simple_values: Vec<String> =
+                items.iter().filter_map(value_to_string).collect();
             if simple_values.len() == items.len() {
                 Some(simple_values.join("\n"))
             } else {
                 serde_json::to_string_pretty(value).ok()
             }
         },
-        serde_json::Value::Object(map) => {
+        serde_json::Value::Object(map) =>
             if map.is_empty() {
                 None
             } else {
                 serde_json::to_string_pretty(value).ok()
-            }
-        },
+            },
         serde_json::Value::Null => None,
     }
 }
@@ -510,10 +507,8 @@ fn field_value(
         serde_json::Value::Bool(flag) => Some(flag.to_string()),
         serde_json::Value::Number(number) => Some(number.to_string()),
         serde_json::Value::Array(items) => {
-            let values: Vec<String> = items
-                .iter()
-                .filter_map(value_to_string)
-                .collect();
+            let values: Vec<String> =
+                items.iter().filter_map(value_to_string).collect();
             if values.is_empty() {
                 None
             } else {

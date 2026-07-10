@@ -65,13 +65,14 @@ pub fn TicketTree(props: TicketTreeProps) -> Element {
             return;
         };
 
-        let Some(document) = web_sys::window().and_then(|window| window.document()) else {
+        let Some(document) =
+            web_sys::window().and_then(|window| window.document())
+        else {
             return;
         };
 
-        let selector = format!(
-            r#"button[data-testid="ticket-tree-ticket-{ticket_id}"]"#
-        );
+        let selector =
+            format!(r#"button[data-testid="ticket-tree-ticket-{ticket_id}"]"#);
         if let Ok(Some(element)) = document.query_selector(&selector) {
             let mut opts = web_sys::ScrollIntoViewOptions::new();
             opts.block(web_sys::ScrollLogicalPosition::Nearest);

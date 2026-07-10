@@ -68,20 +68,20 @@ async fn test_sse_ticket_upsert_emitted() {
         .expect("create ticket");
 
     // We should receive a ticket.upsert event
-    let event = tokio::time::timeout(std::time::Duration::from_secs(2), async {
-        loop {
-            match rx.recv().await {
-                Ok((_id, ev)) => {
-                    if ev.event_name() == "ticket.upsert" {
-                        return ev;
-                    }
+    let event =
+        tokio::time::timeout(std::time::Duration::from_secs(2), async {
+            loop {
+                match rx.recv().await {
+                    Ok((_id, ev)) =>
+                        if ev.event_name() == "ticket.upsert" {
+                            return ev;
+                        },
+                    Err(e) => panic!("SSE receive error: {:?}", e),
                 }
-                Err(e) => panic!("SSE receive error: {:?}", e),
             }
-        }
-    })
-    .await
-    .expect("Timeout waiting for ticket.upsert SSE event");
+        })
+        .await
+        .expect("Timeout waiting for ticket.upsert SSE event");
 
     assert_eq!(event.event_name(), "ticket.upsert");
     let data_str = event.data_json().expect("serialize event data");

@@ -156,7 +156,8 @@ pub fn use_sse(
         // so gate its acquisition and use consistently with the rest of the
         // crate. On native builds the SSE path still updates the list counters.
         #[cfg(target_arch = "wasm32")]
-        let service_upsert = use_context::<crate::graph_fetch::GraphFetchService>();
+        let service_upsert =
+            use_context::<crate::graph_fetch::GraphFetchService>();
         #[cfg(target_arch = "wasm32")]
         let workspace_upsert = workspace.clone();
         let l_upsert = EventListener::new(&es, "ticket.upsert", move |event| {

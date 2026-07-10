@@ -47,8 +47,7 @@ fn open_store(dir: &std::path::Path) -> Arc<TicketStore> {
 fn build_app(store: Arc<TicketStore>) -> (axum::Router, String) {
     let registry = Arc::new(WorkspaceRegistry::single_opened(store));
     let workspace = registry.primary_workspace_name().to_string();
-    let state =
-        AppState::new(registry, Arc::new(StreamBroker::new()));
+    let state = AppState::new(registry, Arc::new(StreamBroker::new()));
     let _ = state.ensure_workspace_runtime(&workspace);
     (ticket_http::build_router(state), workspace)
 }

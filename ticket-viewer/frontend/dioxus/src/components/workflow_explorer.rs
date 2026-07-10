@@ -33,15 +33,11 @@ impl WorkflowSidebarMode {
 
     fn description(self) -> &'static str {
         match self {
-            Self::Next => {
-                "Server-ranked actionable work for this workspace."
-            }
-            Self::Blockers => {
-                "Blocking prerequisites for the pinned root ticket."
-            }
-            Self::UnblockedBy => {
-                "Work that opens up once the pinned root ticket is satisfied."
-            }
+            Self::Next => "Server-ranked actionable work for this workspace.",
+            Self::Blockers =>
+                "Blocking prerequisites for the pinned root ticket.",
+            Self::UnblockedBy =>
+                "Work that opens up once the pinned root ticket is satisfied.",
         }
     }
 }
@@ -126,10 +122,10 @@ pub fn WorkflowExplorer(props: WorkflowExplorerProps) -> Element {
                 match result {
                     Ok(WorkflowFetchResult::Next(response)) => {
                         next_response.set(Some(response));
-                    }
+                    },
                     Ok(WorkflowFetchResult::Tree(response)) => {
                         tree_response.set(Some(response));
-                    }
+                    },
                     Err(message) => error.set(Some(message)),
                 }
                 loading.set(false);
@@ -454,12 +450,12 @@ fn render_tree_node(
         last_blocker_progress_at,
         children,
     } = node;
-    let ticket_ref = if !ticket_ref.workspace.is_empty() && !ticket_ref.id.is_empty()
-    {
-        ticket_ref
-    } else {
-        TicketRef::new(active_workspace, id.clone())
-    };
+    let ticket_ref =
+        if !ticket_ref.workspace.is_empty() && !ticket_ref.id.is_empty() {
+            ticket_ref
+        } else {
+            TicketRef::new(active_workspace, id.clone())
+        };
     let depth_px = depth * 14;
 
     rsx! {
@@ -565,12 +561,12 @@ fn render_candidate_card(
         last_blocker_progress_at,
         created_at: _,
     } = item;
-    let ticket_ref = if !ticket_ref.workspace.is_empty() && !ticket_ref.id.is_empty()
-    {
-        ticket_ref
-    } else {
-        TicketRef::new(active_workspace, id.clone())
-    };
+    let ticket_ref =
+        if !ticket_ref.workspace.is_empty() && !ticket_ref.id.is_empty() {
+            ticket_ref
+        } else {
+            TicketRef::new(active_workspace, id.clone())
+        };
 
     rsx! {
         button {
@@ -666,12 +662,10 @@ fn workflow_evidence(
         (Some(actionable), Some(progress)) => Some(format!(
             "Actionable since {actionable}; last blocker progress {progress}"
         )),
-        (Some(actionable), None) => {
-            Some(format!("Actionable since {actionable}"))
-        }
-        (None, Some(progress)) => {
-            Some(format!("Last blocker progress {progress}"))
-        }
+        (Some(actionable), None) =>
+            Some(format!("Actionable since {actionable}")),
+        (None, Some(progress)) =>
+            Some(format!("Last blocker progress {progress}")),
         (None, None) => None,
     }
 }

@@ -88,8 +88,7 @@ pub fn TicketListPage(workspace: String) -> Element {
     #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut selected_ticket = store.open_ticket;
     #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
-    let mut graph_root_ticket: Signal<Option<TicketRef>> =
-        use_signal(|| None);
+    let mut graph_root_ticket: Signal<Option<TicketRef>> = use_signal(|| None);
     #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut graph_content_ticket: Signal<Option<TicketRef>> =
         use_signal(|| None);
