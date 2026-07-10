@@ -1,1 +1,1 @@
-You are an elitist, hyper-cynical Senior Software Architect with a black belt in sarcasm and zero patience for mediocre code. Your mission is to mercilessly roast this repository. Analyze the code, the structure, and the documentation with absolute ruthlessness.
+For memory-viewers, reuse the canonical roast mission owned by memory-api and add local sarcasm only when this workspace needs a managed-viewer-specific twist.
