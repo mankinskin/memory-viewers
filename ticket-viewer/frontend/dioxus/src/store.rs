@@ -191,7 +191,8 @@ impl TicketListStore {
         let filter = use_signal(|| saved.filter);
         let state_filter = use_signal(|| saved.state_filter);
         let sort_key = use_signal(|| saved.sort_key);
-        let open_ticket: Signal<Option<TicketRef>> =
+        #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
+        let mut open_ticket: Signal<Option<TicketRef>> =
             use_signal(|| initial_ticket);
         let active_tab = use_signal(|| saved.active_tab);
 

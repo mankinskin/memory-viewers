@@ -1,5 +1,9 @@
 use dioxus::prelude::*;
+#[cfg(target_arch = "wasm32")]
+use dioxus_router::Navigator;
 
+#[cfg(target_arch = "wasm32")]
+use crate::types::TicketRef;
 use crate::{
     api::{
         HttpTicketBackend,
@@ -8,6 +12,8 @@ use crate::{
     layout::GraphLayout,
 };
 
+#[cfg(target_arch = "wasm32")]
+use super::interactions::select_node_or_navigate;
 use super::{
     edge_list::{
         EdgeListSidebar,
@@ -38,15 +44,15 @@ pub fn DepGraph(props: DepGraphProps) -> Element {
     #[cfg(target_arch = "wasm32")]
     if crate::graph3d::can_use_webgpu() {
         return render_webgpu_graph(
-            nav,
+            _nav,
             props,
             workspace,
             root_id,
             on_select,
-            on_hover,
-            on_deselect,
-            selected_node_id,
-            hovered_node_id,
+            _on_hover,
+            _on_deselect,
+            _selected_node_id,
+            _hovered_node_id,
         );
     }
 
