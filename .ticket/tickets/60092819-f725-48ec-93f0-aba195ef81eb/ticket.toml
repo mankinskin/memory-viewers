@@ -1,7 +1,7 @@
 id = "60092819-f725-48ec-93f0-aba195ef81eb"
 created_at = "2026-05-25T11:48:36.838491800+00:00"
 title = "[ticket-viewer] Fix graph layout defaults and isometric settings"
-state = "in-implementation"
+state = "in-review"
 acceptance_criteria = "1. Parent and child layers read consistently from top to bottom in the dependency hierarchy. 2. The default layout avoids common overlap cases in graph mode. 3. The default camera and projection read as a mostly planar isometric view. 4. Graph settings expose the main layout controls needed to tune hierarchy and spacing."
 component = "ticket-viewer"
 implementation_summary = "Ticket-viewer graph layout now uses parent-anchored horizontal hierarchy bands with fixed layer spacing and bounded z staggering, while graph mode defaults to hierarchical 3D plus orthographic isometric framing. Focused release E2E coverage was added and stabilized with real sidebar ticket selection for mixed-workspace graphs."
