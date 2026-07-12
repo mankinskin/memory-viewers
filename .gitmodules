@@ -1,4 +1,0 @@
-[submodule "viewer-api"]
-	path = viewer-api
-	url = https://github.com/mankinskin/viewer-api
-	branch = main
