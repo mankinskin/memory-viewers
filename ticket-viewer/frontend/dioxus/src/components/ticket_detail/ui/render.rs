@@ -28,6 +28,8 @@ pub(crate) struct TicketDetailViewState {
     pub transition_pending: bool,
     pub transition_error: Option<String>,
     pub conflict: Option<ConflictState>,
+    pub feedback_pending: bool,
+    pub feedback_error: Option<String>,
 }
 
 #[derive(Clone, Copy)]
@@ -41,6 +43,7 @@ pub(crate) struct TicketDetailHandlers {
     pub on_cancel_edit: EventHandler<()>,
     pub on_transition: EventHandler<String>,
     pub on_undo: EventHandler<()>,
+    pub on_feedback: EventHandler<String>,
 }
 
 pub(crate) fn render_ticket_detail(
@@ -67,6 +70,7 @@ pub(crate) fn render_ticket_detail(
             {render_error_banner(view.load_error.as_ref(), "Error")}
             {render_save_error(view.save_error.as_ref())}
             {render_transition_section(&view, handlers.on_transition, handlers.on_undo)}
+            {render_feedback_section(&view, handlers.on_feedback)}
             {render_string_fields(&view, handlers)}
             {render_bootstrap_blocker(&view, handlers.on_save_bool)}
         }
@@ -273,6 +277,55 @@ fn render_string_fields(
                         }),
                         on_cancel: handlers.on_cancel_edit,
                     }
+                }
+            }
+        }
+    }
+}
+
+fn render_feedback_section(
+    view: &TicketDetailViewState,
+    on_feedback: EventHandler<String>,
+) -> Element {
+    rsx! {
+        div {
+            style: "
+                margin-bottom: 1rem;
+                padding-bottom: 0.75rem;
+                border-bottom: 1px solid var(--border-color);
+            ",
+            div {
+                style: "
+                    font-size: 10px; color: var(--text-muted);
+                    text-transform: uppercase; letter-spacing: 0.05em;
+                    margin-bottom: 4px;
+                ",
+                "Feedback"
+            }
+            div {
+                style: "display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 0.4rem;",
+                button {
+                    class: "chip chip--feature chip-button",
+                    disabled: view.feedback_pending,
+                    onclick: move |_| on_feedback.call("helpful".to_string()),
+                    "Mark helpful"
+                }
+                button {
+                    class: "chip chip--neutral chip-button",
+                    disabled: view.feedback_pending,
+                    onclick: move |_| on_feedback.call("mixed".to_string()),
+                    "Needs follow-up"
+                }
+            }
+            if let Some(error) = view.feedback_error.as_ref() {
+                div {
+                    style: "
+                        background: color-mix(in srgb, var(--accent-red) 15%, transparent);
+                        border: 1px solid var(--accent-red);
+                        border-radius: 4px; padding: 0.5rem;
+                        font-size: 12px; color: var(--accent-red);
+                    ",
+                    "Feedback failed: {error}"
                 }
             }
         }

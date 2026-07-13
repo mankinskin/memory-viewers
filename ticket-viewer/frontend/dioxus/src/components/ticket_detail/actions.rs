@@ -400,3 +400,47 @@ pub(super) fn keep_conflict(
     conflict.set(None);
     editing_field.set(field_key);
 }
+
+pub(super) fn submit_ticket_feedback(
+    backend: HttpTicketBackend,
+    workspace: String,
+    ticket_id: String,
+    mut feedback_pending: Signal<bool>,
+    mut feedback_error: Signal<Option<String>>,
+    rating: String,
+) {
+    feedback_pending.set(true);
+    feedback_error.set(None);
+
+    spawn(async move {
+        let workspace_slug = {
+            let trimmed = workspace.trim();
+            if trimmed.is_empty() || trimmed.contains('/') || trimmed.contains('\\') {
+                "default".to_string()
+            } else {
+                trimmed.to_string()
+            }
+        };
+        let target = format!("ce://{workspace_slug}/ticket/{ticket_id}");
+        let note = Some("Ticket detail feedback submitted from ticket-viewer.");
+
+        match backend
+            .ingest_feedback(
+                &workspace,
+                &target,
+                &rating,
+                note,
+                "frontend",
+            )
+            .await
+        {
+            Ok(()) => {
+                feedback_pending.set(false);
+            },
+            Err(message) => {
+                feedback_pending.set(false);
+                feedback_error.set(Some(message));
+            },
+        }
+    });
+}

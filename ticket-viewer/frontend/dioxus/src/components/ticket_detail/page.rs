@@ -11,6 +11,7 @@ use super::{
         keep_conflict,
         save_bool_field,
         save_field,
+        submit_ticket_feedback,
         transition_state,
         undo_transition,
         use_conflict_sse,
@@ -61,6 +62,10 @@ pub fn TicketDetail(
     let mut conflict: Signal<Option<ConflictState>> = use_signal(|| None);
     #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
     let mut sse_handle: Signal<SseHandle> = use_signal(|| None);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
+    let mut feedback_pending: Signal<bool> = use_signal(|| false);
+    #[cfg_attr(not(target_arch = "wasm32"), allow(unused_mut))]
+    let mut feedback_error: Signal<Option<String>> = use_signal(|| None);
 
     use_ticket_detail_data(
         backend.clone(),
@@ -110,6 +115,8 @@ pub fn TicketDetail(
         transition_pending: transition_pending(),
         transition_error: transition_error(),
         conflict: conflict(),
+        feedback_pending: feedback_pending(),
+        feedback_error: feedback_error(),
     };
 
     let handlers = TicketDetailHandlers {
@@ -193,6 +200,21 @@ pub fn TicketDetail(
                     visited_states,
                     transition_pending,
                     transition_error,
+                );
+            })
+        },
+        on_feedback: {
+            let backend = backend.clone();
+            let workspace = workspace.clone();
+            let id = id.clone();
+            EventHandler::new(move |rating: String| {
+                submit_ticket_feedback(
+                    backend.clone(),
+                    workspace.clone(),
+                    id.clone(),
+                    feedback_pending,
+                    feedback_error,
+                    rating,
                 );
             })
         },

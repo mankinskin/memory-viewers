@@ -115,10 +115,44 @@ impl HttpTicketBackend {
         }
         resp.json::<T>().await.map_err(|e| e.to_string())
     }
+
+    pub async fn ingest_feedback(
+        &self,
+        workspace: &str,
+        target: &str,
+        rating: &str,
+        note: Option<&str>,
+        source: &str,
+    ) -> Result<(), String> {
+        let workspace_slug = feedback_workspace_slug(workspace);
+        let body = serde_json::json!({
+            "workspace": workspace,
+            "workspace_slug": workspace_slug,
+            "source": source,
+            "target": target,
+            "rating": rating,
+            "note": note,
+            "note_kind": if note.is_some() { Some("note") } else { None::<&str> },
+            "author": "ticket-viewer",
+        });
+        let body_str = serde_json::to_string(&body).map_err(|e| e.to_string())?;
+        self.send_json::<serde_json::Value>("POST", "/api/feedback/ingest", &body_str)
+            .await
+            .map(|_| ())
+    }
 }
 
 fn enc(s: &str) -> String {
     utf8_percent_encode(s, NON_ALPHANUMERIC).to_string()
+}
+
+fn feedback_workspace_slug(workspace: &str) -> String {
+    let trimmed = workspace.trim();
+    if trimmed.is_empty() || trimmed.contains('/') || trimmed.contains('\\') {
+        "default".to_string()
+    } else {
+        trimmed.to_string()
+    }
 }
 
 impl TicketBackend for HttpTicketBackend {

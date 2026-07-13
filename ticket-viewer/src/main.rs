@@ -37,6 +37,7 @@ use viewer_api::{
     with_static_files,
 };
 
+use feedback_http::AppState as FeedbackAppState;
 use ticket_api::storage::store::TicketStore;
 use ticket_http::serve::{
     AppState,
@@ -196,6 +197,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Build the ticket API router from ticket-http (includes /healthz).
     let app = ticket_http::build_router(state);
+    let feedback_state = FeedbackAppState {
+        store_root: ticket_api::workspace::resolve_store_root_from(
+            &workspace_root,
+            ".feedback",
+        ),
+        workspace_slug: "default".to_string(),
+    };
+    let app = app.merge(feedback_http::app(feedback_state));
     let app = app.merge(client_log_router(ClientLogState::default()));
 
     let app =
