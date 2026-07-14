@@ -1,0 +1,15 @@
+/* Doc Viewer Styles */
+
+/* Import shared base styles */
+@import '@context-engine/viewer-api-frontend/styles';
+
+/* Syntax highlighting theme */
+@import 'highlight.js/styles/github-dark.css';
+
+/* App-specific overrides and styles */
+@import './layout.css';
+@import './tree.css';
+@import './tabs.css';
+@import './doc-viewer.css';
+@import './filter-panel.css';
+@import './category-page.css';

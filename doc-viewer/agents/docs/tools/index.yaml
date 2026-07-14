@@ -1,0 +1,54 @@
+name: tools
+description: >
+  Core documentation management logic with DocsManager for agent docs and 
+  CrateDocsManager for crate API docs. Contains all business logic for 
+  document creation, search, validation, and sync operations.
+
+submodules: []
+
+files:
+  - name: mod.rs
+    description: Module entry point with common types (ToolError, DetailLevel, ListFilter) and re-exports
+  - name: agents.rs
+    description: DocsManager implementation for agent documentation (~1565 lines)
+  - name: crates.rs
+    description: CrateDocsManager implementation for crate API documentation (~1499 lines)
+
+key_types:
+  # Common types
+  - ToolError: Error type for tool operations
+  - ToolResult: Result alias for tool operations
+  - DetailLevel: Detail level for document reading (Outline/Summary/Full)
+  - ListFilter: Filter criteria for listing documents
+
+  # Agent documentation types
+  - DocsManager: Manager for agent documentation operations
+  - CreateDocParams: Parameters for document creation
+  - CreateDocResult: Result of document creation
+  - DocSummary: Summary information about a document
+  - UpdateMetaParams: Parameters for metadata updates
+  - ValidationReport: Result of documentation validation
+  - ValidationIssue: A single validation issue
+  - IssueSeverity: Severity level (Error/Warning)
+  - ReadDocResult: Result of reading a document
+  - BrowseResult: Result of browsing documentation structure
+  - CategorySummary: Summary of a document category
+  - TocItem: Table of contents item
+  - ReviewCandidate: Document flagged for review
+  - ContentSearchResult: Result of content search
+  - FileMatch: Matches within a single file
+  - MatchExcerpt: A single match with context
+  - AddFrontmatterResult: Result of frontmatter operation
+  - FrontmatterChange: A single frontmatter change
+  - HealthDashboard: Health metrics for documentation
+  - CategoryHealth: Health metrics for a single category
+
+  # Crate documentation types
+  - CrateDocsManager: Manager for crate API documentation
+  - CrateDiscoveryResult: Result of crate discovery with diagnostics
+  - CrateDocResult: Result of reading crate documentation
+
+source_files:
+  - src/tools/mod.rs
+  - src/tools/agents.rs
+  - src/tools/crates.rs

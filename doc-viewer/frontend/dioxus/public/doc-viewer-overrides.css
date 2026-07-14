@@ -1,0 +1,232 @@
+.doc-browser__content {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    flex: 1;
+    overflow: hidden;
+}
+
+.doc-browser__body {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-height: 0;
+    flex: 1;
+    padding: 16px;
+}
+
+.doc-browser__empty,
+.doc-browser__error,
+.doc-browser__loading {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 220px;
+    padding: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    background: rgba(7, 10, 16, 0.72);
+    color: var(--text-secondary, #b7c0d6);
+}
+
+.doc-browser__error {
+    color: #ffb4b4;
+}
+
+.doc-browser__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    align-items: center;
+}
+
+.doc-browser__chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.08);
+    color: var(--text-secondary, #b7c0d6);
+    font-size: 12px;
+}
+
+.doc-browser__mode-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.doc-browser__mode-btn {
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-primary, #f5f7ff);
+    border-radius: 10px;
+    padding: 8px 12px;
+    cursor: pointer;
+}
+
+.doc-browser__mode-btn--active {
+    background: rgba(129, 187, 255, 0.18);
+    border-color: rgba(129, 187, 255, 0.45);
+}
+
+.doc-browser__frame {
+    width: 100%;
+    flex: 1;
+    min-height: 420px;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 16px;
+    background:
+        radial-gradient(circle at top right, rgba(121, 160, 214, 0.22), transparent 34%),
+        linear-gradient(180deg, rgba(248, 243, 233, 0.94), rgba(235, 227, 212, 0.92));
+    box-shadow: 0 24px 48px rgba(15, 19, 27, 0.16);
+    overflow: hidden;
+}
+
+.doc-browser__json {
+    margin: 0;
+    padding: 16px;
+    overflow: auto;
+    min-height: 420px;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    background: rgba(7, 10, 16, 0.72);
+    color: var(--text-primary, #f5f7ff);
+    font-family: "Cascadia Code", "Fira Code", monospace;
+    font-size: 13px;
+    line-height: 1.45;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.doc-browser__sidebar-help {
+    padding: 12px 16px;
+    color: var(--text-secondary, #b7c0d6);
+    font-size: 12px;
+}
+
+html {
+    background: transparent !important;
+}
+
+body.rustdoc {
+    margin: 0 !important;
+    padding: 18px !important;
+    overflow-x: hidden;
+    background:
+        radial-gradient(circle at top right, rgba(121, 160, 214, 0.20), transparent 30%),
+        radial-gradient(circle at top left, rgba(204, 146, 86, 0.18), transparent 24%),
+        linear-gradient(180deg, rgba(247, 243, 235, 0.98), rgba(236, 228, 214, 0.98)) !important;
+    color: #1f2430 !important;
+    font-family: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif !important;
+    line-height: 1.65;
+}
+
+body.rustdoc .content,
+body.rustdoc main {
+    max-width: min(72rem, 100%) !important;
+}
+
+body.rustdoc .content {
+    width: 100% !important;
+    box-sizing: border-box;
+    margin: 0 auto !important;
+    padding: 2rem 2.25rem 3rem !important;
+    border: 1px solid rgba(43, 59, 84, 0.14);
+    border-radius: 24px;
+    background: rgba(255, 255, 255, 0.56) !important;
+    box-shadow: 0 18px 40px rgba(21, 29, 42, 0.10);
+    backdrop-filter: blur(18px);
+}
+
+body.rustdoc .sidebar,
+body.rustdoc .sidebar-elems {
+    background: rgba(247, 242, 233, 0.86) !important;
+    border-right: 1px solid rgba(43, 59, 84, 0.12);
+    backdrop-filter: blur(18px);
+}
+
+body.rustdoc h1,
+body.rustdoc h2,
+body.rustdoc h3,
+body.rustdoc h4,
+body.rustdoc .main-heading,
+body.rustdoc .item-name {
+    color: #1c2738 !important;
+    letter-spacing: -0.02em;
+}
+
+body.rustdoc h2,
+body.rustdoc h3 {
+    margin-top: 2rem !important;
+}
+
+body.rustdoc h2 {
+    padding-top: 1rem;
+    border-top: 1px solid rgba(43, 59, 84, 0.12);
+}
+
+body.rustdoc a,
+body.rustdoc a:visited {
+    color: #255fa7 !important;
+    text-decoration-color: rgba(37, 95, 167, 0.35);
+}
+
+body.rustdoc a:hover {
+    color: #173f72 !important;
+}
+
+body.rustdoc .main-heading {
+    margin: 0 0 1.5rem !important;
+    padding: 1rem 1.25rem 1.25rem !important;
+    border: 1px solid rgba(43, 59, 84, 0.12);
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.54) !important;
+    box-shadow: 0 12px 28px rgba(21, 29, 42, 0.08);
+}
+
+body.rustdoc .item-decl,
+body.rustdoc pre,
+body.rustdoc .example-wrap,
+body.rustdoc .search-results {
+    border: 1px solid rgba(43, 59, 84, 0.12);
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.74) !important;
+    box-shadow: 0 10px 24px rgba(21, 29, 42, 0.07);
+}
+
+body.rustdoc code,
+body.rustdoc pre,
+body.rustdoc .item-decl {
+    font-family: "Cascadia Code", "Iosevka Term", "Fira Code", monospace !important;
+}
+
+body.rustdoc code,
+body.rustdoc .item-table dt,
+body.rustdoc .item-table dd {
+    overflow-wrap: anywhere;
+}
+
+body.rustdoc pre {
+    padding: 1rem 1.1rem !important;
+    overflow-x: auto;
+}
+
+body.rustdoc .item-decl {
+    padding: 0.85rem 1rem !important;
+}
+
+body.rustdoc button,
+body.rustdoc .small-button {
+    border: 1px solid rgba(43, 59, 84, 0.18);
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.78) !important;
+    color: #253247 !important;
+    box-shadow: 0 8px 18px rgba(21, 29, 42, 0.08);
+}
+
+body.rustdoc button:hover,
+body.rustdoc .small-button:hover {
+    background: rgba(255, 255, 255, 0.92) !important;
+}

@@ -1,0 +1,15 @@
+name: templates
+description: >
+  Document template generation for creating new agent documents.
+  Provides templates for guides, plans, bug reports, implementation docs, and analysis.
+
+submodules: []
+
+files:
+  - name: templates.rs
+    description: Template generation functions (~370 lines)
+
+key_types: []
+
+source_files:
+  - src/templates.rs

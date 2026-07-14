@@ -1,0 +1,93 @@
+/* Breadcrumbs styles */
+
+.breadcrumbs {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 12px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+.breadcrumb-nav {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  overflow: hidden;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumb-separator {
+  display: flex;
+  align-items: center;
+  color: var(--text-muted);
+  margin: 0 4px;
+  opacity: 0.6;
+}
+
+.breadcrumb-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 200px;
+  transition: all 0.15s;
+}
+
+.breadcrumb-label:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.breadcrumb-label.clickable {
+  /* Reset button styles */
+  background: none;
+  border: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+.breadcrumb-label.clickable:hover {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+.breadcrumb-label.current {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.breadcrumb-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.breadcrumb-icon svg {
+  width: 12px;
+  height: 12px;
+}
+
+.breadcrumb-empty {
+  font-size: 12px;
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.breadcrumb-loading {
+  font-size: 11px;
+  color: var(--text-muted);
+  font-style: italic;
+}

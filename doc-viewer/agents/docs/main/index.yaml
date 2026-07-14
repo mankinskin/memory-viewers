@@ -1,0 +1,37 @@
+name: main
+description: >
+  MCP server entry point and tool handlers. Defines input structs for each MCP tool
+  and implements the tool router using rmcp macros.
+
+submodules: []
+
+files:
+  - name: main.rs
+    description: Server entry point with DocsServer struct and tool handlers
+
+key_types:
+  - DocsServer: Main server struct holding DocsManager and CrateDocsManager
+  - ListCratesInput: Input for list_crates tool
+  - BrowseCrateInput: Input for browse_crate tool
+  - ReadCrateDocInput: Input for read_crate_doc tool
+  - UpdateCrateDocInput: Input for update_crate_doc tool
+  - CreateModuleDocInput: Input for create_module_doc tool
+  - SearchCrateDocsInput: Input for search_crate_docs tool
+  - ValidateCrateDocsInput: Input for validate_crate_docs tool
+  - CheckStaleDocs: Input for check_stale_docs tool
+  - SyncCrateDocs: Input for sync_crate_docs tool
+  - UpdateCrateIndex: Input for update_crate_index tool
+  - CreateDocInput: Input for create_doc tool
+  - ListDocsInput: Input for list_docs tool
+  - UpdateMetaInput: Input for update_doc_meta tool
+  - SearchDocsInput: Input for search_docs tool
+  - RegenerateIndexInput: Input for regenerate_index tool
+  - ReadDocInput: Input for read_doc tool
+  - BrowseDocsInput: Input for browse_docs tool
+  - GetDocsNeedingReviewInput: Input for get_docs_needing_review tool
+  - SearchContentInput: Input for search_content tool
+  - AddFrontmatterInput: Input for add_frontmatter tool
+  - HealthDashboardInput: Input for health_dashboard tool
+
+source_files:
+  - src/main.rs

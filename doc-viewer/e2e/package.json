@@ -1,0 +1,14 @@
+{
+  "name": "doc-viewer-e2e",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test": "playwright test -c playwright.managed.config.ts",
+    "test:headed": "playwright test -c playwright.managed.config.ts --headed",
+    "test:ui": "playwright test -c playwright.managed.config.ts --ui",
+    "report": "playwright show-report playwright-report-managed"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.58.2"
+  }
+}

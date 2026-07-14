@@ -1,0 +1,16 @@
+name: parser
+description: >
+  Document parsing utilities for extracting metadata from markdown files.
+  Handles frontmatter parsing, title extraction, and YAML file parsing.
+
+submodules: []
+
+files:
+  - name: parser.rs
+    description: Parsing functions for documents and metadata (~190 lines)
+
+key_types:
+  - FrontMatter: Parsed frontmatter data (tags, summary, status)
+
+source_files:
+  - src/parser.rs

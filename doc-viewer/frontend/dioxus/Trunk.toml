@@ -1,0 +1,9 @@
+[build]
+
+[serve]
+port = 8093
+open = false
+
+[[proxy]]
+rewrite = "/api"
+backend = "http://127.0.0.1:4003/api"

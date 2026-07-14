@@ -1,0 +1,48 @@
+name: schema
+description: >
+  Data structures and types for documentation metadata. Defines the schema
+  for both agent documentation (DocType, DocMetadata) and crate documentation
+  (CrateMetadata, ModuleMetadata).
+
+submodules: []
+
+files:
+  - name: schema.rs
+    description: All schema types and their implementations (~680 lines)
+
+key_types:
+  # Agent documentation schema
+  - DocType: Document category (Guide/Plan/Implemented/BugReport/Analysis)
+  - PlanStatus: Status for plan documents (Design/InProgress/Completed/Blocked/Superseded)
+  - DocMetadata: Full metadata for an agent document
+  - IndexEntry: Simplified entry for INDEX.md files
+
+  # Crate documentation schema
+  - ModuleRef: Reference to a module in a crate
+  - SubmoduleRef: Reference to a submodule
+  - FileEntry: File entry in a module
+  - TypeEntry: Type entry with optional description (supports map/string YAML formats)
+  - TypeWithModule: Type entry with module attribution
+  - ExportedItems: Exported types, traits, and macros
+  - CrateMetadata: Crate-level metadata from index.yaml
+  - ModuleMetadata: Module-level metadata from index.yaml
+  - CrateSummary: Summary info for crate listing
+  - ModuleTreeNode: Node in module tree for browsing
+  - CrateSearchResult: Search result for crate documentation
+  - CrateValidationIssue: Validation issue for crate docs
+  - CrateValidationReport: Full validation report
+
+  # Staleness detection schema
+  - StalenessLevel: Staleness status (Fresh/Stale/VeryStale/Unknown)
+  - FileModificationInfo: Git info about a file's modifications
+  - StaleDocItem: Staleness status for a single doc item
+  - StaleDocsReport: Full staleness report
+  - StaleSummary: Summary statistics for staleness
+
+  # Sync schema
+  - SyncSuggestion: Suggested change for documentation sync
+  - SyncAnalysisResult: Result of source file analysis
+  - SyncSummary: Summary counts for sync analysis
+
+source_files:
+  - src/schema.rs

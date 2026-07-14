@@ -1,0 +1,35 @@
+/* CSS Variables and Design Tokens */
+
+:root {
+  /* Background colors */
+  --bg-primary: #1a1a1c;
+  --bg-secondary: #212124;
+  --bg-tertiary: #28282c;
+  --bg-hover: #32323a;
+  --bg-active: #2a3a4a;
+  
+  /* Text colors */
+  --text-primary: #e0e0e4;
+  --text-secondary: #a0a0a8;
+  --text-muted: #606068;
+  
+  /* Border colors */
+  --border-color: #38383e;
+  --border-subtle: #2a2a30;
+  
+  /* Accent colors */
+  --accent-blue: #4a8fd4;
+  --accent-green: #3da060;
+  --accent-orange: #d97a3a;
+  --accent-purple: #a06dd0;
+  --accent-yellow: #c9a820;
+  --accent-red: #c83838;
+  
+  /* Typography */
+  --font-mono: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  
+  /* Layout */
+  --sidebar-width: 280px;
+  --header-height: 44px;
+}

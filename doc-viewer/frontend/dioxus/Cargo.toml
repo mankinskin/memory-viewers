@@ -1,0 +1,22 @@
+[package]
+name = "doc-viewer-dioxus"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "doc-viewer-dioxus"
+path = "src/main.rs"
+
+[dependencies]
+dioxus = { version = "0.7", features = ["web"] }
+viewer-api-dioxus = { path = "../../../../viewer-api/viewer-api/frontend/dioxus" }
+gloo-net = { version = "0.6", features = ["http"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+percent-encoding = "2"
+tracing = "0.1"
+tracing-wasm = "0.2"
+wasm-bindgen = "0.2"
+web-sys = { version = "0.3", features = ["Window", "Location", "Document", "Element", "HtmlIFrameElement", "HtmlHeadElement"] }
+
+[workspace]
