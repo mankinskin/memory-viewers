@@ -560,6 +560,11 @@ impl LogServer {
 impl ServerHandler for LogServer {
     fn get_info(&self) -> ServerInfo {
         ServerInfo {
+            server_info: Implementation {
+                name: env!("CARGO_PKG_NAME").to_string(),
+                version: env!("CARGO_PKG_VERSION").to_string(),
+                ..Default::default()
+            },
             instructions: Some(
                 "Log Viewer MCP Server for querying and debugging tracing logs.\n\n\
                  Tools available:\n\
