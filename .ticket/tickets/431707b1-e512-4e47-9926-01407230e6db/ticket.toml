@@ -1,0 +1,10 @@
+id = "431707b1-e512-4e47-9926-01407230e6db"
+created_at = "2026-07-14T23:14:52.286174900+00:00"
+title = "[viewer-platform][tauri-test] Native desktop E2E validation lane"
+state = "new"
+component = "viewer-platform-tauri"
+depends_on = ["26a73130-c631-4168-8030-fade31c5cf55", "6002e996-dcb8-4dad-a830-20346ce9d8cc", "7d951620-76c5-4b24-90ce-e7d08d2dd188", "9202bc21-b11f-4464-b66b-af19dd6e7078"]
+effort = "3200"
+priority = "low"
+risk_level = "high"
+type = "tracker-improvement"

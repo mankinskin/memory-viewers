@@ -1,0 +1,10 @@
+id = "0556ed59-57a6-4ca1-a8a4-93fdb1549c22"
+created_at = "2026-07-14T23:13:55.330387800+00:00"
+title = "[viewer-platform][ci] Enforce browser lanes and retain diagnostic artifacts"
+state = "new"
+component = "viewer-platform-ci"
+depends_on = ["6002e996-dcb8-4dad-a830-20346ce9d8cc", "9202bc21-b11f-4464-b66b-af19dd6e7078"]
+effort = "2200"
+priority = "high"
+risk_level = "high"
+type = "tracker-improvement"
