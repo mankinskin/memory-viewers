@@ -5,6 +5,7 @@ state = "in-review"
 acceptance_criteria = "1. Graph nodes render through several distinct detail tiers instead of a single fixed card. 2. Zoomed-out graphs fall back to minimal representations that avoid unreadable text walls. 3. Zooming in restores progressively richer ticket content. 4. Focus or hover can keep the active node more informative than distant nodes at the same zoom level."
 component = "viewer-api"
 depends_on = ["60092819-f725-48ec-93f0-aba195ef81eb"]
+effort = "1200"
 priority = "high"
 risk_level = "medium"
 spec_refs = "8c4d51ef-c0b6-437d-bc14-672b0802cef2"
