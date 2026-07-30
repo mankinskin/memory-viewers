@@ -1,12 +1,19 @@
+use std::collections::HashSet;
+
 use dioxus::prelude::*;
 use viewer_api_dioxus::FileContentViewer;
 
 use crate::{
     components::history::HistoryPanel,
-    types::HistoryEntry,
+    types::{
+        HistoryEntry,
+        ProjectedPart,
+        ProjectedRef,
+    },
 };
 
 use super::{
+    parts::render_parts_panel,
     Tab,
     TAB_ACTIVE_STYLE,
     TAB_BASE_STYLE,
@@ -248,6 +255,131 @@ pub(super) fn render_document_panel(
     }
 }
 
+/// Renders the ticket document header plus its parts as independently
+/// collapsible sections (the `view=full` structured render), replacing the
+/// single-blob description body. Legacy tickets still render correctly: the
+/// backend synthesizes a sole `objective` part when `[[parts]]` is absent.
+pub(super) fn render_full_document_panel(
+    document: TicketDocumentContext,
+    full_loading: bool,
+    full_error: Option<String>,
+    parts: Vec<ProjectedPart>,
+    refs: Option<Vec<ProjectedRef>>,
+    collapsed: Signal<HashSet<String>>,
+) -> Element {
+    let ticket_title = document
+        .title
+        .clone()
+        .or_else(|| field_value(&document.fields, "title"))
+        .unwrap_or_else(|| document.ticket_id.clone());
+    let state = document
+        .ticket_state
+        .clone()
+        .or_else(|| field_value(&document.fields, "state"));
+    let ticket_type = document
+        .ticket_type
+        .clone()
+        .or_else(|| field_value(&document.fields, "type"));
+    let priority = field_value(&document.fields, "priority");
+    let component = field_value(&document.fields, "component");
+    let risk_level = field_value(&document.fields, "risk_level");
+    let tags = field_value(&document.fields, "tags");
+    let spec_refs = field_value(&document.fields, "spec_refs");
+    let dependency_ids = field_value(&document.fields, "dependencies")
+        .or_else(|| field_value(&document.fields, "depends_on"));
+    let created_at = document
+        .created_at
+        .clone()
+        .or_else(|| field_value(&document.fields, "created_at"));
+    let updated_at = document
+        .updated_at
+        .clone()
+        .or_else(|| field_value(&document.fields, "updated_at"));
+    let created_at = compact_timestamp(created_at.as_deref());
+    let updated_at = compact_timestamp(updated_at.as_deref());
+    let extra_fields = additional_field_rows(&document.fields);
+
+    let mut chips: Vec<(String, String)> = Vec::new();
+    if let Some(value) = state.clone() {
+        chips.push(("State".to_string(), value));
+    }
+    if let Some(value) = ticket_type {
+        chips.push(("Type".to_string(), value));
+    }
+    if let Some(value) = priority {
+        chips.push(("Priority".to_string(), value));
+    }
+    if let Some(value) = component {
+        chips.push(("Component".to_string(), value));
+    }
+    if let Some(value) = risk_level {
+        chips.push(("Risk".to_string(), value));
+    }
+
+    let mut metadata_rows: Vec<(String, String)> = vec![
+        ("Workspace".to_string(), document.workspace.clone()),
+        ("Ticket".to_string(), document.ticket_id.clone()),
+    ];
+    if let Some(value) = created_at {
+        metadata_rows.push(("Created".to_string(), value));
+    }
+    if let Some(value) = updated_at {
+        metadata_rows.push(("Updated".to_string(), value));
+    }
+    if let Some(value) = tags {
+        metadata_rows.push(("Tags".to_string(), value));
+    }
+    if let Some(value) = spec_refs {
+        metadata_rows.push(("Specs".to_string(), value));
+    }
+    if let Some(value) = dependency_ids {
+        metadata_rows.push(("Dependencies".to_string(), value));
+    }
+
+    if full_loading {
+        return rsx! {
+            div {
+                "data-testid": "ticket-document",
+                style: document_panel_style(),
+                {render_document_header(ticket_title, chips, metadata_rows, state, None)}
+                {render_document_fields(extra_fields)}
+                div {
+                    "data-testid": "desc-loading",
+                    style: document_body_style(),
+                    "Loading…"
+                }
+            }
+        };
+    }
+
+    if let Some(error) = full_error {
+        return rsx! {
+            div {
+                "data-testid": "ticket-document",
+                style: document_panel_style(),
+                {render_document_header(ticket_title, chips, metadata_rows, state, None)}
+                {render_document_fields(extra_fields)}
+                div {
+                    "data-testid": "desc-error",
+                    style: "{document_body_style()} color: #f87171; font-size: 13px;",
+                    strong { "Error: " }
+                    "{error}"
+                }
+            }
+        };
+    }
+
+    rsx! {
+        div {
+            "data-testid": "ticket-document",
+            style: document_panel_style(),
+            {render_document_header(ticket_title, chips, metadata_rows, state, None)}
+            {render_document_fields(extra_fields)}
+            {render_parts_panel(parts, refs, collapsed)}
+        }
+    }
+}
+
 fn render_document_fields(fields: Vec<DocumentFieldRow>) -> Element {
     if fields.is_empty() {
         return rsx! { Fragment {} };
@@ -401,6 +533,11 @@ fn is_header_field(key: &str) -> bool {
             | "spec_refs"
             | "dependencies"
             | "depends_on"
+            // Structural manifest tables rendered by the dedicated parts/refs
+            // UI, not the generic field-row grid (spec 24b3d22b).
+            | "parts"
+            | "refs"
+            | "plan_revision"
     )
 }
 

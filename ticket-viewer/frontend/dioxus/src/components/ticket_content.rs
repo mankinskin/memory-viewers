@@ -35,6 +35,7 @@ pub(crate) const TAB_ACTIVE_STYLE: &str = "
 mod edit;
 mod helpers;
 mod page;
+mod parts;
 mod render;
 
 pub use page::TicketContent;

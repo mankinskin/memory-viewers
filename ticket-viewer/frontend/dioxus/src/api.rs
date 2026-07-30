@@ -201,6 +201,18 @@ impl TicketBackend for HttpTicketBackend {
         .await
     }
 
+    async fn get_ticket_full(
+        &self,
+        workspace: &str,
+        id: &str,
+    ) -> Result<TicketFullResponse, String> {
+        self.fetch(&format!(
+            "/api/tickets/{id}?workspace={}&view=full",
+            enc(workspace)
+        ))
+        .await
+    }
+
     async fn get_subgraph(
         &self,
         workspace: &str,

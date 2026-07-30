@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use dioxus::prelude::*;
 
 use crate::{
@@ -5,7 +7,11 @@ use crate::{
         HttpTicketBackend,
         TicketBackend,
     },
-    types::HistoryEntry,
+    types::{
+        HistoryEntry,
+        ProjectedPart,
+        ProjectedRef,
+    },
 };
 
 use super::{
@@ -16,6 +22,7 @@ use super::{
     },
     render::{
         render_document_panel,
+        render_full_document_panel,
         render_history_panel,
         render_tab_bar,
         render_toml_panel,
@@ -53,6 +60,11 @@ pub fn TicketContent(
     let mut desc_loading: Signal<bool> = use_signal(|| true);
     let mut desc_text: Signal<Option<String>> = use_signal(|| None);
     let mut desc_error: Signal<Option<String>> = use_signal(|| None);
+    let mut full_loading: Signal<bool> = use_signal(|| true);
+    let mut full_error: Signal<Option<String>> = use_signal(|| None);
+    let mut full_parts: Signal<Vec<ProjectedPart>> = use_signal(Vec::new);
+    let mut full_refs: Signal<Option<Vec<ProjectedRef>>> = use_signal(|| None);
+    let collapsed_parts: Signal<HashSet<String>> = use_signal(HashSet::new);
     let mut history_entries: Signal<Vec<HistoryEntry>> = use_signal(|| vec![]);
     let history_refresh_key: Signal<u32> = use_signal(|| 0);
     let mut edit_draft: Signal<String> = use_signal(String::new);
@@ -194,6 +206,38 @@ pub fn TicketContent(
     {
         let workspace = workspace.clone();
         let ticket_id = ticket_id.clone();
+        let is_description = is_description;
+        use_effect(move || {
+            let workspace = workspace.clone();
+            let ticket_id = ticket_id.clone();
+            if !is_description {
+                full_loading.set(false);
+                full_parts.set(Vec::new());
+                full_refs.set(None);
+                return;
+            }
+            full_loading.set(true);
+            full_error.set(None);
+            spawn(async move {
+                let backend = HttpTicketBackend::new(None);
+                match backend.get_ticket_full(&workspace, &ticket_id).await {
+                    Ok(response) => {
+                        full_parts.set(response.ticket.parts);
+                        full_refs.set(response.ticket.refs);
+                        full_loading.set(false);
+                    },
+                    Err(error) => {
+                        full_error.set(Some(error));
+                        full_loading.set(false);
+                    },
+                }
+            });
+        });
+    }
+
+    {
+        let workspace = workspace.clone();
+        let ticket_id = ticket_id.clone();
         use_effect(move || {
             let _refresh = history_refresh_key();
             let workspace = workspace.clone();
@@ -239,13 +283,24 @@ pub fn TicketContent(
                 "data-testid": "ticket-content-body",
                 style: "{body_style}",
                 if active_tab() == Tab::Description {
-                    {render_document_panel(
-                        document_context.clone(),
-                        desc_loading(),
-                        desc_error(),
-                        desc_text(),
-                        asset_path.clone(),
-                    )}
+                    if is_description {
+                        {render_full_document_panel(
+                            document_context.clone(),
+                            full_loading(),
+                            full_error(),
+                            full_parts(),
+                            full_refs(),
+                            collapsed_parts,
+                        )}
+                    } else {
+                        {render_document_panel(
+                            document_context.clone(),
+                            desc_loading(),
+                            desc_error(),
+                            desc_text(),
+                            asset_path.clone(),
+                        )}
+                    }
                 }
                 if active_tab() == Tab::Toml {
                     {render_toml_panel(toml_text)}

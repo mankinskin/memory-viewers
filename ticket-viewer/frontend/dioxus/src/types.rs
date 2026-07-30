@@ -146,6 +146,84 @@ pub struct TicketDetailResponse {
     pub ticket: TicketDetail,
 }
 
+// ── Parts / refs (structured ticket read, `view=full` projection) ────────────
+
+/// A typed reference from a ticket to a non-ticket entity (spec, log, file,
+/// etc.). `kind` is a plain string so a foreign/future kind round-trips.
+#[derive(Debug, Clone, PartialEq, Eq, Deserialize)]
+pub struct ProjectedRef {
+    pub kind: String,
+    pub urn: String,
+    #[serde(default)]
+    pub note: Option<String>,
+}
+
+/// A single projected ticket part. `amendments` carries any parts that
+/// supersede this one, inlined directly beneath it by the backend
+/// projection (oldest first).
+#[derive(Debug, Clone, PartialEq, Deserialize)]
+pub struct ProjectedPart {
+    pub id: String,
+    pub kind: String,
+    #[serde(default)]
+    pub frozen: bool,
+    pub created_at: String,
+    #[serde(default)]
+    pub supersedes: Option<String>,
+    #[serde(default)]
+    pub content: String,
+    #[serde(default)]
+    pub implicit: bool,
+    #[serde(default)]
+    pub amendments: Vec<ProjectedPart>,
+}
+
+/// The schema-validated core part kinds understood by projections (spec
+/// 24b3d22b). Anything else is a free-form/untyped attachment.
+pub const CORE_PART_KINDS: &[&str] = &[
+    "objective",
+    "requirements",
+    "design",
+    "examples",
+    "acceptance_criteria",
+    "review",
+    "validation",
+    "notes",
+    "amendment",
+];
+
+impl ProjectedPart {
+    pub fn is_untyped(&self) -> bool {
+        !CORE_PART_KINDS.contains(&self.kind.as_str())
+    }
+}
+
+/// The `ticket` payload of a `view=full` projected read
+/// (`GET /api/tickets/{id}?view=full`).
+#[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
+pub struct TicketProjection {
+    pub id: String,
+    pub created_at: String,
+    #[serde(default)]
+    pub fields: serde_json::Value,
+    #[serde(default)]
+    pub profile: Option<String>,
+    #[serde(default)]
+    pub parts: Vec<ProjectedPart>,
+    #[serde(default)]
+    pub refs: Option<Vec<ProjectedRef>>,
+}
+
+#[derive(Debug, Clone, Deserialize)]
+#[allow(dead_code)]
+pub struct TicketFullResponse {
+    #[serde(default)]
+    pub active_workspace: String,
+    pub workspace: String,
+    pub ticket: TicketProjection,
+}
+
 #[derive(Debug, Clone, Deserialize)]
 #[allow(dead_code)]
 pub struct TicketDescriptionResponse {

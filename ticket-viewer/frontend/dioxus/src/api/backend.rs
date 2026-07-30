@@ -29,6 +29,13 @@ pub trait TicketBackend {
         id: &str,
     ) -> impl std::future::Future<Output = Result<TicketDescriptionResponse, String>>;
 
+    /// `GET /api/tickets/{id}?view=full` — parts, refs, and frozen state.
+    fn get_ticket_full(
+        &self,
+        workspace: &str,
+        id: &str,
+    ) -> impl std::future::Future<Output = Result<TicketFullResponse, String>>;
+
     #[allow(dead_code)]
     fn get_subgraph(
         &self,
