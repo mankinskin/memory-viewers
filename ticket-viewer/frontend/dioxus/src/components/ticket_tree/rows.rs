@@ -57,7 +57,7 @@ fn render_ticket_entry(
     let ticket_ref_select = ticket_ref.clone();
     let ticket_id_focus = ticket_id.clone();
     let title = ticket.title.clone().unwrap_or_else(|| "Untitled".into());
-    let state = ticket.state.clone().unwrap_or_else(|| "new".into());
+    let state = ticket.state.clone().unwrap_or_else(|| "open".into());
     let is_selected = props.selected_id.as_deref() == Some(ticket_id.as_str());
     let is_keyboard_focused =
         focused_ticket_id.read().as_deref() == Some(ticket_id.as_str());

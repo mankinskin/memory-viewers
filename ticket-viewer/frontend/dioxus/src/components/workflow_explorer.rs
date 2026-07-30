@@ -358,7 +358,7 @@ fn render_tree_panel(
                             "{short_id(&root.id)} · {root.ticket_type}"
                         }
                     }
-                    {render_state_badge(root.state.as_deref().unwrap_or("new"))}
+                    {render_state_badge(root.state.as_deref().unwrap_or("open"))}
                 }
                 div {
                     style: "font-size: 11px; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 6px 10px;",
@@ -491,7 +491,7 @@ fn render_tree_node(
                             "{short_id(&id)} · {ticket_type} · priority {priority}"
                         }
                     }
-                    {render_state_badge(state.as_deref().unwrap_or("new"))}
+                    {render_state_badge(state.as_deref().unwrap_or("open"))}
                 }
                 div {
                     style: "font-size: 11px; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 6px 10px; width: 100%; text-align: left;",
@@ -599,7 +599,7 @@ fn render_candidate_card(
                         "{short_id(&id)} · {ticket_type} · priority {priority}"
                     }
                 }
-                {render_state_badge(state.as_deref().unwrap_or("new"))}
+                {render_state_badge(state.as_deref().unwrap_or("open"))}
             }
             div {
                 style: "font-size: 11px; color: var(--text-secondary); display: flex; flex-wrap: wrap; gap: 6px 10px; width: 100%; text-align: left;",

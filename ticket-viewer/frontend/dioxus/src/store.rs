@@ -52,7 +52,7 @@ pub struct WorkspaceUiState {
     /// Text filter applied to the ticket title / ID.
     #[serde(default)]
     pub filter: String,
-    /// State filter (e.g. `"new"`, `"in-implementation"`, …).
+    /// State filter (e.g. `"open"`, `"in-implementation"`, …).
     #[serde(default)]
     pub state_filter: String,
     /// Sort key for the ticket list.

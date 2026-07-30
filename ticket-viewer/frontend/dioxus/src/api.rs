@@ -420,7 +420,14 @@ impl TicketBackend for HttpTicketBackend {
         text: &str,
     ) -> Result<(), String> {
         let url = format!("/api/tickets/{id}?workspace={}", enc(workspace));
-        let body = serde_json::json!({ "description": text });
+        // The editor always saves the full textarea contents, so this is a
+        // whole-file overwrite: `replace` is the correct explicit mode, not
+        // an omitted default (description_mode has no default; see ticket
+        // 3d952036).
+        let body = serde_json::json!({
+            "description": text,
+            "description_mode": "replace",
+        });
         let body_str =
             serde_json::to_string(&body).map_err(|e| e.to_string())?;
         self.send_json::<serde_json::Value>("PATCH", &url, &body_str)

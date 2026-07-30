@@ -495,7 +495,7 @@ pub fn Graph3D(props: Graph3DProps) -> Element {
                     {
                         let node_id    = node.id.clone();
                         let title      = node.label.clone().unwrap_or_else(|| "Untitled".into());
-                        let state_str  = node.state.clone().unwrap_or_else(|| "new".into());
+                        let state_str  = node.state.clone().unwrap_or_else(|| "open".into());
                         let color      = ticket_card::state_color(Some(state_str.as_str()));
                         let short_id   = if node_id.len() > 8 { node_id[..8].to_string() } else { node_id.clone() };
                         let ticket_ref_click = ticket_refs_by_id

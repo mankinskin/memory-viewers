@@ -79,8 +79,8 @@ pub struct TicketTreeProps {
 
 const STATE_CHIPS: &[(&str, &str)] = &[
     ("All", ""),
-    ("new", "new"),
-    ("ready", "ready"),
+    ("open", "open"),
+    ("planned", "planned"),
     ("impl", "in-implementation"),
     ("review", "in-review"),
     ("done", "done"),

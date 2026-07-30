@@ -1,6 +1,6 @@
 pub(crate) const STATE_OPS: &[(&str, &str)] = &[
-    ("→ new", "new"),
-    ("→ ready", "ready"),
+    ("→ open", "open"),
+    ("→ planned", "planned"),
     ("→ in-impl", "in-implementation"),
     ("→ in-review", "in-review"),
 ];

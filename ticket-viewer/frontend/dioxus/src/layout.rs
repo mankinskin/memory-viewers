@@ -829,17 +829,17 @@ fn primary_parent_index(
 }
 
 fn kanban_state_key(state: Option<&str>) -> String {
-    let normalized = state.unwrap_or("new").trim();
+    let normalized = state.unwrap_or("open").trim();
     if normalized.is_empty() {
-        return "new".to_string();
+        return "open".to_string();
     }
     normalized.to_ascii_lowercase()
 }
 
 fn kanban_state_rank(state: &str) -> usize {
     match state {
-        "new" => 0,
-        "ready" => 1,
+        "open" => 0,
+        "planned" => 1,
         "blocked" => 2,
         "in-implementation" => 3,
         "in-review" => 4,
@@ -968,8 +968,8 @@ mod tests {
             "default",
             vec![
                 node("root", "done", 0, "Root"),
-                node("new-child", "new", 1, "New child"),
-                node("ready-child", "ready", 1, "Ready child"),
+                node("new-child", "open", 1, "New child"),
+                node("ready-child", "planned", 1, "Ready child"),
                 node("impl-child", "in-implementation", 1, "Impl child"),
                 node("review-child", "in-review", 1, "Review child"),
             ],
@@ -1005,7 +1005,7 @@ mod tests {
             .collect::<Vec<_>>();
         assert_eq!(
             states,
-            vec!["new", "ready", "in-implementation", "in-review", "done"]
+            vec!["open", "planned", "in-implementation", "in-review", "done"]
         );
         assert_eq!(
             overlay.separators.len(),
@@ -1019,9 +1019,9 @@ mod tests {
             "default",
             vec![
                 node("root", "done", 0, "Root"),
-                node("branch-a", "ready", 1, "Branch A"),
+                node("branch-a", "planned", 1, "Branch A"),
                 node("branch-a-impl", "in-implementation", 2, "Branch A impl"),
-                node("branch-b", "ready", 1, "Branch B"),
+                node("branch-b", "planned", 1, "Branch B"),
             ],
             vec![
                 edge("root", "branch-a"),
@@ -1067,7 +1067,7 @@ mod tests {
             "default",
             vec![
                 node("root", "done", 0, "Root"),
-                node("branch", "ready", 1, "Branch"),
+                node("branch", "planned", 1, "Branch"),
                 node("impl-a", "in-implementation", 2, "Impl A"),
                 node("impl-b", "in-implementation", 2, "Impl B"),
             ],
