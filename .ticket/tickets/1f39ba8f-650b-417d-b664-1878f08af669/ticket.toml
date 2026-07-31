@@ -6,6 +6,7 @@ acceptance_criteria = "1. Graph browser coverage exercises default hierarchical/
 component = "ticket-viewer"
 effort = "1200"
 implementation_summary = "Extended the graph-detail-sidebar Playwright release suite with a layout/projection restore regression that switches away from the default hierarchical orthographic view and verifies the graph returns to top-to-bottom hierarchy ordering, plus zoom-driven LOD coverage that proves compact or minimal graph nodes remain clickable and promote the selected node back to rich detail."
+parts = [{ id = "8014c307-3e04-4b39-85e8-d81572c2ec00", kind = "objective", path = "parts/8014c307-3e04-4b39-85e8-d81572c2ec00.md", frozen = false, created_at = "2026-07-30T21:02:29.055070200Z" }, { id = "e21dda72-83bc-4a34-8e99-bba1144e48c3", kind = "validation", path = "parts/e21dda72-83bc-4a34-8e99-bba1144e48c3.md", frozen = false, created_at = "2026-07-30T21:02:29.059330600Z" }, { id = "56e5af7e-3f2f-4a99-b881-7d8371be3d00", kind = "objective", path = "parts/56e5af7e-3f2f-4a99-b881-7d8371be3d00.md", frozen = false, created_at = "2026-07-30T21:02:29.063651700Z" }]
 priority = "high"
 risk_level = "medium"
 spec_refs = "8c4d51ef-c0b6-437d-bc14-672b0802cef2"

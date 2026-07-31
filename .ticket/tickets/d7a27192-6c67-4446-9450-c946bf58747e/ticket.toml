@@ -5,6 +5,7 @@ state = "done"
 acceptance_criteria = "Starting ticket-viewer against a checkout with .ticket/tickets content but no tickets.db rebuilds the local index and serves routes without panicking."
 component = "ticket-viewer"
 implementation_summary = "ticket-viewer startup now uses an idempotent local-store bootstrap helper that initializes and force-scans the repo-local .ticket store before building the single-workspace registry, so manifest-only workspaces rebuild tickets.db instead of panicking with WorkspaceNotFound."
+parts = [{ id = "f547f454-ff40-4ff2-92ea-badfa6d8275c", kind = "objective", path = "parts/f547f454-ff40-4ff2-92ea-badfa6d8275c.md", frozen = false, created_at = "2026-07-30T21:05:26.176057200Z" }, { id = "8ec8f883-fa6e-4175-bcc9-721018a1db60", kind = "validation", path = "parts/8ec8f883-fa6e-4175-bcc9-721018a1db60.md", frozen = false, created_at = "2026-07-30T21:05:26.180408900Z" }]
 priority = "high"
 spec_refs = "5650b307-8408-4ca0-922f-c515dd0bfa27"
 type = "tracker-improvement"
