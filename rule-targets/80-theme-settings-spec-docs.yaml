@@ -1,5 +1,0 @@
-targets:
-- name: ticket-viewer-theme-settings-body
-  scope: memory-viewers:.spec/specs/6cf1685d-dc05-4022-abbb-efdd8e94af22/body.md
-- name: spec-viewer-theme-settings-body
-  scope: memory-viewers:.spec/specs/c5b11920-6ae8-4686-ae07-b8e9f8100bf8/body.md

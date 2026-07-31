@@ -1,1 +1,0 @@
-For memory-viewers, inherit the canonical roast tone from memory-api and add only the managed-viewer barbs needed for this workspace.

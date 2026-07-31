@@ -1,6 +1,3 @@
-<!-- rule-api:file generated=true -->
-
-<!-- rule-api:entry id=0b46b9a7-b821-428f-8025-aff2a2fe800a slug=memory-viewers/readme/memory-viewers/l1 -->
 # memory-viewers
 
 memory-viewers is the top-level repository for the user-facing viewer tools and the nested toolchain they depend on.
@@ -21,12 +18,10 @@ Installable content in or directly behind this repository includes the `spec-vie
 | [<code>memory&#8209;api</code>](memory-api/README.md) | CLI, MCP, HTTP, and VS Code tooling | [memory-api/README.md](memory-api/README.md) |
 | [<code>viewer&#8209;api</code>](viewer-api/README.md) | Shared viewer-facing APIs | [viewer-api/README.md](viewer-api/README.md) |
 
-<!-- rule-api:entry id=2b5a6704-cdc0-4897-8d83-8a8b2707ee1a slug=memory-viewers/readme/memory-viewers/user-stories/l5 -->
 ## Tool Screenshots
 
 ![ticket-viewer screenshot](.github/assets/ticket-viewer-example.png)
 
-<!-- rule-api:entry id=f116a30d-199c-45db-a22c-6049d319f263 slug=memory-viewers/readme/memory-viewers/usage-guide/l11 -->
 ## Dependency Graph
 
 ```mermaid
@@ -40,7 +35,6 @@ flowchart LR
     Docs[generated README targets] --> MemoryTools[memory-api rule surfaces]
 ```
 
-<!-- rule-api:entry id=5e37e92f-6f55-49c0-b726-4a6c89dd940f slug=memory-viewers/readme/memory-viewers/nested-workspaces/l18 -->
 ## Tool Use Examples
 
 ### Install the shared tools first

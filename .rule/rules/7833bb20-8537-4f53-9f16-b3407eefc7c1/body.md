@@ -1,1 +1,0 @@
-For memory-viewers, reuse the canonical roast mission owned by memory-api and add local sarcasm only when this workspace needs a managed-viewer-specific twist.

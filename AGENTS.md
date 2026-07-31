@@ -1,11 +1,7 @@
-<!-- rule-api:file generated=true -->
-
-<!-- rule-api:entry id=002154c9-6046-4fab-85ef-0065365a2f52 slug=shared/agent-rules/l1 -->
 # Agent Rules
 
 Global working rules for this repository. Keep this file small and stable.
 
-<!-- rule-api:entry id=40a951a1-0111-4116-afe0-c030208cacc2 slug=shared/agent-rules/operating-principles/l5 -->
 ## Operating Principles
 
 - Gather context before coding. Do not guess.
@@ -18,12 +14,10 @@ Global working rules for this repository. Keep this file small and stable.
 - Read test logs in `target/test-logs/` for debugging instead of relying on truncated test stdout.
 - Keep scope tight: do not add extra features or broad refactors unless requested.
 
-<!-- rule-api:entry id=bf14e804-4574-4a3b-8606-88474584b4b3 slug=shared/agent-rules/discovery-protocol-before-editing/l14 -->
 ## Discovery Protocol (Before Editing)
 
 Use live sources first:
 
-<!-- rule-api:entry id=f8026abd-d873-4ea6-8d23-d4fe6d8fec40 slug=shared/agent-rules/discovery-protocol-before-editing/l18 -->
 1. Documentation: use doc-viewer MCP tools to locate relevant module docs.
 2. Known issues/plans: use ticket-mcp tools before duplicating work.
 3. Board state: check active WIP, stale entries, and file ownership before touching
@@ -34,15 +28,12 @@ Use live sources first:
 4. Test failures: use log-viewer MCP tools (`get_log`, `search_all_logs`, `query_logs`).
 5. Graph/workspace behavior: use context-mcp tools for context-engine operations.
 
-<!-- rule-api:entry id=04f14e9e-a1ba-43c0-ad51-1041e23b8016 slug=shared/agent-rules/discovery-protocol-before-editing/l28 -->
 Use static references as support:
 
-<!-- rule-api:entry id=72cb30dc-e52c-4ec0-8cf0-128c9dfc8e3d slug=shared/agent-rules/discovery-protocol-before-editing/l30 -->
 1. `CHEAT_SHEET.md` for type-level gotchas and common patterns.
 2. crate `README.md` and `HIGH_LEVEL_GUIDE.md` for design context.
 3. existing tests for usage examples and assertions.
 
-<!-- rule-api:entry id=84fa9769-cff9-4d89-9068-5ff8ed283d30 slug=shared/agent-rules/task-routing/l34 -->
 ## Task Routing
 
 - Any requested implementation or behavior change: create or update the tracking ticket(s) first, then create or update the relevant spec before editing files.
@@ -52,7 +43,6 @@ Use static references as support:
 - Unfamiliar module or unclear behavior: follow `.agents/prompts/research.prompt.md` when available before locking the spec or implementation plan.
 - Swarm execution: use `.agents/prompts/swarm-worker.prompt.md`.
 
-<!-- rule-api:entry id=397b0447-135e-4d35-ad05-bcc69047d2c0 slug=shared/agent-rules/quality-gates/l42 -->
 ## Quality Gates
 
 - Relevant validation must pass before completion. If a required check repeatedly fails, stop expanding scope and record the failing command, log or manual result, and blocker clearly in the ticket/spec status summary.
@@ -70,18 +60,15 @@ Use static references as support:
   Doc-viewer and log-viewer keep local Playwright wrappers under `memory-viewers/doc-viewer/e2e/` and `memory-viewers/log-viewer/e2e/`, importing shared suites from `memory-viewers/viewer-api`.
 - For tracing-based tests, use:
 
-<!-- rule-api:entry id=b295a195-616b-4bd0-9181-2d0ae0295965 slug=shared/agent-rules/quality-gates/l51 -->
 ```rust
 let _tracing = init_test_tracing!(&graph);
 ```
 
-<!-- rule-api:entry id=a172249f-b82b-45ea-86a9-4826beec7cc1 slug=shared/agent-rules/quality-gates/l55 -->
 - If public behavior or docs changed, update the docs and run doc validation workflows.
 - When dedicated test, doc, or cross-store-link tooling is missing or partial, use the strongest available command or manual check and call out the limitation explicitly in the status summary and spec traceability.
 - Follow `.github/hooks/` reminders when they fire.
 - Scratch notes belong in temporary files only; do not commit ephemeral notes.
 
-<!-- rule-api:entry id=acd60e9f-71fe-4b9e-9a7f-66fbd262f631 slug=shared/agent-rules/feedback-workflow/l58 -->
 ## Feedback Workflow
 
 - Record feedback in the entity feedback store today. Use the canonical entity URN for the target, for example `ce://default/rule/<rule-id>`, `ce://default/spec/<spec-id>`, or `ce://default/ticket/<ticket-id>`.
@@ -92,7 +79,6 @@ let _tracing = init_test_tracing!(&graph);
 - Use `feedback_summary` or `feedback summary` when you need the current low-signal state for an entity; use `feedback_inbox` or `feedback inbox` when you need the raw stored entries that explain why follow-up is needed.
 - If feedback implies a contract or workflow change, open or update the corresponding spec or ticket and link the exact entity that received the feedback instead of leaving the signal stranded in chat only.
 
-<!-- rule-api:entry id=dada11d6-d36e-464f-92cf-f0a50e3d7aec slug=shared/agent-rules/escalation-rules/l59 -->
 ## Escalation Rules
 
 - If blocked by ambiguity after focused research (10-15 minutes), ask the user.
@@ -103,7 +89,6 @@ let _tracing = init_test_tracing!(&graph);
 - Escalate only when unrelated changes create a real conflict with your owned scope (for example merge conflicts, overlapping owned paths, or failures directly caused by those changes).
 - Never revert, stage, or commit unrelated changes created by other agents.
 
-<!-- rule-api:entry id=6e037f1d-b9cc-4ed4-aefc-a50b16ef122d slug=shared/agent-rules/fallback-mode-when-mcp-is-unavailable/l65 -->
 ## Fallback Mode (When MCP Is Unavailable)
 
 - Docs fallback: search/read local docs directly.
@@ -111,7 +96,6 @@ let _tracing = init_test_tracing!(&graph);
 - Logs fallback: inspect files under `target/test-logs/` directly.
 - Context fallback: use `tools/context-cli/` commands.
 
-<!-- rule-api:entry id=be5a071c-73c8-4b46-967c-d0e80b58391b slug=shared/agent-rules/canonical-sources/l72 -->
 ## Canonical Sources
 
 - API patterns and gotchas: `CHEAT_SHEET.md`

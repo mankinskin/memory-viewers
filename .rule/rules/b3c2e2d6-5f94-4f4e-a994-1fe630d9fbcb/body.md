@@ -1,1 +1,0 @@
-For memory-viewers, reuse the canonical ticket-refinement charter owned by memory-api and keep this local entry limited to workspace-specific deltas.

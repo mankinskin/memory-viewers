@@ -1,1 +1,0 @@
-For memory-viewers, follow the canonical roast objectives from memory-api; keep this workspace limited to managed-viewer critique that the shared brief does not already cover.
