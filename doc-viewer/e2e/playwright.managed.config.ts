@@ -25,7 +25,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'cargo doc --no-deps -p doc-api && viewer-ctl prepare doc-viewer && viewer-ctl start doc-viewer --foreground',
+    command: 'cargo doc --no-deps -p doc-api && install-ctl prepare doc-viewer && install-ctl start doc-viewer --foreground',
     url: RELEASE_SERVER_URL,
     cwd: repoRoot,
     reuseExistingServer: !process.env['CI'],

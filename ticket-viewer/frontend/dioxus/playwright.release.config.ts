@@ -5,7 +5,7 @@ import path from 'node:path';
  * Playwright configuration for ticket-viewer release-binary E2E tests.
  *
  * Tests run against the managed `ticket-viewer` server on port 3002. The
- * server is prepared and started automatically through `viewer-ctl`.
+ * server is prepared and started automatically through `install-ctl`.
  *
  * Run with:
  *   npm run test:e2e:release
@@ -37,7 +37,7 @@ export default defineConfig({
   },
 
   webServer: {
-    command: 'viewer-ctl prepare ticket-viewer && viewer-ctl start ticket-viewer --foreground',
+    command: 'install-ctl prepare ticket-viewer && install-ctl start ticket-viewer --foreground',
     url: RELEASE_SERVER_URL,
     cwd: repoRoot,
     reuseExistingServer: !process.env['CI'],

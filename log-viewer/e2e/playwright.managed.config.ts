@@ -25,7 +25,7 @@ export default defineConfig({
     trace: 'on-first-retry',
   },
   webServer: {
-    command: 'viewer-ctl prepare log-viewer && viewer-ctl start log-viewer --foreground',
+    command: 'install-ctl prepare log-viewer && install-ctl start log-viewer --foreground',
     url: RELEASE_SERVER_URL,
     cwd: repoRoot,
     reuseExistingServer: !process.env['CI'],

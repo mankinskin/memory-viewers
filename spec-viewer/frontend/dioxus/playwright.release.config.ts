@@ -35,7 +35,7 @@ export default defineConfig({
   },
 
   webServer: {
-    command: 'viewer-ctl prepare spec-viewer && viewer-ctl start spec-viewer --foreground',
+    command: 'install-ctl prepare spec-viewer && install-ctl start spec-viewer --foreground',
     url: RELEASE_SERVER_URL,
     cwd: repoRoot,
     reuseExistingServer,
