@@ -127,14 +127,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .unwrap_or(manifest_dir)
         });
     let default_log_dir = workspace_root.join("target").join("logs");
-    let log_dir = std::env::var("LOG_DIR")
-        .map(PathBuf::from)
-        .unwrap_or(default_log_dir);
-    let level =
-        std::env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
-    let config = TracingConfig::default()
-        .with_level(level)
-        .with_file_logging(log_dir, "spec-viewer");
+    let config = TracingConfig::from_env("spec-viewer", default_log_dir);
     init_tracing_full(&config);
     info!(
         port = options.port,
@@ -152,8 +145,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     info!(index_root = %index_root.display(), "Using spec index root");
 
-    let store =
-        SpecStore::open(&index_root).expect("failed to open spec store");
+    let store = SpecStore::open(&index_root).map_err(|error| {
+        std::io::Error::other(format!(
+            "Failed to open spec store at {}: {error}",
+            index_root.display()
+        ))
+    })?;
     let state = SpecAppState::new(store);
 
     // Pre-scan so slugs are available immediately.

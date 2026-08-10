@@ -73,15 +73,7 @@ fn init_tracing() {
         });
 
     let default_log_dir = workspace_root.join("target").join("logs");
-    let log_dir = std::env::var("LOG_DIR")
-        .map(PathBuf::from)
-        .unwrap_or(default_log_dir);
-    let level =
-        std::env::var("LOG_LEVEL").unwrap_or_else(|_| "info".to_string());
-
-    let config = TracingConfig::default()
-        .with_level(level)
-        .with_file_logging(log_dir, "doc-viewer");
+    let config = TracingConfig::from_env("doc-viewer", default_log_dir);
     init_tracing_full(&config);
 }
 

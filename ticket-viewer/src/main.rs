@@ -130,7 +130,7 @@ async fn shutdown_signal() {
 fn open_local_ticket_store(
     index_root: &Path
 ) -> Result<TicketStore, ticket_api::error::StorageError> {
-    TicketStore::open_or_init(index_root)
+    TicketStore::open(index_root)
 }
 
 #[tokio::main]
@@ -158,7 +158,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // server, which must serve whatever workspace is local to its cwd.
     let store = open_local_ticket_store(&index_root).map_err(|error| {
         std::io::Error::other(format!(
-            "failed to initialize ticket store at {}: {error}",
+            "Failed to open ticket store at {}: {error}",
             index_root.display()
         ))
     })?;
@@ -242,33 +242,12 @@ mod tests {
     };
 
     #[test]
-    fn startup_bootstraps_manifest_only_ticket_store() {
+    fn startup_requires_an_initialized_ticket_store() {
         let dir = tempdir().unwrap();
-        let store = TicketStore::init(dir.path()).unwrap();
-        let ticket_id = store
-            .create(
-                None,
-                "tracker-improvement",
-                Some("bootstrap local ticket store"),
-                Some("planned"),
-                Default::default(),
-                None,
-                None,
-            )
-            .unwrap();
+        let error = open_local_ticket_store(dir.path()).unwrap_err();
 
-        let index_root = store.index_root.clone();
-        drop(store);
-
-        std::fs::remove_file(index_root.join("tickets.db")).unwrap();
-        let _ = std::fs::remove_file(index_root.join("tickets.db-shm"));
-        let _ = std::fs::remove_file(index_root.join("tickets.db-wal"));
-        let _ = std::fs::remove_dir_all(index_root.join("search_index"));
-
-        let rebuilt = open_local_ticket_store(dir.path()).unwrap();
-        let manifest = rebuilt.get(&ticket_id).unwrap();
-
-        assert_eq!(manifest.id, ticket_id);
+        assert!(error.to_string().contains("workspace not initialized"));
+        assert!(!dir.path().join(".ticket").exists());
     }
 
     #[test]
