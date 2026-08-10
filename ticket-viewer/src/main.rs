@@ -244,7 +244,9 @@ mod tests {
     #[test]
     fn startup_requires_an_initialized_ticket_store() {
         let dir = tempdir().unwrap();
-        let error = open_local_ticket_store(dir.path()).unwrap_err();
+        let Err(error) = open_local_ticket_store(dir.path()) else {
+            panic!("expected an error for an uninitialized ticket store");
+        };
 
         assert!(error.to_string().contains("workspace not initialized"));
         assert!(!dir.path().join(".ticket").exists());
