@@ -80,7 +80,7 @@ impl SpecListStore {
 
     /// Flush current state to localStorage.
     pub fn persist(&self) {
-        let _snapshot = SpecUiState {
+        let snapshot = SpecUiState {
             filter: self.filter.read().clone(),
             state_filter: self.state_filter.read().clone(),
         };
