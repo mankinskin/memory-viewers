@@ -1,7 +1,7 @@
 id = "800f09ed-beb0-4a12-be93-1392e45eadb8"
 created_at = "2026-05-25T21:17:55.348442300+00:00"
 title = "[ticket-viewer][viewer-api] Tighten graph layout and enlarge rich nodes"
-state = "in-review"
+state = "done"
 acceptance_criteria = "1. Default graph nodes are materially easier to read at the default camera than the current layout. 2. The default layout is more compact horizontally without losing clear parent-to-child hierarchy. 3. Rich LOD nodes use a more cubic presentation and expose more ticket content than the current card."
 component = "ticket-viewer"
 effort = "1200"
