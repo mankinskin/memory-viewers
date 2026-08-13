@@ -196,7 +196,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     }
 
     // Build the ticket API router from ticket-http (includes /healthz).
-    let app = ticket_http::build_router(state);
+    let app = ticket_http::serve::routes::build_router(state);
     let feedback_state = FeedbackAppState {
         store_root: ticket_api::workspace::resolve_store_root_from(
             &workspace_root,
