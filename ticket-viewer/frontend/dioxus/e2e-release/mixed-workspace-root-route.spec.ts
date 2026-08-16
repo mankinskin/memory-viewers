@@ -860,7 +860,19 @@ test('content mode renders an integrated ticket document and keeps asset context
 
   const childButton = page.getByTestId(`ticket-tree-ticket-${currentFixture.childTicketId}`);
   await expect(childButton).toBeVisible({ timeout: 30_000 });
+  const descriptionResponsePromise = page.waitForResponse((response) => {
+    return matchesWorkspaceRequest(
+      response,
+      `/api/tickets/${currentFixture.childTicketId}/description`,
+      currentFixture.childWorkspace,
+    );
+  });
   await childButton.click();
+  const descriptionResponse = await descriptionResponsePromise;
+  expect(
+    descriptionResponse.ok(),
+    'mixed-workspace description request must succeed',
+  ).toBe(true);
 
   await page.getByRole('button', { name: 'Content' }).click();
 

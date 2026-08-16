@@ -117,26 +117,24 @@ async function openTicketById(
 
 function normalizeTicketState(state?: string | null): string {
   const normalized = state?.trim().toLowerCase();
-  return normalized && normalized.length > 0 ? normalized : 'new';
+  return normalized && normalized.length > 0 ? normalized : 'open';
 }
 
 function kanbanStateRank(state: string): number {
   switch (state) {
-    case 'new':
+    case 'open':
       return 0;
-    case 'ready':
+    case 'planned':
       return 1;
-    case 'blocked':
-      return 2;
     case 'in-implementation':
-      return 3;
+      return 2;
     case 'in-review':
-      return 4;
+      return 3;
     case 'done':
-      return 5;
+      return 4;
     case 'cancelled':
     case 'canceled':
-      return 6;
+      return 5;
     default:
       return 7;
   }

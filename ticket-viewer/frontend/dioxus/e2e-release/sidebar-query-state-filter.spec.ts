@@ -21,8 +21,8 @@ interface QueryStateCandidate {
 
 const STATE_CHIP_BY_VALUE: Record<string, string> = {
   '': 'all',
-  'new': 'new',
-  'ready': 'ready',
+  'open': 'open',
+  'planned': 'planned',
   'in-implementation': 'in-implementation',
   'in-review': 'in-review',
   'done': 'done',

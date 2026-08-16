@@ -135,10 +135,15 @@ impl HttpTicketBackend {
             "note_kind": if note.is_some() { Some("note") } else { None::<&str> },
             "author": "ticket-viewer",
         });
-        let body_str = serde_json::to_string(&body).map_err(|e| e.to_string())?;
-        self.send_json::<serde_json::Value>("POST", "/api/feedback/ingest", &body_str)
-            .await
-            .map(|_| ())
+        let body_str =
+            serde_json::to_string(&body).map_err(|e| e.to_string())?;
+        self.send_json::<serde_json::Value>(
+            "POST",
+            "/api/feedback/ingest",
+            &body_str,
+        )
+        .await
+        .map(|_| ())
     }
 }
 

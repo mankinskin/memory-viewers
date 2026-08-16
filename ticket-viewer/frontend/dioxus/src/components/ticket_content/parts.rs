@@ -22,9 +22,8 @@ fn kind_label(kind: &str) -> String {
         .map(|word| {
             let mut chars = word.chars();
             match chars.next() {
-                Some(first) => {
-                    first.to_uppercase().collect::<String>() + chars.as_str()
-                },
+                Some(first) =>
+                    first.to_uppercase().collect::<String>() + chars.as_str(),
                 None => String::new(),
             }
         })
@@ -79,6 +78,7 @@ fn render_part(
     let amendments = part.amendments.clone();
     let toggle_id = part_id.clone();
     let indent = if depth > 0 { 20 * depth } else { 0 };
+    let is_description = part.kind == "objective";
 
     rsx! {
         div {
@@ -129,9 +129,19 @@ fn render_part(
                 div {
                     "data-testid": "ticket-part-body",
                     style: "padding: 4px 14px 14px;",
-                    FileContentViewer {
-                        content: content,
-                        filename: filename,
+                    if is_description {
+                        div {
+                            "data-testid": "desc-markdown",
+                            FileContentViewer {
+                                content: content,
+                                filename: filename,
+                            }
+                        }
+                    } else {
+                        FileContentViewer {
+                            content: content,
+                            filename: filename,
+                        }
                     }
                 }
             }
@@ -245,9 +255,8 @@ fn resolve_ref_href(
 ) -> (Option<String>, bool) {
     match kind {
         "spec" => match last_segment(urn) {
-            Some(id) if looks_like_uuid(id) => {
-                (Some(format!("http://localhost:4002/specs/{id}")), true)
-            },
+            Some(id) if looks_like_uuid(id) =>
+                (Some(format!("http://localhost:4002/specs/{id}")), true),
             _ => (None, false),
         },
         "log" => match last_segment(urn) {

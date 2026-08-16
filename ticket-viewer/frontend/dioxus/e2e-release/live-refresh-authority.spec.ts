@@ -222,7 +222,7 @@ async function seedFilterFixture(): Promise<FilterFixture> {
     '--type',
     'tracker-improvement',
     '--title',
-    'Visible ready ticket',
+    'Visible planned ticket',
   ]);
 
   const secondReadyTicket = await runTicketCli<CreatePayload>([
@@ -233,14 +233,14 @@ async function seedFilterFixture(): Promise<FilterFixture> {
     '--type',
     'tracker-improvement',
     '--title',
-    'Second ready ticket',
+    'Second planned ticket',
   ]);
 
   await runTicketCli<unknown>([
     'update',
     readyTicket.id,
     '--to-state',
-    'ready',
+    'planned',
     '--json',
     '--index-root',
     indexRoot,
@@ -249,7 +249,7 @@ async function seedFilterFixture(): Promise<FilterFixture> {
     'update',
     secondReadyTicket.id,
     '--to-state',
-    'ready',
+    'planned',
     '--json',
     '--index-root',
     indexRoot,
@@ -356,7 +356,7 @@ test.describe('ticket-viewer — live refresh authority', () => {
         timeout: TICKET_VIEWER.readyTimeout,
       });
 
-      const readyChip = page.getByTestId('ticket-tree-state-chip-ready');
+      const readyChip = page.getByTestId('ticket-tree-state-chip-planned');
       await expect(readyChip).toBeVisible();
       await readyChip.click();
 
@@ -411,7 +411,7 @@ test.describe('ticket-viewer — live refresh authority', () => {
         timeout: TICKET_VIEWER.readyTimeout,
       });
 
-      const readyChip = page.getByTestId('ticket-tree-state-chip-ready');
+      const readyChip = page.getByTestId('ticket-tree-state-chip-planned');
       await expect(readyChip).toBeVisible();
       await readyChip.click();
 

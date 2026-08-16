@@ -415,7 +415,10 @@ pub(super) fn submit_ticket_feedback(
     spawn(async move {
         let workspace_slug = {
             let trimmed = workspace.trim();
-            if trimmed.is_empty() || trimmed.contains('/') || trimmed.contains('\\') {
+            if trimmed.is_empty()
+                || trimmed.contains('/')
+                || trimmed.contains('\\')
+            {
                 "default".to_string()
             } else {
                 trimmed.to_string()
@@ -425,13 +428,7 @@ pub(super) fn submit_ticket_feedback(
         let note = Some("Ticket detail feedback submitted from ticket-viewer.");
 
         match backend
-            .ingest_feedback(
-                &workspace,
-                &target,
-                &rating,
-                note,
-                "frontend",
-            )
+            .ingest_feedback(&workspace, &target, &rating, note, "frontend")
             .await
         {
             Ok(()) => {
