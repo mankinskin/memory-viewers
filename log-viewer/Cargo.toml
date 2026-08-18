@@ -10,7 +10,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Shared viewer infrastructure
-viewer-api = { path = "../../viewer-api/viewer-api", features = ["ts-gen"] }
+viewer-api = { git = "https://github.com/mankinskin/viewer-api", branch = "main", features = ["ts-gen"] }
 
 # App-specific
 tokio = { version = "1", features = ["full"] }

@@ -10,7 +10,7 @@ path = "src/main.rs"
 
 [dependencies]
 # Shared viewer infrastructure
-viewer-api = { path = "../../viewer-api/viewer-api" }
+viewer-api = { git = "https://github.com/mankinskin/viewer-api", branch = "main" }
 doc-http = { path = "../../memory-api/tools/http/doc-http" }
 
 # App-specific
