@@ -11,7 +11,7 @@ path = "src/main.rs"
 [dependencies]
 # Shared viewer infrastructure
 viewer-api = { git = "https://github.com/mankinskin/viewer-api", branch = "main" }
-doc-http = { path = "../../memory-api/tools/http/doc-http" }
+doc-http = { git = "https://github.com/mankinskin/memory-api", branch = "main" }
 
 # App-specific
 tokio = { version = "1", features = ["full"] }
