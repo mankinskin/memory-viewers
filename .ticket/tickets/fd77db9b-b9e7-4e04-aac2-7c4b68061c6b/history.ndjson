@@ -1,0 +1,2 @@
+{"rev":1,"ts":"2026-07-25T07:33:52.790843600+00:00","fields":{"state":"open","title":"[skill] Author Dioxus skill (signals, server fns, WASM toolchain, viewer-api integration, styling)","type":"task"}}
+{"rev":2,"ts":"2026-07-25T07:34:51.530500200+00:00","fields":{"depends_on":["5f217947-0fde-431c-b1ab-9d5d8153ed17"],"state":"open","title":"[skill] Author Dioxus skill (signals, server fns, WASM toolchain, viewer-api integration, styling)","type":"task"}}

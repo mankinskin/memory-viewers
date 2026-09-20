@@ -1,0 +1,7 @@
+id = "fd77db9b-b9e7-4e04-aac2-7c4b68061c6b"
+created_at = "2026-07-25T07:33:52.744968200+00:00"
+title = "[skill] Author Dioxus skill (signals, server fns, WASM toolchain, viewer-api integration, styling)"
+state = "planning"
+depends_on = ["5f217947-0fde-431c-b1ab-9d5d8153ed17"]
+type = "task"
+component = "memory-viewers"
