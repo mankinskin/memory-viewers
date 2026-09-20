@@ -1,0 +1,11 @@
+id = "08c86dbd-72b8-446b-a930-30ef3352d604"
+created_at = "2026-06-05T14:11:31.706507600+00:00"
+title = "[viewer-api] Create comprehensive E2E test suite for graph improvements"
+state = "planning"
+component = "memory-viewers"
+depends_on = ["254ac30d-26c0-4bfe-8a66-b10ab9e4843a"]
+effort = "2400"
+priority = "medium"
+risk_level = "medium"
+tags = "viewer-api,e2e,testing,playwright,graph"
+type = "tracker-improvement"

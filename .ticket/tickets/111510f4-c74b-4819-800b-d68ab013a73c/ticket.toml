@@ -1,0 +1,11 @@
+id = "111510f4-c74b-4819-800b-d68ab013a73c"
+created_at = "2026-06-05T14:29:39.980751600+00:00"
+title = "Fix graph reactivity: ticket state changes don't update graph nodes"
+state = "planning"
+depends_on = ["1e119a99-375a-479b-80ce-98cb63d92436", "5d5c7bbb-fac2-49ba-aa19-37bf6e2aac34", "7db89f25-9395-45b3-a35d-8c5c219067f8", "aac045c2-9455-4338-9942-32466ff2e6b1", "fe7effea-6b70-4b16-8c00-bc7e910a0fde"]
+effort = "1200"
+parts = [{ id = "a57203c4-32f2-4ebb-ba03-55e69a4e14c6", kind = "objective", path = "parts/a57203c4-32f2-4ebb-ba03-55e69a4e14c6.md", frozen = true, created_at = "2026-07-31T07:35:08.919793600Z" }, { id = "aeabc50b-d45c-428f-8c66-e363bf79401b", kind = "requirements", path = "parts/aeabc50b-d45c-428f-8c66-e363bf79401b.md", frozen = true, created_at = "2026-07-31T07:35:08.920125700Z" }, { id = "719ee2f0-a8d0-4b0f-b018-2c66a2e1ebef", kind = "design", path = "parts/719ee2f0-a8d0-4b0f-b018-2c66a2e1ebef.md", frozen = true, created_at = "2026-07-31T07:35:08.920512600Z" }, { id = "6641cfc5-fe5e-4951-a46a-cd37b647167c", kind = "examples", path = "parts/6641cfc5-fe5e-4951-a46a-cd37b647167c.md", frozen = true, created_at = "2026-07-31T07:35:08.920765800Z" }, { id = "5f89aa84-0380-46e3-a8a7-3443bdf6da9e", kind = "acceptance_criteria", path = "parts/5f89aa84-0380-46e3-a8a7-3443bdf6da9e.md", frozen = true, created_at = "2026-07-31T07:35:08.921177200Z" }]
+plan_revision = 1
+status_summary = "Triage 2026-07-31: no implementation work landed; returned to planned for re-scoping."
+type = "tracker-improvement"
+component = "memory-viewers"

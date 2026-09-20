@@ -1,0 +1,10 @@
+id = "345528ff-a9ca-4d0d-ba94-a5365a14c54e"
+created_at = "2026-07-28T14:44:20.906016300+00:00"
+title = "[presentation] presentation-viewer: Rust server + Dioxus deck browser on port 3003, registered in viewer-ctl"
+state = "planning"
+depends_on = ["3cdcaf3b-d958-44f3-afb2-b17be3484419"]
+effort = "25k tokens"
+epic = "0ee95228-475d-4706-a108-fd208f7c4098"
+spec = "2ccde9ee-85ac-4c87-9601-f6099f5be01c"
+type = "tracker-improvement"
+component = "memory-viewers"

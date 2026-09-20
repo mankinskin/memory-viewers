@@ -1,0 +1,6 @@
+id = "fe7effea-6b70-4b16-8c00-bc7e910a0fde"
+created_at = "2026-06-05T15:57:28.991323+00:00"
+title = "[ticket-viewer] Test graph reactivity with ticket state updates"
+state = "done"
+type = "tracker-improvement"
+component = "memory-viewers"

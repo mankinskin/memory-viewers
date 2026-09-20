@@ -1,0 +1,6 @@
+id = "1e119a99-375a-479b-80ce-98cb63d92436"
+created_at = "2026-06-05T15:56:23.500742900+00:00"
+title = "[ticket-viewer] Update graph SSE subscription to listen for ticket.upsert events"
+state = "done"
+type = "tracker-improvement"
+component = "memory-viewers"

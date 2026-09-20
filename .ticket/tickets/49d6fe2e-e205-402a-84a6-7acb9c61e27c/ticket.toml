@@ -1,0 +1,8 @@
+id = "49d6fe2e-e205-402a-84a6-7acb9c61e27c"
+created_at = "2026-04-09T15:01:59.489398200+00:00"
+title = "[AOH][Research] Container BaaS — Podman/Docker, GPU passthrough, bollard, network namespaces"
+state = "done"
+depends_on = ["65d8e6c7-78ea-48ce-a6bd-8bc1eb712c4f"]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

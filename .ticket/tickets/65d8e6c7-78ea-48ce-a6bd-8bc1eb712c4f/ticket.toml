@@ -1,0 +1,9 @@
+id = "65d8e6c7-78ea-48ce-a6bd-8bc1eb712c4f"
+created_at = "2026-04-09T14:35:44.561487300+00:00"
+title = "[AOH][Research] Cloud Hypervisor — Rust microVM with browser support and fast boot"
+state = "done"
+depends_on = ["7cf1044a-ae6a-4d08-a96f-436a5d4d9863"]
+parts = [{ id = "110e86fb-059e-49b9-829f-100f4fb987b1", kind = "objective", path = "parts/110e86fb-059e-49b9-829f-100f4fb987b1.md", frozen = false, created_at = "2026-07-30T21:05:26.715111800Z" }, { id = "1a1b0de4-8d20-4906-9d65-96f53475b033", kind = "notes", path = "parts/1a1b0de4-8d20-4906-9d65-96f53475b033.md", frozen = false, created_at = "2026-07-30T21:05:26.718910400Z" }, { id = "9ab8a270-073e-4814-aa41-82bd9959ecc6", kind = "objective", path = "parts/9ab8a270-073e-4814-aa41-82bd9959ecc6.md", frozen = false, created_at = "2026-07-30T21:05:26.722943Z" }]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

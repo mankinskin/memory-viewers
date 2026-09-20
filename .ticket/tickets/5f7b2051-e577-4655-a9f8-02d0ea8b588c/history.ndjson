@@ -1,0 +1,4 @@
+{"rev":1,"ts":"2026-07-05T19:02:59.270049200+00:00","fields":{"state":"open","title":"[audit-roadmap][file_length][batch-4] memory-viewers (19)","type":"tracker-improvement"}}
+{"rev":2,"ts":"2026-07-05T19:03:02.687305600+00:00","fields":{"depends_on":["1abda9df-bb74-4c84-8b92-2a38d8731949"],"state":"open","title":"[audit-roadmap][file_length][batch-4] memory-viewers (19)","type":"tracker-improvement"}}
+{"rev":3,"ts":"2026-07-05T20:02:56.216814900+00:00","fields":{"depends_on":["1abda9df-bb74-4c84-8b92-2a38d8731949"],"state":"open","title":"[audit-roadmap][file_length][batch-4] memory-viewers (19)","type":"tracker-improvement"}}
+{"rev":4,"ts":"2026-07-23T13:33:19.903966100+00:00","fields":{"depends_on":["1abda9df-bb74-4c84-8b92-2a38d8731949"],"effort":"1200","state":"open","title":"[audit-roadmap][file_length][batch-4] memory-viewers (19)","type":"tracker-improvement"},"author":"github-copilot"}

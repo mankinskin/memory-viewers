@@ -1,0 +1,8 @@
+id = "9ac0a02b-965f-45f3-b8c9-97a063e3bc55"
+created_at = "2026-04-14T14:26:21.517235700+00:00"
+title = "Epic: Viewer Component Port -- framework migration and API surface (Preact to Dioxus/Leptos)"
+state = "planning"
+depends_on = ["06a194e8-d883-45a4-9693-6a4b9123ec5a", "31739fc3-bb79-4b56-8dd6-ea789340ac8a", "3e79be12-cf02-4976-9d66-23cafb3276eb", "3fda11c3-978b-4f7c-9ee1-934a97debb12", "503eecc9-c8d6-4932-93df-e40018805818", "8034efd8-e165-4798-afe1-3445026345d9", "80b4b77f-3fd6-4fab-98ab-028c6f6d6ef6", "8672684c-da0a-4e45-9b7d-0ce6c6d4182a", "af19b0f6-b6b4-48fb-8b70-09a70f4868f8", "b3f9878d-5839-4a87-989c-aa3101ee38aa", "c2f04936-8871-4ee6-9b08-febe671fba2f"]
+effort = "1200"
+type = "tracker-improvement"
+component = "memory-viewers"
