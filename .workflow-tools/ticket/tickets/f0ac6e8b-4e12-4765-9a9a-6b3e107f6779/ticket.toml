@@ -1,0 +1,8 @@
+id = "f0ac6e8b-4e12-4765-9a9a-6b3e107f6779"
+created_at = "2026-03-29T05:11:25.143799800+00:00"
+title = "Voxel Splat Kernel: Ray-Box SDF Splatting with Screen-Space EWA Filtering and LOD Blend"
+state = "done"
+depends_on = ["c6c150d9-eba5-4370-8283-c759bac302ef", "c7659e24-3687-4581-bc4c-54bfc7e19267"]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

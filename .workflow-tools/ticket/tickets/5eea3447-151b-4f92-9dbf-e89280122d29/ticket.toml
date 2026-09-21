@@ -1,0 +1,8 @@
+id = "5eea3447-151b-4f92-9dbf-e89280122d29"
+created_at = "2026-04-01T13:37:12.247949600+00:00"
+title = "[context-editor][SVO-RM] Phase 3b: Remove Tiled Forward+ Pipeline"
+state = "done"
+component = "memory-viewers"
+depends_on = ["5e87d2e3-d1cd-4b6c-932a-15b5d1393651"]
+phase = "svo-ray-march"
+type = "tracker-improvement"

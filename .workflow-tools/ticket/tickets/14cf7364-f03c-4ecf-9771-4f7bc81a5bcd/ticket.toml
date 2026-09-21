@@ -1,0 +1,9 @@
+id = "14cf7364-f03c-4ecf-9771-4f7bc81a5bcd"
+created_at = "2026-03-29T03:45:32.191287+00:00"
+title = "Rendering: Voxel Splatting from SVO — Ray-Box SDF Kernel, EWA Filtering, PBR & Tiled Forward+ Rasterization"
+state = "done"
+component = "memory-viewers"
+depends_on = ["194ade77-6922-4be8-8c5b-4423173abcf6", "5070c6b3-a37a-47fa-8dcf-69f805c1a2d2", "530e1bea-7502-45e9-93c8-83a7a48ba124", "6851d03f-692e-4fc0-ada3-08480ecced6e", "947d0a30-1731-445e-a438-2eeab6b1c5bf", "cf71418d-038b-4fc1-879d-0a302b681f84", "f0ac6e8b-4e12-4765-9a9a-6b3e107f6779"]
+phase = "3d-world"
+priority = "high"
+type = "tracker-improvement"

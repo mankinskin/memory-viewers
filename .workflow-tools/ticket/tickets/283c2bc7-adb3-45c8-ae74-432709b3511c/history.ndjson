@@ -1,0 +1,10 @@
+{"rev":1,"ts":"2026-03-31T00:20:23.480039400+00:00","fields":{"state":"open","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}
+{"rev":2,"ts":"2026-03-31T00:20:44.755577300+00:00","fields":{"state":"in-refinement","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}
+{"rev":3,"ts":"2026-03-31T01:54:54.972839+00:00","fields":{"state":"planned","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}
+{"rev":4,"ts":"2026-03-31T01:54:55.257119400+00:00","fields":{"state":"in-implementation","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}
+{"rev":5,"ts":"2026-03-31T02:17:35.934351800+00:00","fields":{"state":"in-implementation","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}
+{"rev":6,"ts":"2026-03-31T02:17:55.980838800+00:00","fields":{"state":"in-review","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}
+{"rev":7,"ts":"2026-03-31T02:18:20.606438200+00:00","fields":{"state":"in-validation","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}
+{"rev":8,"ts":"2026-03-31T02:19:06.344504100+00:00","fields":{"state":"done","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}
+{"rev":9,"ts":"2026-03-31T02:20:03.036856500+00:00","fields":{"state":"in-validation","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}
+{"rev":10,"ts":"2026-04-01T13:30:36.376610300+00:00","fields":{"state":"cancelled","title":"[context-editor] Phase 5: Z-Prepass Depth Buffer for Early-Z Voxel Culling","type":"tracker-improvement"}}

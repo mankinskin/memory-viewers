@@ -1,0 +1,9 @@
+id = "947d0a30-1731-445e-a438-2eeab6b1c5bf"
+created_at = "2026-03-29T03:45:23.346683700+00:00"
+title = "Style: Theme Palette Driving SVO Materials, PBR Parameters, and Glass Tints"
+state = "done"
+component = "memory-viewers"
+depends_on = ["530e1bea-7502-45e9-93c8-83a7a48ba124"]
+phase = "core-gpu"
+priority = "high"
+type = "tracker-improvement"

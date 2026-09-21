@@ -1,0 +1,9 @@
+id = "1e7a290c-0571-490e-9010-48840f28159f"
+created_at = "2026-03-29T03:45:09.436137+00:00"
+title = "VFX: Liquid Glass — SDF Refraction of Voxel Splats with Chromatic Aberration, Caustics, and Mipmap Blur"
+state = "done"
+component = "memory-viewers"
+depends_on = ["5008909b-e6f2-40a4-897c-8cd359efc292", "530e1bea-7502-45e9-93c8-83a7a48ba124", "a87f450a-f703-4773-8467-44718d5ba70f"]
+phase = "core-gpu"
+priority = "high"
+type = "tracker-improvement"

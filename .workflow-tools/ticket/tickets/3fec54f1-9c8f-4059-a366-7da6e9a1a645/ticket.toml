@@ -1,0 +1,8 @@
+id = "3fec54f1-9c8f-4059-a366-7da6e9a1a645"
+created_at = "2026-03-29T06:14:05.260243800+00:00"
+title = "Force Compute Shader & SVO Collision"
+state = "planning"
+depends_on = ["0cfa8404-ca21-4761-b754-54bfd3c174f1", "c241f246-2fc2-47dc-8742-684f5b23f08f"]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

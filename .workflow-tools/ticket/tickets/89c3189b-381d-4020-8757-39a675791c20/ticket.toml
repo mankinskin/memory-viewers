@@ -1,0 +1,8 @@
+id = "89c3189b-381d-4020-8757-39a675791c20"
+created_at = "2026-03-29T05:39:57.581351900+00:00"
+title = "Skill System: Spell SDFs, Procedural Shader Effects & Volumetric Magic"
+state = "planning"
+depends_on = ["1211b2d8-93f9-4b1a-8973-10ee9937ba3d", "194ade77-6922-4be8-8c5b-4423173abcf6", "5008909b-e6f2-40a4-897c-8cd359efc292", "c7659e24-3687-4581-bc4c-54bfc7e19267"]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

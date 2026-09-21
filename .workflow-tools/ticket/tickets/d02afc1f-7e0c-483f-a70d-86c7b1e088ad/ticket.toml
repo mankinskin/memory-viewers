@@ -1,0 +1,8 @@
+id = "d02afc1f-7e0c-483f-a70d-86c7b1e088ad"
+created_at = "2026-03-29T05:12:08.991216400+00:00"
+title = "WorldPanel Rendering: Glass SDF Panels with Content Textures in 3D Scene"
+state = "done"
+depends_on = ["656c3673-f066-4241-a21f-b020c427fc27", "a87f450a-f703-4773-8467-44718d5ba70f", "c6c150d9-eba5-4370-8283-c759bac302ef"]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

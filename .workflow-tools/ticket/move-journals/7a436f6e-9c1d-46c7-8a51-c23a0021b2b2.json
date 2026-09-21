@@ -1,0 +1,44 @@
+{
+  "id": "7a436f6e-9c1d-46c7-8a51-c23a0021b2b2",
+  "entity_id": "fe7effea-6b70-4b16-8c00-bc7e910a0fde",
+  "source_store_root": "C:/Users/linus/git/3/meta-workspace/context-engine/memory-viewers/.workflow-tools/ticket",
+  "target_store_root": "C:/Users/linus/git/3/meta-workspace/context-engine/.workflow-tools/ticket",
+  "source_entity_path": "C:/Users/linus/git/3/meta-workspace/context-engine/memory-viewers/.workflow-tools/ticket/tickets/fe7effea-6b70-4b16-8c00-bc7e910a0fde",
+  "destination_entity_path": "C:/Users/linus/git/3/meta-workspace/context-engine/.workflow-tools/ticket/tickets/fe7effea-6b70-4b16-8c00-bc7e910a0fde",
+  "phase": "Validated",
+  "created_at": "2026-09-21T13:58:21.605910600Z",
+  "updated_at": "2026-09-21T13:58:22.782500100Z",
+  "steps": [
+    "created move journal",
+    "source/target store locks already held by the enclosing move-set operation",
+    "moved entity folder",
+    "scanned source store",
+    "scanned target store",
+    "deferred set ownership validation",
+    "validated move ownership in set"
+  ],
+  "rollback_steps": [
+    "rename destination entity folder back to source path",
+    "restore migrated board history rows to source store",
+    "scan source and target stores"
+  ],
+  "lock_paths": [
+    "C:/Users/linus/git/3/meta-workspace/context-engine/.workflow-tools/ticket/move-locks/entity-fe7effea-6b70-4b16-8c00-bc7e910a0fde.lock",
+    "C:/Users/linus/git/3/meta-workspace/context-engine/.workflow-tools/ticket/move-locks/store.lock",
+    "C:/Users/linus/git/3/meta-workspace/context-engine/memory-viewers/.workflow-tools/ticket/move-locks/entity-fe7effea-6b70-4b16-8c00-bc7e910a0fde.lock",
+    "C:/Users/linus/git/3/meta-workspace/context-engine/memory-viewers/.workflow-tools/ticket/move-locks/store.lock"
+  ],
+  "migrated_board_entries": [],
+  "rewritten_path_files": [],
+  "manual_followups": [],
+  "phase_timings_ms": {
+    "lock_acquisition_ms": 0,
+    "migrate_board_history_ms": 0,
+    "rename_entity_ms": 1,
+    "rewrite_path_refs_ms": 0,
+    "scan_source_ms": 0,
+    "scan_target_ms": 0
+  },
+  "failure": null,
+  "next_recovery_step": null
+}

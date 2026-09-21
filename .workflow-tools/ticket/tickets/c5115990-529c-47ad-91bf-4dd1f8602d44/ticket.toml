@@ -1,0 +1,8 @@
+id = "c5115990-529c-47ad-91bf-4dd1f8602d44"
+created_at = "2026-03-29T05:39:46.075051500+00:00"
+title = "Voxel Inventory: Mini-SVO Items, Glass UI Rendering & Drag-to-World"
+state = "done"
+depends_on = ["47914c71-bb3c-4b95-9120-6121dd42ae2b", "86b0a60e-9e9b-41c5-ba1e-a0f372587dbe", "c241f246-2fc2-47dc-8742-684f5b23f08f", "d02afc1f-7e0c-483f-a70d-86c7b1e088ad"]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

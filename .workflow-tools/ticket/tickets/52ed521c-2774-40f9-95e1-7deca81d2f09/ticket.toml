@@ -1,0 +1,9 @@
+id = "52ed521c-2774-40f9-95e1-7deca81d2f09"
+created_at = "2026-03-30T20:33:50.842766900+00:00"
+title = "[context-editor][SDF-DAG] Phase 1: Per-Voxel SDF Atom Type System with Typed Dispatch"
+state = "planning"
+depends_on = ["194ade77-6922-4be8-8c5b-4423173abcf6"]
+effort = "1200"
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

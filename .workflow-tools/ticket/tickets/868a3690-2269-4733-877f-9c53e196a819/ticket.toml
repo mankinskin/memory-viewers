@@ -1,0 +1,10 @@
+id = "868a3690-2269-4733-877f-9c53e196a819"
+created_at = "2026-03-28T15:08:49.157656600+00:00"
+title = "Feature: Code viewer with source file references in log entries"
+state = "cancelled"
+acceptance_criteria = "1. Right panel CodeViewer component with: syntect-based syntax highlighting (Rust, TS, JS, JSON, YAML, TOML, Markdown), line numbers (50px column), gold highlight on target line, scroll-to-highlight, header with filename + language badge + line count. 2. syntect compiled to WASM — OneDark color theme, language detection by file extension. 3. ResizeHandle between main content and CodeViewer right panel (reuse from T4). 4. Clickable source reference buttons on log entry rows showing filename:line with location icon. 5. Click source ref → GET /api/source/{path} → populates CodeViewer with full file + highlighted line. 6. Inline 5-line snippet in expanded log entries via /api/source/{path}?line=N&context=5. 7. Store signals: code_viewer_file, code_viewer_content, code_viewer_line. 8. Remote source resolution: backend resolves paths as URLs for remote repos (already supported by backend). 9. FileContentViewer wrapper with custom renderer hook (for future markdown/doc rendering). 10. CodeViewer component ported to viewer-api-leptos shared crate."
+component = "memory-viewers"
+depends_on = ["29897f92-59bf-45f9-b963-caa7bfad71c8"]
+interview_answers = "Q1: Use syntect compiled to WASM for Rust-native syntax highlighting — richest result, acceptable binary size tradeoff. Q2: Both inline 5-line snippets in expanded log entries AND full file in the right panel. Q3: Full remote source file resolution support (URL-based repos), not just local."
+risk_level = "medium"
+type = "tracker-improvement"

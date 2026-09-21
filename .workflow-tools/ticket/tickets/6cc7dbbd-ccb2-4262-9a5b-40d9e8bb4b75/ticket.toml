@@ -1,0 +1,8 @@
+id = "6cc7dbbd-ccb2-4262-9a5b-40d9e8bb4b75"
+created_at = "2026-03-29T05:39:39.965194200+00:00"
+title = "Multiplayer Characters: SDF Capsule Sync, Interpolation & Voxel Splat Rendering"
+state = "done"
+depends_on = ["194ade77-6922-4be8-8c5b-4423173abcf6", "286cb564-7406-44e7-911f-509a1ea5144d", "4cf4eeb7-2421-438a-a05c-f081125a3617"]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

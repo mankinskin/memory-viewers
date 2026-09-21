@@ -1,0 +1,9 @@
+id = "4a7a4323-594e-437f-bf78-db9f92a112fb"
+created_at = "2026-03-29T03:45:16.126889200+00:00"
+title = "Particle System & Physics Effects (Rollup)"
+state = "done"
+component = "memory-viewers"
+depends_on = ["3fec54f1-9c8f-4059-a366-7da6e9a1a645", "530e1bea-7502-45e9-93c8-83a7a48ba124", "75b12c5a-a0cf-4810-b5b6-a65319dc95a7"]
+phase = "core-gpu"
+priority = "high"
+type = "tracker-improvement"

@@ -1,0 +1,9 @@
+id = "4cf4eeb7-2421-438a-a05c-f081125a3617"
+created_at = "2026-03-29T03:45:52.587681500+00:00"
+title = "Character: First-Person Camera Controller with SVO-Derived Rapier Collision"
+state = "done"
+component = "memory-viewers"
+depends_on = ["14cf7364-f03c-4ecf-9771-4f7bc81a5bcd", "f7340416-1d2f-4ff9-b27e-237958ac00ca"]
+phase = "3d-world"
+priority = "high"
+type = "tracker-improvement"

@@ -1,0 +1,14 @@
+{"rev":1,"ts":"2026-03-29T05:11:38.357431300+00:00","fields":{"state":"open","title":"[context-editor] GPU Radix Sort (8-Pass Parallel Sort for Gaussians)","type":"tracker-improvement"}}
+{"rev":2,"ts":"2026-03-29T06:49:10.985362100+00:00","fields":{"state":"in-refinement","title":"[context-editor] GPU Radix Sort (8-Pass Parallel Sort for Gaussians)","type":"tracker-improvement"}}
+{"rev":3,"ts":"2026-03-29T06:49:11.149961800+00:00","fields":{"state":"planned","title":"[context-editor] GPU Radix Sort (8-Pass Parallel Sort for Gaussians)","type":"tracker-improvement"}}
+{"rev":4,"ts":"2026-03-29T06:52:43.354131100+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] GPU Radix Sort (8-Pass Parallel Sort for Gaussians)","type":"tracker-improvement"}}
+{"rev":5,"ts":"2026-03-29T06:53:26.543522500+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] GPU Radix Sort (8-Pass Parallel Sort for Gaussians)","type":"tracker-improvement"}}
+{"rev":6,"ts":"2026-03-29T06:53:39.857650200+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] GPU Radix Sort (8-Pass Parallel Sort for Gaussians)","type":"tracker-improvement"}}
+{"rev":7,"ts":"2026-03-29T07:48:49.110655700+00:00","fields":{"priority":"high","state":"planned","title":"GPU Radix Sort: 8-Pass Parallel Sort for Gaussian Depth+Tile Ordering","type":"tracker-improvement"}}
+{"rev":8,"ts":"2026-03-29T15:41:41.523364800+00:00","fields":{"priority":"high","state":"planned","title":"GPU Radix Sort: 8-Pass Parallel Sort for Voxel Splat Depth+Tile Ordering","type":"tracker-improvement"}}
+{"rev":9,"ts":"2026-03-29T21:41:27.643783900+00:00","fields":{"priority":"high","state":"in-refinement","title":"GPU Radix Sort: 8-Pass Parallel Sort for Voxel Splat Depth+Tile Ordering","type":"tracker-improvement"}}
+{"rev":10,"ts":"2026-03-29T21:41:37.938084900+00:00","fields":{"priority":"high","state":"planned","title":"GPU Radix Sort: 8-Pass Parallel Sort for Voxel Splat Depth+Tile Ordering","type":"tracker-improvement"}}
+{"rev":11,"ts":"2026-03-29T21:41:43.333016400+00:00","fields":{"priority":"high","state":"in-implementation","title":"GPU Radix Sort: 8-Pass Parallel Sort for Voxel Splat Depth+Tile Ordering","type":"tracker-improvement"}}
+{"rev":12,"ts":"2026-03-29T21:57:42.464893900+00:00","fields":{"priority":"high","state":"in-review","title":"GPU Radix Sort: 8-Pass Parallel Sort for Voxel Splat Depth+Tile Ordering","type":"tracker-improvement"}}
+{"rev":13,"ts":"2026-03-29T21:57:49.062453200+00:00","fields":{"priority":"high","state":"in-validation","title":"GPU Radix Sort: 8-Pass Parallel Sort for Voxel Splat Depth+Tile Ordering","type":"tracker-improvement"}}
+{"rev":14,"ts":"2026-03-29T21:57:49.669408600+00:00","fields":{"priority":"high","state":"done","title":"GPU Radix Sort: 8-Pass Parallel Sort for Voxel Splat Depth+Tile Ordering","type":"tracker-improvement"}}

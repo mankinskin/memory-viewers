@@ -1,0 +1,11 @@
+{"rev":1,"ts":"2026-03-29T05:12:09.273331500+00:00","fields":{"state":"open","title":"[context-editor] WorldPanel Rendering (Glass SDF Panels + Content Textures)","type":"tracker-improvement"}}
+{"rev":2,"ts":"2026-03-29T06:49:15.253036800+00:00","fields":{"state":"in-refinement","title":"[context-editor] WorldPanel Rendering (Glass SDF Panels + Content Textures)","type":"tracker-improvement"}}
+{"rev":3,"ts":"2026-03-29T06:49:15.427568+00:00","fields":{"state":"planned","title":"[context-editor] WorldPanel Rendering (Glass SDF Panels + Content Textures)","type":"tracker-improvement"}}
+{"rev":4,"ts":"2026-03-29T06:52:43.565052600+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] WorldPanel Rendering (Glass SDF Panels + Content Textures)","type":"tracker-improvement"}}
+{"rev":5,"ts":"2026-03-29T06:53:26.683937400+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] WorldPanel Rendering (Glass SDF Panels + Content Textures)","type":"tracker-improvement"}}
+{"rev":6,"ts":"2026-03-29T06:53:40.004094100+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] WorldPanel Rendering (Glass SDF Panels + Content Textures)","type":"tracker-improvement"}}
+{"rev":7,"ts":"2026-03-29T07:48:49.261912500+00:00","fields":{"priority":"high","state":"planned","title":"WorldPanel Rendering: Glass SDF Panels with Content Textures in 3D Scene","type":"tracker-improvement"}}
+{"rev":8,"ts":"2026-03-29T23:43:42.641082400+00:00","fields":{"priority":"high","state":"in-implementation","title":"WorldPanel Rendering: Glass SDF Panels with Content Textures in 3D Scene","type":"tracker-improvement"}}
+{"rev":9,"ts":"2026-03-29T23:46:09.641548700+00:00","fields":{"priority":"high","state":"in-review","title":"WorldPanel Rendering: Glass SDF Panels with Content Textures in 3D Scene","type":"tracker-improvement"}}
+{"rev":10,"ts":"2026-03-29T23:46:10.359761600+00:00","fields":{"priority":"high","state":"in-validation","title":"WorldPanel Rendering: Glass SDF Panels with Content Textures in 3D Scene","type":"tracker-improvement"}}
+{"rev":11,"ts":"2026-03-29T23:46:11.090729500+00:00","fields":{"priority":"high","state":"done","title":"WorldPanel Rendering: Glass SDF Panels with Content Textures in 3D Scene","type":"tracker-improvement"}}

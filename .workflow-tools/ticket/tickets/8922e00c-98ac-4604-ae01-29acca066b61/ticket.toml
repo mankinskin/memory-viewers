@@ -1,0 +1,10 @@
+id = "8922e00c-98ac-4604-ae01-29acca066b61"
+created_at = "2026-04-01T13:31:25.194877300+00:00"
+title = "[context-editor] Epic: Direct SVO Ray Marching — Replace Tiled Forward+ Pipeline"
+state = "planning"
+component = "memory-viewers"
+depends_on = ["194ade77-6922-4be8-8c5b-4423173abcf6", "283c2bc7-adb3-45c8-ae74-432709b3511c", "5e87d2e3-d1cd-4b6c-932a-15b5d1393651", "5eea3447-151b-4f92-9dbf-e89280122d29", "70d37471-bb9e-4100-b239-c5da156cbe2a", "86de425a-f7cc-4cfb-9a1d-582bc4e352cb", "e3340271-557d-4d1c-bef7-db73712f468e"]
+effort = "1200"
+phase = "rendering-rewrite"
+priority = "critical"
+type = "tracker-improvement"

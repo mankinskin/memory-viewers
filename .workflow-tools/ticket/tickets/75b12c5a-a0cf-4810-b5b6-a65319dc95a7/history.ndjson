@@ -1,0 +1,21 @@
+{"rev":1,"ts":"2026-03-29T06:14:11.145540200+00:00","fields":{"state":"open","title":"Sub-ticket: Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":2,"ts":"2026-03-29T06:49:19.177012500+00:00","fields":{"state":"in-refinement","title":"Sub-ticket: Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":3,"ts":"2026-03-29T06:49:19.317947+00:00","fields":{"state":"planned","title":"Sub-ticket: Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":4,"ts":"2026-03-29T06:52:40.522928+00:00","fields":{"priority":"high","state":"planned","title":"Sub-ticket: Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":5,"ts":"2026-03-29T06:53:23.633506400+00:00","fields":{"priority":"high","state":"planned","title":"Sub-ticket: Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":6,"ts":"2026-03-29T06:53:37.019331600+00:00","fields":{"priority":"high","state":"planned","title":"Sub-ticket: Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":7,"ts":"2026-03-29T07:48:51.793471+00:00","fields":{"priority":"high","state":"planned","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":8,"ts":"2026-03-29T23:46:30.023477100+00:00","fields":{"priority":"high","state":"in-implementation","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":9,"ts":"2026-03-29T23:52:57.477952100+00:00","fields":{"priority":"high","state":"in-review","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":10,"ts":"2026-03-29T23:53:04.028698500+00:00","fields":{"priority":"high","state":"in-validation","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":11,"ts":"2026-03-29T23:53:10.177528300+00:00","fields":{"priority":"high","state":"done","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":12,"ts":"2026-03-30T02:40:06.829860300+00:00","fields":{"priority":"high","state":"in-validation","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":13,"ts":"2026-03-30T02:40:31.940781900+00:00","fields":{"priority":"high","state":"done","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":14,"ts":"2026-03-30T02:42:07.207529300+00:00","fields":{"priority":"high","state":"in-validation","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":15,"ts":"2026-03-30T14:17:00.002789400+00:00","fields":{"priority":"high","state":"in-review","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":16,"ts":"2026-03-30T14:17:00.910700600+00:00","fields":{"priority":"high","state":"in-implementation","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":17,"ts":"2026-03-31T00:43:06.476011100+00:00","fields":{"priority":"high","state":"in-implementation","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":18,"ts":"2026-03-31T00:43:13.858271300+00:00","fields":{"priority":"high","state":"in-implementation","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":19,"ts":"2026-03-31T00:43:33.242029400+00:00","fields":{"priority":"high","state":"in-review","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":20,"ts":"2026-03-31T00:43:50.043359900+00:00","fields":{"priority":"high","state":"in-validation","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}
+{"rev":21,"ts":"2026-03-31T00:43:50.351561+00:00","fields":{"priority":"high","state":"done","title":"Motion-Blurred Particle Splatting","type":"tracker-improvement"}}

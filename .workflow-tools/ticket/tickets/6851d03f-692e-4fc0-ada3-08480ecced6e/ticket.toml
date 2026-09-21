@@ -1,0 +1,8 @@
+id = "6851d03f-692e-4fc0-ada3-08480ecced6e"
+created_at = "2026-03-29T10:05:27.735426800+00:00"
+title = "Voxel Splat PBR Material System: Cook-Torrance/GGX, Compact u32 Material Encoding, BRDF LUT & Soft Shadows"
+state = "done"
+component = "memory-viewers"
+phase = "3d-world"
+priority = "high"
+type = "tracker-improvement"

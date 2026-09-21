@@ -1,0 +1,8 @@
+id = "70d37471-bb9e-4100-b239-c5da156cbe2a"
+created_at = "2026-04-01T13:35:48.031101600+00:00"
+title = "[context-editor][SVO-RM] Phase 4b: LOD Cutoff"
+state = "done"
+component = "memory-viewers"
+depends_on = ["86de425a-f7cc-4cfb-9a1d-582bc4e352cb"]
+phase = "svo-ray-march"
+type = "tracker-improvement"

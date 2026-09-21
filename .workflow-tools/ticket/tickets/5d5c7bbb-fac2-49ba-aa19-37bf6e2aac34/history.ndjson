@@ -1,4 +1,0 @@
-{"rev":1,"ts":"2026-06-05T15:56:53.595060600+00:00","fields":{"state":"open","title":"[ticket-viewer] Add cache invalidation for graph layout on ticket updates","type":"tracker-improvement"}}
-{"rev":2,"ts":"2026-06-05T22:56:53.284030800+00:00","fields":{"state":"planned","title":"[ticket-viewer] Add cache invalidation for graph layout on ticket updates","type":"tracker-improvement"}}
-{"rev":3,"ts":"2026-06-05T23:01:09.961662700+00:00","fields":{"state":"in-implementation","title":"[ticket-viewer] Add cache invalidation for graph layout on ticket updates","type":"tracker-improvement"}}
-{"rev":4,"ts":"2026-06-05T23:09:15.420686500+00:00","fields":{"state":"done","title":"[ticket-viewer] Add cache invalidation for graph layout on ticket updates","type":"tracker-improvement"}}

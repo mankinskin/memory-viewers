@@ -1,0 +1,8 @@
+id = "c6c150d9-eba5-4370-8283-c759bac302ef"
+created_at = "2026-03-29T05:10:50.358147500+00:00"
+title = "GPU Buffer Infrastructure: Double-Buffered SVO, Splat Buffers, and Bind Groups"
+state = "done"
+depends_on = ["0cfa8404-ca21-4761-b754-54bfd3c174f1"]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

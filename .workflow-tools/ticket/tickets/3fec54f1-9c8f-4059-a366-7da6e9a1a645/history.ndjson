@@ -1,0 +1,13 @@
+{"rev":1,"ts":"2026-03-29T06:14:05.450936300+00:00","fields":{"state":"open","title":"Sub-ticket: Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":2,"ts":"2026-03-29T06:49:18.795940800+00:00","fields":{"state":"in-refinement","title":"Sub-ticket: Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":3,"ts":"2026-03-29T06:49:19.010184400+00:00","fields":{"state":"planned","title":"Sub-ticket: Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":4,"ts":"2026-03-29T06:52:34.431935300+00:00","fields":{"priority":"high","state":"planned","title":"Sub-ticket: Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":5,"ts":"2026-03-29T06:52:37.903557900+00:00","fields":{"priority":"high","state":"planned","title":"Sub-ticket: Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":6,"ts":"2026-03-29T06:53:21.072753300+00:00","fields":{"priority":"high","state":"planned","title":"Sub-ticket: Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":7,"ts":"2026-03-29T06:53:34.090159100+00:00","fields":{"priority":"high","state":"planned","title":"Sub-ticket: Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":8,"ts":"2026-03-29T07:48:50.540906800+00:00","fields":{"priority":"high","state":"planned","title":"Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":9,"ts":"2026-03-29T23:39:02.422992700+00:00","fields":{"priority":"high","state":"in-implementation","title":"Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":10,"ts":"2026-03-29T23:43:12.426442500+00:00","fields":{"priority":"high","state":"in-review","title":"Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":11,"ts":"2026-03-29T23:43:13.164494700+00:00","fields":{"priority":"high","state":"in-validation","title":"Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":12,"ts":"2026-03-29T23:43:13.831270200+00:00","fields":{"priority":"high","state":"done","title":"Force Compute Shader & SVO Collision","type":"tracker-improvement"}}
+{"rev":13,"ts":"2026-07-25T06:48:05.088441500+00:00","fields":{"depends_on":["0cfa8404-ca21-4761-b754-54bfd3c174f1","c241f246-2fc2-47dc-8742-684f5b23f08f"],"priority":"high","state":"open","title":"Force Compute Shader & SVO Collision","type":"tracker-improvement"}}

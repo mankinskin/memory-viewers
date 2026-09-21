@@ -1,0 +1,9 @@
+id = "656c3673-f066-4241-a21f-b020c427fc27"
+created_at = "2026-03-29T03:46:00.153417700+00:00"
+title = "Dioxus–Taffy Bridge: 2D UI Panels Composited Over Voxel-Splatted Scene"
+state = "done"
+component = "memory-viewers"
+depends_on = ["0cfa8404-ca21-4761-b754-54bfd3c174f1", "1e7a290c-0571-490e-9010-48840f28159f"]
+phase = "ui-framework"
+priority = "high"
+type = "tracker-improvement"

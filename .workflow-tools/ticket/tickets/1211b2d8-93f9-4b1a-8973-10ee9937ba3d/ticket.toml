@@ -1,0 +1,8 @@
+id = "1211b2d8-93f9-4b1a-8973-10ee9937ba3d"
+created_at = "2026-03-29T05:39:51.638181+00:00"
+title = "Combat System: SDF Hit Detection, Damage Model & Voxel Destruction VFX"
+state = "planning"
+depends_on = ["1b65d658-07d0-4d31-881b-6111321b5752", "47914c71-bb3c-4b95-9120-6121dd42ae2b", "4a7a4323-594e-437f-bf78-db9f92a112fb", "6cc7dbbd-ccb2-4262-9a5b-40d9e8bb4b75", "c241f246-2fc2-47dc-8742-684f5b23f08f"]
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

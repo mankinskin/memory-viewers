@@ -1,0 +1,11 @@
+{"rev":1,"ts":"2026-03-29T05:11:12.271331300+00:00","fields":{"state":"open","title":"[context-editor] Glass SDF Core (Analytical SDF + Snell Refraction)","type":"tracker-improvement"}}
+{"rev":2,"ts":"2026-03-29T06:49:14.217574+00:00","fields":{"state":"in-refinement","title":"[context-editor] Glass SDF Core (Analytical SDF + Snell Refraction)","type":"tracker-improvement"}}
+{"rev":3,"ts":"2026-03-29T06:49:14.385751800+00:00","fields":{"state":"planned","title":"[context-editor] Glass SDF Core (Analytical SDF + Snell Refraction)","type":"tracker-improvement"}}
+{"rev":4,"ts":"2026-03-29T06:52:41.524883500+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] Glass SDF Core (Analytical SDF + Snell Refraction)","type":"tracker-improvement"}}
+{"rev":5,"ts":"2026-03-29T06:53:24.702366500+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] Glass SDF Core (Analytical SDF + Snell Refraction)","type":"tracker-improvement"}}
+{"rev":6,"ts":"2026-03-29T06:53:38.110627400+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] Glass SDF Core (Analytical SDF + Snell Refraction)","type":"tracker-improvement"}}
+{"rev":7,"ts":"2026-03-29T07:48:47.729332900+00:00","fields":{"priority":"high","state":"planned","title":"Glass SDF Core: Analytical SDF Evaluation + Snell's Refraction in Tiled Rasterizer","type":"tracker-improvement"}}
+{"rev":8,"ts":"2026-03-29T22:39:43.121282200+00:00","fields":{"priority":"high","state":"in-implementation","title":"Glass SDF Core: Analytical SDF Evaluation + Snell's Refraction in Tiled Rasterizer","type":"tracker-improvement"}}
+{"rev":9,"ts":"2026-03-29T22:56:01.047434900+00:00","fields":{"priority":"high","state":"in-review","title":"Glass SDF Core: Analytical SDF Evaluation + Snell's Refraction in Tiled Rasterizer","type":"tracker-improvement"}}
+{"rev":10,"ts":"2026-03-29T22:56:15.009434900+00:00","fields":{"priority":"high","state":"in-validation","title":"Glass SDF Core: Analytical SDF Evaluation + Snell's Refraction in Tiled Rasterizer","type":"tracker-improvement"}}
+{"rev":11,"ts":"2026-03-29T22:56:29.180676400+00:00","fields":{"priority":"high","state":"done","title":"Glass SDF Core: Analytical SDF Evaluation + Snell's Refraction in Tiled Rasterizer","type":"tracker-improvement"}}

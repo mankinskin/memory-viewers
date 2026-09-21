@@ -1,0 +1,2 @@
+{"rev":1,"ts":"2026-03-30T20:33:51.035888400+00:00","fields":{"priority":"high","state":"open","title":"[context-editor][SDF-DAG] Phase 1: Per-Voxel SDF Atom Type System with Typed Dispatch","type":"tracker-improvement"}}
+{"rev":2,"ts":"2026-07-23T13:33:18.582958900+00:00","fields":{"depends_on":["194ade77-6922-4be8-8c5b-4423173abcf6"],"effort":"1200","priority":"high","state":"open","title":"[context-editor][SDF-DAG] Phase 1: Per-Voxel SDF Atom Type System with Typed Dispatch","type":"tracker-improvement"},"author":"github-copilot"}

@@ -1,0 +1,8 @@
+id = "1b65d658-07d0-4d31-881b-6111321b5752"
+created_at = "2026-03-29T10:07:00.374230200+00:00"
+title = "SDF Item Cutting: CSG Shader Subtraction, Cut Particles & Liquid Glass Impact Feedback"
+state = "planning"
+component = "memory-viewers"
+phase = "3d-world"
+priority = "high"
+type = "tracker-improvement"

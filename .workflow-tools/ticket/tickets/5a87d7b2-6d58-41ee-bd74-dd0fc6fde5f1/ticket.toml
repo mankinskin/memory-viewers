@@ -1,0 +1,9 @@
+id = "5a87d7b2-6d58-41ee-bd74-dd0fc6fde5f1"
+created_at = "2026-03-30T20:51:31.133066200+00:00"
+title = "[context-editor][SDF-DAG] GPU SDF Collision & Force Kernel — DAG Traversal Physics"
+state = "planning"
+depends_on = ["52ed521c-2774-40f9-95e1-7deca81d2f09", "8f0ffc7c-b1d6-423d-bb9b-6f0c6b75852b"]
+effort = "1200"
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"

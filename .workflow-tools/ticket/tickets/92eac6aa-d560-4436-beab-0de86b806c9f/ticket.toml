@@ -1,0 +1,10 @@
+id = "92eac6aa-d560-4436-beab-0de86b806c9f"
+created_at = "2026-03-28T15:08:48.577614200+00:00"
+title = "Bug: Node projection broken — nodes cluster in top-left corner"
+state = "cancelled"
+acceptance_criteria = "1. Node DOM elements project correctly using full viewport coordinates (not scoped to container bounds). 2. Projection accounts for devicePixelRatio (GPU physical pixels vs DOM logical pixels). 3. Nodes visually appear behind transparent glass sidebar/header panels when they overlap. 4. Full hypergraph rendering (nodes, edges, grid, labels) only active when hypergraph tab is selected. 5. When on other tabs (e.g. Logs), only ambient GPU effects (smoke, particles, background) render — no 3D scene geometry. 6. Switching to hypergraph tab re-enables full 3D rendering without flicker or delay."
+component = "memory-viewers"
+depends_on = ["ee6e2d37-60b0-434f-8b8e-d2ccbb2f7624"]
+interview_answers = "Q1: Nodes should overflow behind glass panels — sidebars are overlays, not clipping boundaries. Q2: Only ambient smoke/particles render when not on hypergraph tab. Full 3D hypergraph (nodes, edges, grid) only renders when hypergraph tab is active."
+risk_level = "medium"
+type = "tracker-improvement"

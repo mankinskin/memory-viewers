@@ -1,0 +1,9 @@
+id = "de697c71-9328-4133-8c77-d01e8b885940"
+created_at = "2026-03-29T03:46:25.365416300+00:00"
+title = "Runtime Parameters: Voxel Splatting, Tiling, Sorting, and Double Buffer Config"
+state = "done"
+component = "memory-viewers"
+depends_on = ["55e30448-e34d-423f-9625-b32425cfbfdc", "656c3673-f066-4241-a21f-b020c427fc27"]
+phase = "ui-framework"
+priority = "high"
+type = "tracker-improvement"

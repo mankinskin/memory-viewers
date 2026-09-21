@@ -1,0 +1,13 @@
+{"rev":1,"ts":"2026-03-29T05:11:31.660987300+00:00","fields":{"state":"open","title":"[context-editor] EWA Projection (3D-to-2D Covariance + SH Eval + Sort Keys)","type":"tracker-improvement"}}
+{"rev":2,"ts":"2026-03-29T06:49:10.660666400+00:00","fields":{"state":"in-refinement","title":"[context-editor] EWA Projection (3D-to-2D Covariance + SH Eval + Sort Keys)","type":"tracker-improvement"}}
+{"rev":3,"ts":"2026-03-29T06:49:10.814118500+00:00","fields":{"state":"planned","title":"[context-editor] EWA Projection (3D-to-2D Covariance + SH Eval + Sort Keys)","type":"tracker-improvement"}}
+{"rev":4,"ts":"2026-03-29T06:52:35.524466600+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] EWA Projection (3D-to-2D Covariance + SH Eval + Sort Keys)","type":"tracker-improvement"}}
+{"rev":5,"ts":"2026-03-29T06:52:38.979234800+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] EWA Projection (3D-to-2D Covariance + SH Eval + Sort Keys)","type":"tracker-improvement"}}
+{"rev":6,"ts":"2026-03-29T06:53:22.122996900+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] EWA Projection (3D-to-2D Covariance + SH Eval + Sort Keys)","type":"tracker-improvement"}}
+{"rev":7,"ts":"2026-03-29T06:53:35.265047700+00:00","fields":{"priority":"high","state":"planned","title":"[context-editor] EWA Projection (3D-to-2D Covariance + SH Eval + Sort Keys)","type":"tracker-improvement"}}
+{"rev":8,"ts":"2026-03-29T07:48:46.520662400+00:00","fields":{"priority":"high","state":"planned","title":"EWA Projection: 3D→2D Covariance, SH Evaluation, and Sort Key Construction","type":"tracker-improvement"}}
+{"rev":9,"ts":"2026-03-29T10:04:17.691836800+00:00","fields":{"priority":"high","state":"planned","title":"Sort Key Construction & Tiled Depth Ordering for Voxel Splats","type":"tracker-improvement"}}
+{"rev":10,"ts":"2026-03-29T21:28:22.609655200+00:00","fields":{"priority":"high","state":"in-implementation","title":"Sort Key Construction & Tiled Depth Ordering for Voxel Splats","type":"tracker-improvement"}}
+{"rev":11,"ts":"2026-03-29T21:40:41.957248300+00:00","fields":{"priority":"high","state":"in-review","title":"Sort Key Construction & Tiled Depth Ordering for Voxel Splats","type":"tracker-improvement"}}
+{"rev":12,"ts":"2026-03-29T21:40:49.430423900+00:00","fields":{"priority":"high","state":"in-validation","title":"Sort Key Construction & Tiled Depth Ordering for Voxel Splats","type":"tracker-improvement"}}
+{"rev":13,"ts":"2026-03-29T21:40:54.665684800+00:00","fields":{"priority":"high","state":"done","title":"Sort Key Construction & Tiled Depth Ordering for Voxel Splats","type":"tracker-improvement"}}

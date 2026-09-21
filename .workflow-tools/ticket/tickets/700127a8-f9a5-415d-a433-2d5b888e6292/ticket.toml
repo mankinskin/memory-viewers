@@ -1,0 +1,9 @@
+id = "700127a8-f9a5-415d-a433-2d5b888e6292"
+created_at = "2026-03-29T05:40:03.369651+00:00"
+title = "[context-editor] LLM Integration: Text-to-Voxel/Shader, Naga Validation & Hot-Reload"
+state = "planning"
+depends_on = ["47914c71-bb3c-4b95-9120-6121dd42ae2b", "c241f246-2fc2-47dc-8742-684f5b23f08f", "c7659e24-3687-4581-bc4c-54bfc7e19267"]
+effort = "1200"
+priority = "high"
+type = "tracker-improvement"
+component = "memory-viewers"
